@@ -1,0 +1,99 @@
+{
+  "name": "@neodrag/solid",
+  "version": "3.0.0-next.11",
+  "description": "SolidJS library to add dragging to your apps 😉",
+  "keywords": [
+    "drag",
+    "draggable",
+    "neodrag",
+    "performant",
+    "react-draggable",
+    "small",
+    "solid",
+    "tiny"
+  ],
+  "homepage": "https://github.com/PuruVJ/neodrag/tree/main/packages/solid#readme",
+  "bugs": {
+    "url": "https://github.com/PuruVJ/neodrag/issues"
+  },
+  "license": "MIT",
+  "author": "Puru Vijay",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PuruVJ/neodrag.git"
+  },
+  "files": [
+    "dist/*"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./collab": {
+      "types": "./dist/collab.d.ts",
+      "import": "./dist/collab.js",
+      "default": "./dist/collab.js"
+    },
+    "./sortable": {
+      "types": "./dist/sortable.d.ts",
+      "import": "./dist/sortable.js",
+      "default": "./dist/sortable.js"
+    },
+    "./resize": {
+      "types": "./dist/resize.d.ts",
+      "import": "./dist/resize.js",
+      "default": "./dist/resize.js"
+    },
+    "./rotate": {
+      "types": "./dist/rotate.d.ts",
+      "import": "./dist/rotate.js",
+      "default": "./dist/rotate.js"
+    },
+    "./drop": {
+      "types": "./dist/drop.d.ts",
+      "import": "./dist/drop.js",
+      "default": "./dist/drop.js"
+    },
+    "./splitpane": {
+      "types": "./dist/splitpane.d.ts",
+      "import": "./dist/splitpane.js",
+      "default": "./dist/splitpane.js"
+    },
+    "./panzoom": {
+      "types": "./dist/panzoom.d.ts",
+      "import": "./dist/panzoom.js",
+      "default": "./dist/panzoom.js"
+    },
+    "./swipe": {
+      "types": "./dist/swipe.d.ts",
+      "import": "./dist/swipe.js",
+      "default": "./dist/swipe.js"
+    },
+    "./select": {
+      "types": "./dist/select.d.ts",
+      "import": "./dist/select.js",
+      "default": "./dist/select.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "devDependencies": {
+    "@vitest/browser": "^3.2.4",
+    "playwright": "^1.53.1",
+    "solid-js": "^1.9.7",
+    "vite-plugin-solid": "^2.11.6",
+    "vitest": "^3.2.4",
+    "@neodrag/core": "3.0.0-next.11"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.0.0",
+    "@neodrag/core": "3.0.0-next.11"
+  },
+  "scripts": {
+    "compile": "vp pack",
+    "test": "vitest run"
+  }
+}
