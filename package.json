@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "cd ./apps/web && pnpm dev"
+    "dev": "cd ./apps/web && pnpm dev",
+    "dev:api": "cd ./apps/api && uv run fastapi dev main.py"
   },
   "keywords": [],
   "author": "",
