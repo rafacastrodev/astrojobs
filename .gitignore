@@ -1,2 +1,7 @@
 .env*
 !.env.example
+.playwright-mcp/
+.superpowers/
+node_modules/*
+*.log
+
