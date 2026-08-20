@@ -5,11 +5,15 @@
   "main": "index.js",
   "scripts": {
     "dev": "cd ./apps/web && pnpm dev",
-    "dev:api": "cd ./apps/api && uv run fastapi dev main.py"
+    "dev:api": "cd ./apps/api && uv run fastapi dev main.py",
+    "prepare": "husky"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
-  "packageManager": "pnpm@11.21.0"
+  "packageManager": "pnpm@11.21.0",
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
 }

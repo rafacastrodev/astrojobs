@@ -1,11 +1,18 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { AuthLayout } from '#/components/AuthLayout'
 import { SigninForm } from '#/pages/signin/components/SigninForm'
 import { SignupForm } from '#/pages/signup/components/SignupForm'
+import { getCurrentUser } from '#/utils/auth/getCurrentUser.server'
 
 export const Route = createFileRoute('/login')({
+  beforeLoad: async () => {
+    const user = await getCurrentUser()
+    if (user) {
+      throw redirect({ to: '/dashboard' })
+    }
+  },
   component: LoginPage,
 })
 

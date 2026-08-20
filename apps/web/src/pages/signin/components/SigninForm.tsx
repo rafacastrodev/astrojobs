@@ -8,7 +8,8 @@ import { PasswordInput } from '#/components/PasswordInput'
 import { SocialIconButton } from '#/components/SocialIconButton'
 import { GithubIcon, GoogleIcon } from '#/components/SocialIconButton/icons'
 import { MailIcon } from '#/components/icons'
-import { loginSchema, type LoginFormValues } from '#/utils/validation/authSchemas'
+import { loginSchema } from '#/utils/validation/authSchemas'
+import type { LoginFormValues } from '#/utils/validation/authSchemas'
 import { useSignin } from '../hooks/useSignin'
 
 type SigninFormProps = {
@@ -26,7 +27,10 @@ export const SigninForm = ({ onSwitchToSignup }: SigninFormProps) => {
   const signin = useSignin({ setError })
 
   return (
-    <form onSubmit={handleSubmit((values) => signin.mutate(values))} className="space-y-4">
+    <form
+      onSubmit={handleSubmit((values) => signin.mutate(values))}
+      className="space-y-4"
+    >
       {signin.isError && !signin.error.fieldErrors ? (
         <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {signin.error.message}
@@ -34,19 +38,39 @@ export const SigninForm = ({ onSwitchToSignup }: SigninFormProps) => {
       ) : null}
 
       <div>
-        <label className="mb-1.5 block text-sm text-muted-foreground">Email</label>
-        <Input placeholder="you@example.com" type="email" icon={<MailIcon />} {...register('email')} />
-        {errors.email ? <p className="mt-1 text-sm text-destructive">{errors.email.message}</p> : null}
+        <label className="mb-1.5 block text-sm text-muted-foreground">
+          Email
+        </label>
+        <Input
+          placeholder="you@example.com"
+          type="email"
+          icon={<MailIcon />}
+          {...register('email')}
+        />
+        {errors.email ? (
+          <p className="mt-1 text-sm text-destructive">
+            {errors.email.message}
+          </p>
+        ) : null}
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm text-muted-foreground">Password</label>
+        <label className="mb-1.5 block text-sm text-muted-foreground">
+          Password
+        </label>
         <PasswordInput placeholder="••••••••" {...register('password')} />
-        {errors.password ? <p className="mt-1 text-sm text-destructive">{errors.password.message}</p> : null}
+        {errors.password ? (
+          <p className="mt-1 text-sm text-destructive">
+            {errors.password.message}
+          </p>
+        ) : null}
       </div>
 
       <div className="text-right text-sm">
-        <Link to="/forgot-password" className="text-muted-foreground hover:text-foreground">
+        <Link
+          to="/forgot-password"
+          className="text-muted-foreground hover:text-foreground"
+        >
           Forgot password?
         </Link>
       </div>

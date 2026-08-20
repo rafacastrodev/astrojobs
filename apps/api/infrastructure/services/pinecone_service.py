@@ -12,3 +12,9 @@ class PineconeClient:
         self.index = self.client.Index(
             settings.PINECONE_INDEX_NAME
         )
+
+    def upsert(self, vectors: list[dict]):
+        self.index.upsert(vectors)
+
+    def query(self, query: str, top_k: int = 10) -> list[dict]:
+        return self.index.query(query, top_k=top_k)

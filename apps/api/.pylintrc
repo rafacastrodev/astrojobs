@@ -177,10 +177,6 @@ const-naming-style=UPPER_CASE
 # style.
 #const-rgx=
 
-# Minimum line length for functions/classes that require docstrings, shorter
-# ones are exempt.
-docstring-min-length=-1
-
 # Naming style matching correct function names.
 function-naming-style=snake_case
 
@@ -229,10 +225,6 @@ module-naming-style=snake_case
 # Colon-delimited sets of names that determine each other's naming style when
 # the name regexes allow several styles.
 name-group=
-
-# Regular expression which should only match function or class names that do
-# not require a docstring.
-no-docstring-rgx=^_
 
 # List of decorators that produce properties, such as abc.abstractproperty. Add
 # to this list to register other decorators that produce valid properties.
@@ -512,9 +504,6 @@ score=yes
 
 # Comments are removed from the similarity computation
 ignore-comments=yes
-
-# Docstrings are removed from the similarity computation
-ignore-docstrings=yes
 
 # Imports are removed from the similarity computation
 ignore-imports=yes
