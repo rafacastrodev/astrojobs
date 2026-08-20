@@ -1,0 +1,27 @@
+name: Main Action
+run-name:
+on: [push]
+branches: ["main"]
+jobs:
+  run:
+    runs-on:
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create .env on EC2
+    uses: appleboy/ssh-action@v1.0.3
+    with:
+      host: ${{ secrets.EC2_HOST }}
+      username: ${{ secrets.EC2_USER }}
+      key: ${{ secrets.EC2_SSH_KEY }}
+      script: |
+        cd /var/www/api
+
+        cat > .env << 'EOF'
+        DATABASE_URL=${{ secrets.DATABASE_URL }}
+        PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}
+        JWT_SECRET=${{ secrets.JWT_SECRET }}
+        EOF
+
+        chmod 600 .env
