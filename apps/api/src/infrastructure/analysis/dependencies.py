@@ -1,0 +1,37 @@
+from fastapi import Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from domain.analysis.use_cases.analyze_resume import AnalyzeResumeUseCase
+from domain.analysis.use_cases.list_resume_analyses import ListResumeAnalysesUseCase
+from infrastructure.database.config import settings
+from infrastructure.database.session import get_db
+from infrastructure.extraction.heuristic_text_extractor import HeuristicTextExtractor
+from infrastructure.repositories.sqlalchemy_analysis_repository import (
+    SqlAlchemyAnalysisRepository,
+)
+from infrastructure.repositories.sqlalchemy_document_repository import (
+    SqlAlchemyDocumentRepository,
+)
+from infrastructure.services.bedrock_resume_analyzer import BedrockResumeAnalyzer
+
+
+def get_analyze_resume_use_case(db: Session = Depends(get_db)) -> AnalyzeResumeUseCase:
+    if not settings.bedrock_model_id:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Resume analysis is not configured",
+        )
+    return AnalyzeResumeUseCase(
+        SqlAlchemyAnalysisRepository(db),
+        SqlAlchemyDocumentRepository(db),
+        BedrockResumeAnalyzer(),
+        HeuristicTextExtractor(),
+    )
+
+
+def get_list_resume_analyses_use_case(
+    db: Session = Depends(get_db),
+) -> ListResumeAnalysesUseCase:
+    return ListResumeAnalysesUseCase(
+        SqlAlchemyAnalysisRepository(db), SqlAlchemyDocumentRepository(db)
+    )
