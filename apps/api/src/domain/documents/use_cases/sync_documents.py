@@ -1,4 +1,5 @@
 import json
+import logging
 from collections.abc import Callable, Sequence
 from typing import Any
 
@@ -7,6 +8,8 @@ from domain.documents.entities import DocumentType
 from domain.documents.errors import SyncConfigurationError
 from domain.documents.pinecone_client import PineconeClientPort
 from domain.documents.repository import DocumentRepository
+
+logger = logging.getLogger(__name__)
 
 
 class SyncDocumentsUseCase:
@@ -36,7 +39,7 @@ class SyncDocumentsUseCase:
 
         try:
             client = self._pinecone_factory()
-        except Exception as exc:
+        except RuntimeError as exc:
             raise SyncConfigurationError(str(exc)) from exc
 
         synced = 0
@@ -65,7 +68,8 @@ class SyncDocumentsUseCase:
                 self._documents.mark_synced(document.id, vector_id)
                 synced += 1
                 results.append({"id": document.id, "status": "synced", "pinecone_id": vector_id})
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Failed to sync document %s: %s", document.id, exc)
                 self._documents.mark_failed(document.id, str(exc))
                 failed += 1
                 results.append({"id": document.id, "status": "failed", "error": str(exc)})

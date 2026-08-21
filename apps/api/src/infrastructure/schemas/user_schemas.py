@@ -25,7 +25,7 @@ class ResetPasswordRequest(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id: int
+    id: str
     name: str
     email: str
     role: Literal["user", "admin"]

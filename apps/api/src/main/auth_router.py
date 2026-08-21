@@ -45,7 +45,11 @@ def _set_auth_cookie(response: Response, token: str) -> None:
 
 def _to_user_response(user: UserEntity) -> UserResponse:
     return UserResponse(
-        id=user.id, name=user.name, email=user.email, role=user.role, created_at=user.created_at
+        id=user.id,
+        name=user.name,
+        email=user.email,
+        role=user.role,
+        created_at=user.created_at,
     )
 
 
@@ -58,7 +62,9 @@ def signup(
     try:
         user, token = use_case.execute(body.name, body.email, body.password)
     except EmailAlreadyExistsError:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already in use")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Email already in use"
+        )
     _set_auth_cookie(response, token)
     return _to_user_response(user)
 
@@ -93,7 +99,9 @@ def me(user: UserEntity = Depends(get_current_user)) -> UserResponse:
 @router.post("/forgot-password")
 def forgot_password(
     body: ForgotPasswordRequest,
-    use_case: RequestPasswordResetUseCase = Depends(get_request_password_reset_use_case),
+    use_case: RequestPasswordResetUseCase = Depends(
+        get_request_password_reset_use_case
+    ),
 ) -> dict[str, bool]:
     use_case.execute(body.email)
     return {"ok": True}
@@ -108,6 +116,7 @@ def reset_password(
         use_case.execute(body.token, body.new_password)
     except InvalidResetTokenError:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset token"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token",
         )
     return {"ok": True}

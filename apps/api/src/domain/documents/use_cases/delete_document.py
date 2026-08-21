@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Callable
 
 from domain.documents.entities import DocumentType
@@ -5,6 +6,8 @@ from domain.documents.errors import DocumentNotFoundError
 from domain.documents.pinecone_client import PineconeClientPort
 from domain.documents.repository import DocumentRepository
 from domain.documents.use_cases.get_document import GetDocumentUseCase
+
+logger = logging.getLogger(__name__)
 
 
 class DeleteDocumentUseCase:
@@ -30,8 +33,12 @@ class DeleteDocumentUseCase:
             try:
                 client = self._pinecone_factory()
                 client.delete([document.pinecone_id], self._namespace_for(document.type))
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "Failed to delete Pinecone vector %s: %s",
+                    document.pinecone_id,
+                    exc,
+                )
 
     def _namespace_for(self, doc_type: DocumentType) -> str:
         if doc_type == "resume":

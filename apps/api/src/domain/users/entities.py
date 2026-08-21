@@ -7,7 +7,7 @@ UserRole = Literal["user", "admin"]
 
 @dataclass
 class UserEntity:
-    id: int | None
+    id: str
     name: str
     email: str
     hashed_password: str
