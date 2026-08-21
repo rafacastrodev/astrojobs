@@ -12,7 +12,9 @@ from infrastructure.database.session import get_db
 from infrastructure.repositories.sqlalchemy_password_reset_token_repository import (
     SqlAlchemyPasswordResetTokenRepository,
 )
-from infrastructure.repositories.sqlalchemy_user_repository import SqlAlchemyUserRepository
+from infrastructure.repositories.sqlalchemy_user_repository import (
+    SqlAlchemyUserRepository,
+)
 from infrastructure.security.hashing import BcryptPasswordHasher
 from infrastructure.security.jwt import JwtTokenService
 

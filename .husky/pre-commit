@@ -1,2 +1,2 @@
-cd "../apps/api/" && uv run ruff check
-cd "../apps/web/" && npx tsc --noEmit
+cd "./apps/api/" && uv run ruff check --fix && cd ../../
+cd "./apps/web/" && npx tsc --noEmit

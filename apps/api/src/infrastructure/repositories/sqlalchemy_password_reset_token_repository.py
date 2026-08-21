@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -25,7 +25,7 @@ class SqlAlchemyPasswordResetTokenRepository:
             .filter(
                 PasswordResetTokenModel.token_hash == token_hash,
                 PasswordResetTokenModel.used_at.is_(None),
-                PasswordResetTokenModel.expires_at > datetime.utcnow(),
+                PasswordResetTokenModel.expires_at > datetime.now(UTC),
             )
             .one_or_none()
         )
@@ -35,7 +35,7 @@ class SqlAlchemyPasswordResetTokenRepository:
         model = self._session.get(PasswordResetTokenModel, token_id)
         if model is None:
             return
-        model.used_at = datetime.utcnow()
+        model.used_at = datetime.now(UTC)
         self._session.commit()
 
     @staticmethod

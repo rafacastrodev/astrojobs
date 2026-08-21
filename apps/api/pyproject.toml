@@ -32,3 +32,17 @@ disable-search-path-heuristics = true
 dev = [
     "ruff>=0.16.4",
 ]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.params.Depends",
+    "fastapi.Query",
+    "fastapi.params.Query",
+    "fastapi.File",
+    "fastapi.params.File",
+    "fastapi.Form",
+    "fastapi.params.Form",
+    "fastapi.Cookie",
+    "fastapi.params.Cookie",
+]

@@ -1,7 +1,7 @@
 import hashlib
 import logging
 import secrets
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from domain.users.password_reset_token_repository import PasswordResetTokenRepository
 from domain.users.repository import UserRepository
@@ -30,7 +30,7 @@ class RequestPasswordResetUseCase:
             return
         raw_token = secrets.token_urlsafe(32)
         token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
-        expires_at = datetime.utcnow() + RESET_TOKEN_TTL
+        expires_at = datetime.now(UTC) + RESET_TOKEN_TTL
         self._reset_tokens.create(user.id, token_hash, expires_at)
         reset_link = f"{self._frontend_origin}/reset-password?token={raw_token}"
         if self._environment != "production":

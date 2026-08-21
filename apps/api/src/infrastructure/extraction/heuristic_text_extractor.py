@@ -1,17 +1,17 @@
 import re
-from typing import Any
+from typing import Any, ClassVar
 
 from domain.documents.entities import DocumentType
 
 
 class HeuristicTextExtractor:
-    RESUME_SECTION_ALIASES = {
+    RESUME_SECTION_ALIASES: ClassVar[dict[str, tuple[str, ...]]] = {
         "about": ("about", "summary", "profile", "objective", "overview"),
         "experience": ("experience", "work experience", "employment", "work history", "professional experience"),
         "education": ("education", "academic", "studies", "qualifications"),
     }
 
-    JOB_SECTION_ALIASES = {
+    JOB_SECTION_ALIASES: ClassVar[dict[str, tuple[str, ...]]] = {
         "title": ("title", "position", "role", "job title"),
         "requirements": ("requirements", "qualifications", "what you'll need", "must have", "skills"),
         "responsibilities": ("responsibilities", "what you'll do", "duties", "role description", "about the role"),

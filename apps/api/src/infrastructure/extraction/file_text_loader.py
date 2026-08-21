@@ -1,5 +1,6 @@
 from io import BytesIO
 from pathlib import Path
+from typing import ClassVar
 
 from docx import Document
 from pypdf import PdfReader
@@ -8,7 +9,7 @@ from domain.documents.errors import UnsupportedFileError
 
 
 class CompositeFileTextLoader:
-    SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".txt", ".md"}
+    SUPPORTED_EXTENSIONS: ClassVar[set[str]] = {".pdf", ".docx", ".txt", ".md"}
 
     def load(self, content: bytes, filename: str) -> str:
         extension = Path(filename).suffix.lower()
