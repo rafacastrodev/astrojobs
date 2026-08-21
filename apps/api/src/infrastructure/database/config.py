@@ -43,6 +43,38 @@ class Settings(BaseSettings):
     pinecone_namespace_jobs: str = "jobs"
     embedding_dimensions: int = 384
 
+    aws_region: str = "us-east-1"
+    aws_s3_bucket: str = ""
+    # Empty means real AWS S3; set it to a LocalStack URL for dev and CI.
+    aws_s3_endpoint_url: str = ""
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
+    max_upload_bytes: int = 5 * 1024 * 1024
+
+    # Social sign-in. Empty means the /auth/cognito endpoint stays unavailable.
+    cognito_user_pool_id: str = ""
+    cognito_client_id: str = ""
+
+    @property
+    def cognito_region(self) -> str:
+        """Pool ids are '<region>_<suffix>', so the region needs no own setting."""
+        return self.cognito_user_pool_id.split("_", 1)[0]
+
+    @property
+    def cognito_issuer(self) -> str:
+        return (
+            f"https://cognito-idp.{self.cognito_region}.amazonaws.com/"
+            f"{self.cognito_user_pool_id}"
+        )
+
+    @property
+    def cognito_jwks_url(self) -> str:
+        return f"{self.cognito_issuer}/.well-known/jwks.json"
+
+    @property
+    def cognito_enabled(self) -> bool:
+        return bool(self.cognito_user_pool_id and self.cognito_client_id)
+
     @field_validator("database_url", "postgres_host", "frontend_origin", mode="before")
     @classmethod
     def _empty_str_to_none(cls, value: object) -> object:

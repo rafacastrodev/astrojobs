@@ -5,9 +5,12 @@ from domain.documents.use_cases.create_document_from_upload import (
     CreateDocumentFromUploadUseCase,
 )
 from domain.documents.use_cases.delete_document import DeleteDocumentUseCase
+from domain.documents.use_cases.delete_user_resume import DeleteUserResumeUseCase
 from domain.documents.use_cases.get_document import GetDocumentUseCase
 from domain.documents.use_cases.list_documents import ListDocumentsUseCase
+from domain.documents.use_cases.list_user_resumes import ListUserResumesUseCase
 from domain.documents.use_cases.sync_documents import SyncDocumentsUseCase
+from domain.documents.use_cases.upload_resume import UploadResumeUseCase
 from infrastructure.database.config import settings
 from infrastructure.database.session import get_db
 from infrastructure.extraction.file_text_loader import CompositeFileTextLoader
@@ -17,6 +20,7 @@ from infrastructure.repositories.sqlalchemy_document_repository import (
 )
 from infrastructure.services.hashing_embedder import HashingEmbedder
 from infrastructure.services.pinecone_service import PineconeClient
+from infrastructure.storage.s3_file_storage import S3FileStorage
 
 
 def get_create_document_use_case(
@@ -41,6 +45,29 @@ def get_delete_document_use_case(db: Session = Depends(get_db)) -> DeleteDocumen
         pinecone_client_factory=PineconeClient,
         namespace_resumes=settings.pinecone_namespace_resumes,
         namespace_jobs=settings.pinecone_namespace_jobs,
+    )
+
+
+def get_upload_resume_use_case(db: Session = Depends(get_db)) -> UploadResumeUseCase:
+    return UploadResumeUseCase(
+        SqlAlchemyDocumentRepository(db),
+        CompositeFileTextLoader(),
+        HeuristicTextExtractor(),
+        S3FileStorage(),
+        max_file_bytes=settings.max_upload_bytes,
+    )
+
+
+def get_list_user_resumes_use_case(db: Session = Depends(get_db)) -> ListUserResumesUseCase:
+    return ListUserResumesUseCase(SqlAlchemyDocumentRepository(db))
+
+
+def get_delete_user_resume_use_case(db: Session = Depends(get_db)) -> DeleteUserResumeUseCase:
+    return DeleteUserResumeUseCase(
+        SqlAlchemyDocumentRepository(db),
+        S3FileStorage(),
+        pinecone_client_factory=PineconeClient,
+        namespace_resumes=settings.pinecone_namespace_resumes,
     )
 
 

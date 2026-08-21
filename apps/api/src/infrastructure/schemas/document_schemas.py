@@ -16,6 +16,16 @@ class DocumentResponse(BaseModel):
     updated_at: datetime
 
 
+class ResumeResponse(BaseModel):
+    id: int
+    payload: dict[str, Any]
+    source_filename: str
+    status: Literal["draft", "synced", "failed"]
+    error_message: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
 class SyncDocumentsRequest(BaseModel):
     ids: list[int] | None = None
 

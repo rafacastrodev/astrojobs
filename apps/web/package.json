@@ -12,7 +12,8 @@
     "preview": "vite preview --port 3000",
     "lint": "eslint",
     "format": "prettier --write . && eslint --fix",
-    "check": "prettier --check ."
+    "check": "prettier --check .",
+    "test": "jest"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -23,22 +24,28 @@
     "@tanstack/react-router": "latest",
     "@tanstack/react-router-devtools": "latest",
     "axios": "^1.19.0",
+    "oidc-client-ts": "^3.5.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.85.0",
+    "react-oidc-context": "^3.3.1",
     "tailwindcss": "^4.1.18",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@swc/core": "^1.16.1",
+    "@swc/jest": "^0.2.39",
     "@tanstack/devtools-vite": "latest",
     "@tanstack/eslint-config": "latest",
     "@tanstack/router-cli": "^1.132.0",
     "@tanstack/router-plugin": "latest",
+    "@types/jest": "^30.0.0",
     "@types/node": "^22.10.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^9.20.0",
+    "jest": "^30.4.2",
     "openapi-typescript": "^7.13.0",
     "prettier": "^3.8.1",
     "typescript": "^6.0.2",

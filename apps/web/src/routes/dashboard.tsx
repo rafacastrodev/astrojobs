@@ -2,11 +2,11 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { Dashboard } from '@/pages/dashboard/components/Dashboard'
-import { getCurrentUser } from '@/utils/auth/getCurrentUser'
+import { userServices } from '@/services/userServices'
 
 export const Route = createFileRoute('/dashboard')({
   beforeLoad: async () => {
-    const user = await getCurrentUser()
+    const user = await userServices.getCurrentUser()
     if (!user) {
       throw redirect({ to: '/login' })
     }

@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "pnpm dev:web && cd ../../ && pnpm dev:api",
-    "dev:web": "cd ./apps/web && pnpm dev",
-    "dev:api": "cd ./apps/api && uv run fastapi dev main.py",
+    "dev": "concurrently -n api,web -c blue,green \"pnpm dev:api\" \"pnpm dev:web\"",
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "cd ./apps/api && uv run uvicorn main.server:app --app-dir src --reload --host 0.0.0.0 --port 8000",
     "up": "docker compose up -d --build --remove-orphans",
     "down": "docker compose down --remove-orphans",
     "prepare": "husky"
@@ -17,6 +17,7 @@
   "type": "module",
   "packageManager": "pnpm@11.21.0",
   "devDependencies": {
+    "concurrently": "^9.2.4",
     "husky": "^9.1.7"
   }
 }

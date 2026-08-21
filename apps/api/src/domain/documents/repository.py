@@ -10,6 +10,8 @@ class DocumentRepository(Protocol):
         doc_type: DocumentType,
         payload: dict,
         source_filename: str,
+        user_id: int | None = None,
+        storage_key: str | None = None,
     ) -> DocumentEntity: ...
 
     def get_by_id(self, document_id: int) -> DocumentEntity | None: ...
@@ -18,6 +20,12 @@ class DocumentRepository(Protocol):
         self,
         doc_type: DocumentType | None = None,
         status: DocumentStatus | None = None,
+    ) -> Sequence[DocumentEntity]: ...
+
+    def list_by_user(
+        self,
+        user_id: int,
+        doc_type: DocumentType | None = None,
     ) -> Sequence[DocumentEntity]: ...
 
     def list_by_ids(self, ids: Sequence[int]) -> Sequence[DocumentEntity]: ...

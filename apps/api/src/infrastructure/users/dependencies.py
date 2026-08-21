@@ -2,6 +2,9 @@ from fastapi import Cookie, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from domain.users.entities import UserEntity
+from domain.users.use_cases.authenticate_with_cognito import (
+    AuthenticateWithCognitoUseCase,
+)
 from domain.users.use_cases.get_current_user import GetCurrentUserUseCase
 from domain.users.use_cases.login import LoginUseCase
 from domain.users.use_cases.request_password_reset import RequestPasswordResetUseCase
@@ -15,6 +18,7 @@ from infrastructure.repositories.sqlalchemy_password_reset_token_repository impo
 from infrastructure.repositories.sqlalchemy_user_repository import (
     SqlAlchemyUserRepository,
 )
+from infrastructure.security.cognito import CognitoIdTokenVerifier
 from infrastructure.security.hashing import BcryptPasswordHasher
 from infrastructure.security.jwt import JwtTokenService
 
@@ -29,6 +33,21 @@ def get_login_use_case(db: Session = Depends(get_db)) -> LoginUseCase:
     return LoginUseCase(SqlAlchemyUserRepository(db), BcryptPasswordHasher(), JwtTokenService())
 
 
+def get_authenticate_with_cognito_use_case(
+    db: Session = Depends(get_db),
+) -> AuthenticateWithCognitoUseCase:
+    if not settings.cognito_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Social sign-in is not configured",
+        )
+    return AuthenticateWithCognitoUseCase(
+        SqlAlchemyUserRepository(db),
+        CognitoIdTokenVerifier(),
+        JwtTokenService(),
+    )
+
+
 def get_current_user_use_case(db: Session = Depends(get_db)) -> GetCurrentUserUseCase:
     return GetCurrentUserUseCase(SqlAlchemyUserRepository(db), JwtTokenService())
 
@@ -39,7 +58,7 @@ def get_request_password_reset_use_case(
     return RequestPasswordResetUseCase(
         SqlAlchemyUserRepository(db),
         SqlAlchemyPasswordResetTokenRepository(db),
-        frontend_origin=settings.frontend_origin,
+        frontend_origin=settings.frontend_origin or "http://localhost:3000",
         environment=settings.environment,
     )
 

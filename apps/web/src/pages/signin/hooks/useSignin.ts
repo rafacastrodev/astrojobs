@@ -3,8 +3,8 @@ import { useMutation } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 
+import { userServices } from '@/services/userServices'
 import {
-  api,
   applyApiFieldErrors,
   getApiErrorMessage,
   hasApiFieldErrors,
@@ -12,25 +12,19 @@ import {
 import type { LoginFormValues } from '@/utils/validation/authSchemas'
 import { loginSchema } from '@/utils/validation/authSchemas'
 
-type User = {
-  id: number
-  name: string
-  email: string
-  role: 'user' | 'admin'
-  created_at: string
-}
-
 export const useSignin = () => {
   const router = useRouter()
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
+    mode: 'onChange',
+    defaultValues: {
+      email: '',
+      password: '',
+    },
   })
 
   const mutation = useMutation({
-    mutationFn: async (values: LoginFormValues) => {
-      const response = await api.post<User>('/auth/login', values)
-      return response.data
-    },
+    mutationFn: userServices.signIn,
     onSuccess: () => {
       router.navigate({ to: '/dashboard' })
     },
@@ -39,13 +33,22 @@ export const useSignin = () => {
     },
   })
 
-  const onSubmit = form.handleSubmit((values) => mutation.mutate(values))
+  const onSubmit = form.handleSubmit(async (values) => {
+    try {
+      await mutation.mutateAsync(values)
+    } catch {
+      return
+    }
+  })
+
+  const { errors, isValid, isSubmitting } = form.formState
 
   return {
     register: form.register,
-    errors: form.formState.errors,
+    errors,
+    isValid,
     onSubmit,
-    isLoading: form.formState.isSubmitting || mutation.isPending,
+    isLoading: isSubmitting || mutation.isPending,
     errorMessage:
       mutation.isError && !hasApiFieldErrors(mutation.error)
         ? getApiErrorMessage(mutation.error)

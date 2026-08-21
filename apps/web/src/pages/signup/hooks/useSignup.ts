@@ -1,39 +1,32 @@
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 
+import { userServices } from '@/services/userServices'
 import {
-  api,
   applyApiFieldErrors,
   getApiErrorMessage,
   hasApiFieldErrors,
 } from '@/utils'
-import { signupSchema } from '@/utils/validation/authSchemas'
 import type { SignupFormValues } from '@/utils/validation/authSchemas'
-
-type User = {
-  id: number
-  name: string
-  email: string
-  role: 'user' | 'admin'
-  created_at: string
-}
+import { signupSchema } from '@/utils/validation/authSchemas'
 
 export const useSignup = () => {
   const router = useRouter()
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
+    mode: 'onChange',
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
   })
 
   const mutation = useMutation({
-    mutationFn: async ({
-      confirmPassword: _confirmPassword,
-      ...body
-    }: SignupFormValues) => {
-      const response = await api.post<User>('/auth/signup', body)
-      return response.data
-    },
+    mutationFn: userServices.signUp,
     onSuccess: () => {
       router.navigate({ to: '/dashboard' })
     },
@@ -42,13 +35,24 @@ export const useSignup = () => {
     },
   })
 
-  const onSubmit = form.handleSubmit((values) => mutation.mutate(values))
+  const onSubmit = form.handleSubmit(async (values) => {
+    try {
+      await mutation.mutateAsync(values)
+    } catch {
+      return
+    }
+  })
+
+  const { errors, isValid, isSubmitting } = form.formState
 
   return {
     register: form.register,
-    errors: form.formState.errors,
+    password: form.watch('password'),
+    confirmPassword: form.watch('confirmPassword'),
+    errors,
+    isValid,
     onSubmit,
-    isLoading: form.formState.isSubmitting || mutation.isPending,
+    isLoading: isSubmitting || mutation.isPending,
     errorMessage:
       mutation.isError && !hasApiFieldErrors(mutation.error)
         ? getApiErrorMessage(mutation.error)

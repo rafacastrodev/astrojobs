@@ -1,6 +1,7 @@
 packages:
   - "apps/*"
 allowBuilds:
+  '@swc/core': true
   esbuild: true
   lightningcss: true
   unrs-resolver: true

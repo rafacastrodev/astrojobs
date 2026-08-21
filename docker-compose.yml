@@ -16,10 +16,36 @@ services:
       timeout: 5s
       retries: 20
       start_period: 5s
+  localstack:
+    image: localstack/localstack:4
+    profiles: ["dev"]
+    restart: unless-stopped
+    environment:
+      - SERVICES=s3
+      - AWS_DEFAULT_REGION=${AWS_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test}
+    ports:
+      - "4566:4566"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4566/_localstack/health"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
   frontend:
     build:
       context: .
       dockerfile: ./apps/web/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-}
+        VITE_COGNITO_AUTHORITY: ${VITE_COGNITO_AUTHORITY:-}
+        VITE_COGNITO_CLIENT_ID: ${VITE_COGNITO_CLIENT_ID:-}
+        VITE_COGNITO_DOMAIN: ${VITE_COGNITO_DOMAIN:-}
+        VITE_COGNITO_SCOPE: ${VITE_COGNITO_SCOPE:-}
+        VITE_COGNITO_REDIRECT_PATH: ${VITE_COGNITO_REDIRECT_PATH:-}
+        VITE_COGNITO_LOGOUT_PATH: ${VITE_COGNITO_LOGOUT_PATH:-}
+        VITE_COGNITO_PROVIDERS: ${VITE_COGNITO_PROVIDERS:-}
     ports:
       - "80:80"
     restart: unless-stopped
@@ -28,12 +54,28 @@ services:
   api:
     build: ./apps/api
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_MINUTES=${JWT_EXPIRES_MINUTES:-10080}
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - PINECONE_API_KEY=${PINECONE_API_KEY:-}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME:-}
+      - PINECONE_NAMESPACE_RESUMES=${PINECONE_NAMESPACE_RESUMES:-resumes}
+      - PINECONE_NAMESPACE_JOBS=${PINECONE_NAMESPACE_JOBS:-jobs}
+      - EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS:-384}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-astrojobs-resumes}
+      - AWS_S3_ENDPOINT_URL=${AWS_S3_ENDPOINT_URL:-}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - MAX_UPLOAD_BYTES=${MAX_UPLOAD_BYTES:-5242880}
+      - COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID:-}
+      - COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID:-}
     ports:
       - "8000:8000"
     depends_on:

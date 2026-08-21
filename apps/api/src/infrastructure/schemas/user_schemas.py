@@ -24,8 +24,12 @@ class ResetPasswordRequest(BaseModel):
     new_password: str = Field(min_length=8, max_length=72)
 
 
+class CognitoLoginRequest(BaseModel):
+    id_token: str = Field(min_length=1)
+
+
 class UserResponse(BaseModel):
-    id: str
+    id: int
     name: str
     email: str
     role: Literal["user", "admin"]

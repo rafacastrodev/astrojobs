@@ -5,22 +5,59 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+  POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+  POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+  JWT_SECRET: ${{ secrets.JWT_SECRET }}
+  JWT_EXPIRES_MINUTES: ${{ secrets.JWT_EXPIRES_MINUTES }}
+  PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+  PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
+  PINECONE_NAMESPACE_RESUMES: ${{ secrets.PINECONE_NAMESPACE_RESUMES }}
+  PINECONE_NAMESPACE_JOBS: ${{ secrets.PINECONE_NAMESPACE_JOBS }}
+  EMBEDDING_DIMENSIONS: ${{ secrets.EMBEDDING_DIMENSIONS }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  MAX_UPLOAD_BYTES: ${{ secrets.MAX_UPLOAD_BYTES }}
+  FRONTEND_ORIGIN: ${{ secrets.FRONTEND_ORIGIN }}
+  EC2_HOST: ${{ secrets.EC2_HOST }}
+  EC2_USER: ${{ secrets.EC2_USER }}
+  EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+
 jobs:
   ci:
     runs-on: ubuntu-latest
-    env:
-      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check GitHub env
+        run: node --experimental-strip-types --no-warnings apps/web/src/utils/env/checkGithubEnv.ts
+
       - name: Start API and database
         run: docker compose up -d --build db api
 
-      - name: Run API tests
-        run: docker compose exec -T api uv run pytest
+      - name: Wait for API health
+        run: |
+          for i in $(seq 1 30); do
+            if docker compose exec -T api python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose logs api
+          exit 1
 
       - name: Stop containers
         if: always()
@@ -30,20 +67,182 @@ jobs:
     needs: ci
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd /home/ubuntu/astrojobs
+      - name: Checkout
+        uses: actions/checkout@v4
 
-            git pull origin main
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${EC2_SSH_KEY}" > ~/.ssh/deploy.pem
+          chmod 600 ~/.ssh/deploy.pem
+          cat >> ~/.ssh/config <<EOF
+          Host deploy-target
+            HostName ${EC2_HOST}
+            User ${EC2_USER}
+            IdentityFile ~/.ssh/deploy.pem
+            IdentitiesOnly yes
+            StrictHostKeyChecking accept-new
+          EOF
+          chmod 600 ~/.ssh/config
 
-            export POSTGRES_USER="${{ secrets.POSTGRES_USER }}"
-            export POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
-            export POSTGRES_DB="${{ secrets.POSTGRES_DB }}"
+      - name: Provision host
+        run: |
+          ssh deploy-target 'sudo bash -s' <<'PROVISION'
+          set -euo pipefail
+          COMPOSE_VERSION=v2.32.4
+          log() { echo "[provision] $*"; }
 
-            docker compose down
-            docker compose up -d --build
+          if ! command -v docker >/dev/null 2>&1; then
+            log "installing docker"
+            if command -v dnf >/dev/null 2>&1; then
+              dnf install -y docker
+            else
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update -qq
+              apt-get install -y -qq docker.io
+            fi
+          fi
+
+          # Neither distro reliably ships the Compose v2 plugin, and the
+          # project uses `docker compose`, not the removed docker-compose.
+          if ! docker compose version >/dev/null 2>&1; then
+            log "installing docker compose ${COMPOSE_VERSION}"
+            mkdir -p /usr/local/lib/docker/cli-plugins
+            curl -fsSL \
+              "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-$(uname -m)" \
+              -o /usr/local/lib/docker/cli-plugins/docker-compose
+            chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+          fi
+
+          systemctl enable --now docker
+          # So the deploy user can run docker without sudo.
+          usermod -aG docker "${SUDO_USER:-ubuntu}"
+
+          # The default json-file driver has no size limit and will quietly
+          # fill a small root volume.
+          if [ ! -f /etc/docker/daemon.json ]; then
+            log "capping container log size"
+            mkdir -p /etc/docker
+            printf '%s\n' '{"log-driver":"json-file","log-opts":{"max-size":"10m","max-file":"3"}}' \
+              > /etc/docker/daemon.json
+            systemctl restart docker
+          fi
+
+          # Each deploy rebuilds both images and leaves the old layers behind.
+          if [ ! -f /etc/systemd/system/docker-prune.timer ]; then
+            log "scheduling weekly image prune"
+            printf '%s\n' \
+              '[Unit]' 'Description=Reclaim unused Docker data' \
+              '[Service]' 'Type=oneshot' \
+              'ExecStart=/usr/bin/docker system prune -af --filter until=168h' \
+              'ExecStart=/usr/bin/docker builder prune -af --filter until=168h' \
+              > /etc/systemd/system/docker-prune.service
+            printf '%s\n' \
+              '[Unit]' 'Description=Weekly Docker cleanup' \
+              '[Timer]' 'OnCalendar=weekly' 'Persistent=true' \
+              '[Install]' 'WantedBy=timers.target' \
+              > /etc/systemd/system/docker-prune.timer
+            systemctl daemon-reload
+            systemctl enable --now docker-prune.timer
+          fi
+
+          # The frontend image is built here, and `vite build` under Node needs
+          # headroom. Swap costs disk though, so only add it on a small machine
+          # that can spare the space.
+          ram_mb=$(free -m | awk '/^Mem:/{print $2}')
+          free_mb=$(df -m --output=avail / | tail -1 | tr -d ' ')
+          if swapon --show | grep -q /swapfile; then
+            log "swap already present"
+          elif [ "${ram_mb}" -ge 3000 ]; then
+            log "skipping swap: ${ram_mb}MB RAM is enough"
+          elif [ "$((free_mb - 4096))" -ge 2048 ]; then
+            log "creating 2G swapfile (${ram_mb}MB RAM, ${free_mb}MB free)"
+            dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none
+            chmod 600 /swapfile
+            mkswap /swapfile >/dev/null
+            swapon /swapfile
+            grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+          else
+            log "WARNING: ${ram_mb}MB RAM and only ${free_mb}MB disk free."
+            log "WARNING: the frontend build may be OOM-killed."
+          fi
+
+          mkdir -p "/home/${SUDO_USER:-ubuntu}/astrojobs"
+          chown "${SUDO_USER:-ubuntu}:${SUDO_USER:-ubuntu}" "/home/${SUDO_USER:-ubuntu}/astrojobs"
+          log "done"
+          PROVISION
+
+      - name: Compose .env
+        run: |
+          umask 077
+          case "${FRONTEND_ORIGIN}" in
+            https://*) cookie_secure=true ;;
+            *)         cookie_secure=false ;;
+          esac
+          echo "COOKIE_SECURE=${cookie_secure} (from FRONTEND_ORIGIN)"
+          cat > .env.deploy <<EOF
+          POSTGRES_USER=${POSTGRES_USER}
+          POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+          POSTGRES_DB=${POSTGRES_DB}
+          JWT_SECRET=${JWT_SECRET}
+          JWT_EXPIRES_MINUTES=${JWT_EXPIRES_MINUTES:-10080}
+          COOKIE_SECURE=${cookie_secure}
+          FRONTEND_ORIGIN=${FRONTEND_ORIGIN}
+          ENVIRONMENT=production
+          PINECONE_API_KEY=${PINECONE_API_KEY}
+          PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
+          PINECONE_NAMESPACE_RESUMES=${PINECONE_NAMESPACE_RESUMES:-resumes}
+          PINECONE_NAMESPACE_JOBS=${PINECONE_NAMESPACE_JOBS:-jobs}
+          EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS:-384}
+          AWS_REGION=${AWS_REGION}
+          AWS_S3_BUCKET=${AWS_S3_BUCKET}
+          AWS_S3_ENDPOINT_URL=
+          AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+          AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+          MAX_UPLOAD_BYTES=${MAX_UPLOAD_BYTES:-5242880}
+          VITE_API_URL=
+          COGNITO_USER_POOL_ID=${{ secrets.COGNITO_USER_POOL_ID }}
+          COGNITO_CLIENT_ID=${{ secrets.COGNITO_CLIENT_ID }}
+          VITE_COGNITO_AUTHORITY=${{ secrets.VITE_COGNITO_AUTHORITY }}
+          VITE_COGNITO_CLIENT_ID=${{ secrets.VITE_COGNITO_CLIENT_ID }}
+          VITE_COGNITO_DOMAIN=${{ secrets.VITE_COGNITO_DOMAIN }}
+          VITE_COGNITO_SCOPE=${{ secrets.VITE_COGNITO_SCOPE }}
+          VITE_COGNITO_REDIRECT_PATH=/callback
+          VITE_COGNITO_LOGOUT_PATH=/login
+          VITE_COGNITO_PROVIDERS=${{ secrets.VITE_COGNITO_PROVIDERS }}
+          EOF
+
+      - name: Ship code to host
+        run: |
+          rsync -az --delete \
+            --exclude '.git' --exclude 'node_modules' --exclude '.venv' \
+            --exclude 'dist' --exclude '__pycache__' --exclude '*.pyc' \
+            --exclude '.env' --exclude '.env.deploy' \
+            ./ deploy-target:~/astrojobs/
+          scp .env.deploy deploy-target:~/astrojobs/.env
+          ssh deploy-target 'chmod 600 ~/astrojobs/.env'
+
+      - name: Deploy
+        run: |
+          ssh deploy-target 'bash -s' <<'DEPLOY'
+          set -euo pipefail
+          cd ~/astrojobs
+          # sg docker: the deploy user was just added to the docker group, and
+          # that does not apply to an already-open session.
+          sg docker -c 'docker compose up -d --build --remove-orphans'
+          sg docker -c 'docker compose ps'
+          DEPLOY
+
+      - name: Verify
+        run: |
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://${EC2_HOST}/health" || true)
+            if [ "$code" = "200" ]; then
+              echo "health check passed"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "health check never returned 200 (last: ${code:-none})"
+          ssh deploy-target "cd ~/astrojobs && sg docker -c 'docker compose logs --tail=50'"
+          exit 1

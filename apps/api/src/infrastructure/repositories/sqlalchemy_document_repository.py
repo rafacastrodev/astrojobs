@@ -15,12 +15,16 @@ class SqlAlchemyDocumentRepository:
         doc_type: DocumentType,
         payload: dict,
         source_filename: str,
+        user_id: int | None = None,
+        storage_key: str | None = None,
     ) -> DocumentEntity:
         model = DocumentModel(
             type=doc_type,
             payload=payload,
             source_filename=source_filename,
             status="draft",
+            user_id=user_id,
+            storage_key=storage_key,
         )
         self._session.add(model)
         self._session.commit()
@@ -41,6 +45,17 @@ class SqlAlchemyDocumentRepository:
             query = query.filter(DocumentModel.type == doc_type)
         if status is not None:
             query = query.filter(DocumentModel.status == status)
+        models = query.order_by(DocumentModel.created_at.desc()).all()
+        return [self._to_entity(model) for model in models]
+
+    def list_by_user(
+        self,
+        user_id: int,
+        doc_type: DocumentType | None = None,
+    ) -> Sequence[DocumentEntity]:
+        query = self._session.query(DocumentModel).filter(DocumentModel.user_id == user_id)
+        if doc_type is not None:
+            query = query.filter(DocumentModel.type == doc_type)
         models = query.order_by(DocumentModel.created_at.desc()).all()
         return [self._to_entity(model) for model in models]
 
@@ -96,4 +111,6 @@ class SqlAlchemyDocumentRepository:
             error_message=model.error_message,
             created_at=model.created_at,
             updated_at=model.updated_at,
+            user_id=model.user_id,
+            storage_key=model.storage_key,
         )

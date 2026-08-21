@@ -7,9 +7,11 @@ UserRole = Literal["user", "admin"]
 
 @dataclass
 class UserEntity:
-    id: str
+    id: int
     name: str
     email: str
-    hashed_password: str
+    # None for social-only accounts, which cannot sign in with a password.
+    hashed_password: str | None
     role: UserRole
     created_at: datetime
+    cognito_sub: str | None = None

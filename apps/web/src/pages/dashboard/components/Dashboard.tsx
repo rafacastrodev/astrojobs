@@ -4,6 +4,7 @@ import { Button } from '@/components/Button'
 import { Logo } from '@/components/Logo'
 
 import { useDashboard } from '../hooks/useDashboard'
+import { ResumeSection } from './ResumeSection'
 
 type DashboardProps = {
   name: string
@@ -42,12 +43,7 @@ export const Dashboard = ({ name, role }: DashboardProps) => {
           </div>
         </header>
 
-        <section className="rounded-2xl border border-border bg-card p-8">
-          <h2 className="text-lg font-semibold text-card-foreground">Welcome, {name}</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Your workspace is ready. More dashboard content will land here soon.
-          </p>
-        </section>
+        <ResumeSection />
       </div>
     </div>
   )

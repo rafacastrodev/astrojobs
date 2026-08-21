@@ -1,24 +1,31 @@
-import { useMutation } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useMutation } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 
-import { api, getApiErrorMessage } from '@/utils'
-import { forgotPasswordSchema } from '@/utils/validation/authSchemas'
+import { userServices } from '@/services/userServices'
+import { getApiErrorMessage } from '@/utils'
 import type { ForgotPasswordFormValues } from '@/utils/validation/authSchemas'
+import { forgotPasswordSchema } from '@/utils/validation/authSchemas'
 
 export const useForgotPassword = () => {
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
-  })
-
-  const mutation = useMutation({
-    mutationFn: async (values: ForgotPasswordFormValues) => {
-      const response = await api.post<{ ok: boolean }>('/auth/forgot-password', values)
-      return response.data
+    defaultValues: {
+      email: '',
     },
   })
 
-  const onSubmit = form.handleSubmit((values) => mutation.mutate(values))
+  const mutation = useMutation({
+    mutationFn: userServices.forgotPassword,
+  })
+
+  const onSubmit = form.handleSubmit(async (values) => {
+    try {
+      await mutation.mutateAsync(values)
+    } catch {
+      return
+    }
+  })
 
   return {
     register: form.register,

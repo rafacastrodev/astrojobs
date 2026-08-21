@@ -17,7 +17,13 @@ class LoginUseCase:
 
     def execute(self, email: str, password: str) -> tuple[UserEntity, str]:
         user = self._users.get_by_email(email)
-        if user is None or not self._hasher.verify(password, user.hashed_password):
+        # A social-only account has no password to check; reject it with the
+        # same error so the response never reveals how the account signs in.
+        if (
+            user is None
+            or user.hashed_password is None
+            or not self._hasher.verify(password, user.hashed_password)
+        ):
             raise InvalidCredentialsError()
         token = self._tokens.create_access_token(user.id)
         return user, token

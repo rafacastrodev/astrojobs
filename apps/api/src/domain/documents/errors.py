@@ -6,6 +6,10 @@ class UnsupportedFileError(DocumentServiceError):
     pass
 
 
+class FileTooLargeError(DocumentServiceError):
+    pass
+
+
 class ExtractionError(DocumentServiceError):
     pass
 
@@ -15,4 +19,8 @@ class DocumentNotFoundError(DocumentServiceError):
 
 
 class SyncConfigurationError(DocumentServiceError):
+    pass
+
+
+class StorageError(DocumentServiceError):
     pass

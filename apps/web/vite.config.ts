@@ -12,8 +12,10 @@ const config = defineConfig({
   server: {
     port: 3000,
     proxy: {
+      '/health': 'http://localhost:8000',
       '/auth': 'http://localhost:8000',
       '/admin/documents': 'http://localhost:8000',
+      '/documents': 'http://localhost:8000',
     },
   },
   plugins: [

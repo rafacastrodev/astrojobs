@@ -17,3 +17,5 @@ class DocumentEntity:
     error_message: str | None
     created_at: datetime
     updated_at: datetime
+    user_id: int | None = None
+    storage_key: str | None = None
