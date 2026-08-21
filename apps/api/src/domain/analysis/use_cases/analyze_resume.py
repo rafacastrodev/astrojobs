@@ -46,7 +46,7 @@ class AnalyzeResumeUseCase:
             result = self._analyzer.analyze(resume.payload, job_payload)
         except AnalyzerError:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning(
                 "Resume analysis failed for document %s: %s", resume_document_id, exc
             )

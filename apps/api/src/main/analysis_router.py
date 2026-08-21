@@ -1,7 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from domain.analysis.entities import AnalysisEntity
-from domain.analysis.errors import AnalyzerConfigurationError, AnalyzerError, InvalidJobSourceError
+from domain.analysis.errors import (
+    AnalyzerConfigurationError,
+    AnalyzerError,
+    InvalidJobSourceError,
+)
 from domain.analysis.use_cases.analyze_resume import AnalyzeResumeUseCase
 from domain.analysis.use_cases.list_resume_analyses import ListResumeAnalysesUseCase
 from domain.documents.errors import DocumentNotFoundError
@@ -10,7 +14,10 @@ from infrastructure.analysis.dependencies import (
     get_analyze_resume_use_case,
     get_list_resume_analyses_use_case,
 )
-from infrastructure.schemas.analysis_schemas import AnalysisResponse, AnalyzeResumeRequest
+from infrastructure.schemas.analysis_schemas import (
+    AnalysisResponse,
+    AnalyzeResumeRequest,
+)
 from infrastructure.users.dependencies import get_current_user
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
