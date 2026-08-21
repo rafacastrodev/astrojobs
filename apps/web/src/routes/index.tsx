@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 
 import { LoadingScreen } from '@/components/LoadingScreen'
-import { getCurrentUser } from '@/utils/auth/getCurrentUser.server'
+import { getCurrentUser } from '@/utils/auth/getCurrentUser'
 
 export const Route = createFileRoute('/')({
   beforeLoad: async () => {

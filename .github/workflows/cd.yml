@@ -1,0 +1,33 @@
+name: cd-astrojobs
+
+on:
+  workflow_run:
+    workflows:
+      - ci-astrojobs-workflow
+    types:
+      - completed
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+
+          script: |
+            cd /home/ubuntu/astrojobs
+
+            git pull origin main
+
+            export POSTGRES_USER="${{ secrets.POSTGRES_USER }}"
+            export POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
+            export POSTGRES_DB="${{ secrets.POSTGRES_DB }}"
+
+            docker compose down
+            docker compose up -d --build
