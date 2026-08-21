@@ -10,6 +10,19 @@ class AnalyzeResumeRequest(BaseModel):
     job_text: str | None = None
 
 
+class AnalysisFeedbackRequest(BaseModel):
+    rating: Literal["up", "down"]
+    expected_score: int | None = None
+    comment: str | None = None
+
+
+class AnalysisFeedbackResponse(BaseModel):
+    rating: Literal["up", "down"]
+    expected_score: int | None
+    comment: str | None
+    updated_at: datetime
+
+
 class AnalysisResponse(BaseModel):
     id: int
     resume_document_id: int
@@ -20,3 +33,4 @@ class AnalysisResponse(BaseModel):
     summary: str
     findings: list[str]
     created_at: datetime
+    feedback: AnalysisFeedbackResponse | None = None

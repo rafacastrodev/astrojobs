@@ -1,26 +1,43 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from domain.analysis.entities import AnalysisEntity
+from domain.analysis.entities import AnalysisEntity, AnalysisFeedbackEntity
 from domain.analysis.errors import (
+    AnalysisNotFoundError,
     AnalyzerConfigurationError,
     AnalyzerError,
+    InvalidFeedbackError,
     InvalidJobSourceError,
 )
 from domain.analysis.use_cases.analyze_resume import AnalyzeResumeUseCase
 from domain.analysis.use_cases.list_resume_analyses import ListResumeAnalysesUseCase
+from domain.analysis.use_cases.submit_analysis_feedback import (
+    SubmitAnalysisFeedbackUseCase,
+)
 from domain.documents.errors import DocumentNotFoundError
 from domain.users.entities import UserEntity
 from infrastructure.analysis.dependencies import (
     get_analyze_resume_use_case,
     get_list_resume_analyses_use_case,
+    get_submit_analysis_feedback_use_case,
 )
 from infrastructure.schemas.analysis_schemas import (
+    AnalysisFeedbackRequest,
+    AnalysisFeedbackResponse,
     AnalysisResponse,
     AnalyzeResumeRequest,
 )
 from infrastructure.users.dependencies import get_current_user
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
+
+
+def _to_feedback_response(feedback: AnalysisFeedbackEntity) -> AnalysisFeedbackResponse:
+    return AnalysisFeedbackResponse(
+        rating=feedback.rating,
+        expected_score=feedback.expected_score,
+        comment=feedback.comment,
+        updated_at=feedback.updated_at,
+    )
 
 
 def _to_response(analysis: AnalysisEntity) -> AnalysisResponse:
@@ -34,6 +51,7 @@ def _to_response(analysis: AnalysisEntity) -> AnalysisResponse:
         summary=analysis.summary,
         findings=analysis.findings,
         created_at=analysis.created_at,
+        feedback=_to_feedback_response(analysis.feedback) if analysis.feedback else None,
     )
 
 
@@ -76,3 +94,25 @@ def list_resume_analyses(
     except DocumentNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     return [_to_response(analysis) for analysis in analyses]
+
+
+@router.put("/{analysis_id}/feedback", response_model=AnalysisFeedbackResponse)
+def submit_analysis_feedback(
+    analysis_id: int,
+    body: AnalysisFeedbackRequest,
+    user: UserEntity = Depends(get_current_user),
+    use_case: SubmitAnalysisFeedbackUseCase = Depends(get_submit_analysis_feedback_use_case),
+) -> AnalysisFeedbackResponse:
+    try:
+        feedback = use_case.execute(
+            user_id=user.id,
+            analysis_id=analysis_id,
+            rating=body.rating,
+            expected_score=body.expected_score,
+            comment=body.comment,
+        )
+    except AnalysisNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except InvalidFeedbackError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+    return _to_feedback_response(feedback)

@@ -2,9 +2,10 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from infrastructure.database.session import Base
+from infrastructure.models.analysis_feedback_model import AnalysisFeedbackModel
 
 
 class AnalysisModel(Base):
@@ -24,3 +25,10 @@ class AnalysisModel(Base):
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     findings: Mapped[list[Any]] = mapped_column(JSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    feedback: Mapped[AnalysisFeedbackModel | None] = relationship(
+        AnalysisFeedbackModel,
+        lazy="joined",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )

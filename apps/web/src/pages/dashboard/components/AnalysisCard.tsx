@@ -1,3 +1,4 @@
+import { AnalysisFeedback } from './AnalysisFeedback'
 import type { AnalysisResult } from '../types'
 
 type AnalysisCardProps = {
@@ -23,5 +24,6 @@ export const AnalysisCard = ({ analysis }: AnalysisCardProps) => (
         <li key={index}>• {finding}</li>
       ))}
     </ul>
+    <AnalysisFeedback analysis={analysis} />
   </div>
 )

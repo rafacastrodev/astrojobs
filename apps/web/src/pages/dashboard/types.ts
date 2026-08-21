@@ -10,6 +10,15 @@ export type Resume = {
 
 export type JobSource = 'none' | 'catalog' | 'pasted'
 
+export type FeedbackRating = 'up' | 'down'
+
+export type AnalysisFeedback = {
+  rating: FeedbackRating
+  expected_score: number | null
+  comment: string | null
+  updated_at: string
+}
+
 export type AnalysisResult = {
   id: number
   resume_document_id: number
@@ -20,6 +29,7 @@ export type AnalysisResult = {
   summary: string
   findings: string[]
   created_at: string
+  feedback: AnalysisFeedback | null
 }
 
 export type JobSummary = {

@@ -37,6 +37,20 @@ export const EyeIcon = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
+export const ThumbUpIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...baseProps} className="h-4 w-4" {...props}>
+    <path d="M7 10v10H4a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h3Z" />
+    <path d="M7 10 12 3a2 2 0 0 1 2 2v4h4.5a2 2 0 0 1 2 2.4l-1.3 6.4a2 2 0 0 1-2 1.6H7" />
+  </svg>
+)
+
+export const ThumbDownIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...baseProps} className="h-4 w-4" {...props}>
+    <path d="M7 14V4H4a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h3Z" />
+    <path d="M7 14l5 7a2 2 0 0 0 2-2v-4h4.5a2 2 0 0 0 2-2.4l-1.3-6.4a2 2 0 0 0-2-1.6H7" />
+  </svg>
+)
+
 export const EyeOffIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg {...baseProps} className="h-4 w-4" {...props}>
     <path d="M3 3l18 18" />

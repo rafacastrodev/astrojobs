@@ -2,8 +2,26 @@ from collections.abc import Sequence
 
 from sqlalchemy.orm import Session
 
-from domain.analysis.entities import AnalysisEntity, JobSource
+from domain.analysis.entities import (
+    AnalysisEntity,
+    AnalysisFeedbackEntity,
+    FeedbackRating,
+    JobSource,
+)
+from infrastructure.models.analysis_feedback_model import AnalysisFeedbackModel
 from infrastructure.models.analysis_model import AnalysisModel
+
+
+def _to_feedback_entity(model: AnalysisFeedbackModel) -> AnalysisFeedbackEntity:
+    return AnalysisFeedbackEntity(
+        id=model.id,
+        analysis_id=model.analysis_id,
+        rating=model.rating,  # type: ignore[arg-type]
+        expected_score=model.expected_score,
+        comment=model.comment,
+        created_at=model.created_at,
+        updated_at=model.updated_at,
+    )
 
 
 class SqlAlchemyAnalysisRepository:
@@ -36,6 +54,10 @@ class SqlAlchemyAnalysisRepository:
         self._session.refresh(model)
         return self._to_entity(model)
 
+    def get_by_id(self, analysis_id: int) -> AnalysisEntity | None:
+        model = self._session.get(AnalysisModel, analysis_id)
+        return self._to_entity(model) if model else None
+
     def list_by_resume(
         self, resume_document_id: int, user_id: int
     ) -> Sequence[AnalysisEntity]:
@@ -63,4 +85,34 @@ class SqlAlchemyAnalysisRepository:
             summary=model.summary,
             findings=model.findings,
             created_at=model.created_at,
+            feedback=_to_feedback_entity(model.feedback) if model.feedback else None,
         )
+
+
+class SqlAlchemyAnalysisFeedbackRepository:
+    def __init__(self, session: Session):
+        self._session = session
+
+    def upsert(
+        self,
+        analysis_id: int,
+        rating: FeedbackRating,
+        expected_score: int | None,
+        comment: str | None,
+    ) -> AnalysisFeedbackEntity:
+        model = (
+            self._session.query(AnalysisFeedbackModel)
+            .filter(AnalysisFeedbackModel.analysis_id == analysis_id)
+            .one_or_none()
+        )
+        if model is None:
+            model = AnalysisFeedbackModel(analysis_id=analysis_id)
+            self._session.add(model)
+
+        model.rating = rating
+        model.expected_score = expected_score
+        model.comment = comment
+
+        self._session.commit()
+        self._session.refresh(model)
+        return _to_feedback_entity(model)

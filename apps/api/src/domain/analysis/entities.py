@@ -3,6 +3,18 @@ from datetime import datetime
 from typing import Literal
 
 JobSource = Literal["none", "catalog", "pasted"]
+FeedbackRating = Literal["up", "down"]
+
+
+@dataclass
+class AnalysisFeedbackEntity:
+    id: int | None
+    analysis_id: int
+    rating: FeedbackRating
+    expected_score: int | None
+    comment: str | None
+    created_at: datetime
+    updated_at: datetime
 
 
 @dataclass
@@ -17,3 +29,4 @@ class AnalysisEntity:
     summary: str
     findings: list[str]
     created_at: datetime
+    feedback: AnalysisFeedbackEntity | None = None

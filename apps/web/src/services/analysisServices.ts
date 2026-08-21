@@ -1,4 +1,10 @@
-import type { JobSource, JobSummary, AnalysisResult } from '@/pages/dashboard/types'
+import type {
+  AnalysisFeedback,
+  AnalysisResult,
+  FeedbackRating,
+  JobSource,
+  JobSummary,
+} from '@/pages/dashboard/types'
 import { api } from '@/utils/api/client'
 
 type AnalyzeResumePayload = {
@@ -22,8 +28,23 @@ async function listJobs() {
   return response.data
 }
 
+type FeedbackPayload = {
+  rating: FeedbackRating
+  expected_score?: number
+  comment?: string
+}
+
+async function submitFeedback(analysisId: number, payload: FeedbackPayload) {
+  const response = await api.put<AnalysisFeedback>(
+    `/analysis/${analysisId}/feedback`,
+    payload,
+  )
+  return response.data
+}
+
 export const analysisServices = {
   analyze,
   listAnalyses,
   listJobs,
+  submitFeedback,
 }

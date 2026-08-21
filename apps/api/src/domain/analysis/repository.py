@@ -1,7 +1,12 @@
 from collections.abc import Sequence
 from typing import Protocol
 
-from domain.analysis.entities import AnalysisEntity, JobSource
+from domain.analysis.entities import (
+    AnalysisEntity,
+    AnalysisFeedbackEntity,
+    FeedbackRating,
+    JobSource,
+)
 
 
 class AnalysisRepository(Protocol):
@@ -17,6 +22,18 @@ class AnalysisRepository(Protocol):
         findings: list[str],
     ) -> AnalysisEntity: ...
 
+    def get_by_id(self, analysis_id: int) -> AnalysisEntity | None: ...
+
     def list_by_resume(
         self, resume_document_id: int, user_id: int
     ) -> Sequence[AnalysisEntity]: ...
+
+
+class AnalysisFeedbackRepository(Protocol):
+    def upsert(
+        self,
+        analysis_id: int,
+        rating: FeedbackRating,
+        expected_score: int | None,
+        comment: str | None,
+    ) -> AnalysisFeedbackEntity: ...
