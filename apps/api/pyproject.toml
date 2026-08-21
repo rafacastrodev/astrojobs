@@ -7,9 +7,13 @@ dependencies = [
     "alembic>=1.19.1",
     "bcrypt>=5.0.0",
     "fastapi[standard]>=0.141.1",
+    "numpy>=2",
+    "pinecone>=9.1.0",
     "psycopg[binary]>=3.3.4",
     "pydantic-settings>=2.15.0",
     "pyjwt>=2.13.0",
+    "pypdf>=6.16.1",
+    "python-docx>=1.2.0",
     "sqlalchemy>=2.0.52",
 ]
 

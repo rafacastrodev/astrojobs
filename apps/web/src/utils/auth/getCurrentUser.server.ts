@@ -3,7 +3,13 @@ import { getCookie } from '@tanstack/react-start/server'
 
 const API_URL = import.meta.env.VITE_API_URL as string
 
-type CurrentUser = { id: number; name: string; email: string; created_at: string }
+export type CurrentUser = {
+  id: number
+  name: string
+  email: string
+  role: 'user' | 'admin'
+  created_at: string
+}
 
 export const getCurrentUser = createServerFn({ method: 'GET' }).handler(
   async (): Promise<CurrentUser | null> => {
@@ -17,7 +23,6 @@ export const getCurrentUser = createServerFn({ method: 'GET' }).handler(
       if (!response.ok) return null
       return (await response.json()) as CurrentUser
     } catch {
-      // API unreachable (e.g. not running, or DB not connected yet) — fail safe to "not logged in"
       return null
     }
   },

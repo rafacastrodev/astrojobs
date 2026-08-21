@@ -34,7 +34,13 @@ def _set_auth_cookie(response: Response, token: str) -> None:
 
 
 def _to_user_response(user: UserEntity) -> UserResponse:
-    return UserResponse(id=user.id, name=user.name, email=user.email, created_at=user.created_at)
+    return UserResponse(
+        id=user.id,
+        name=user.name,
+        email=user.email,
+        role=user.role,
+        created_at=user.created_at,
+    )
 
 
 @router.post("/signup", response_model=UserResponse)

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import type { InputHTMLAttributes, Ref } from 'react'
 
-import { Input } from '#/components/Input'
-import { EyeIcon, EyeOffIcon, LockIcon } from '#/components/icons'
+import { Input } from '@/components/Input'
+import { EyeIcon, EyeOffIcon, LockIcon } from '@/components/icons'
 
 type PasswordInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
   ref?: Ref<HTMLInputElement>

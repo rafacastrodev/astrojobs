@@ -5,6 +5,7 @@ from sqlalchemy import engine_from_config, pool
 
 from core.config import settings
 from infrastructure.db.base import Base
+import infrastructure.models.document_model  # noqa: F401
 import infrastructure.models.password_reset_token_model  # noqa: F401
 import infrastructure.models.user_model  # noqa: F401
 

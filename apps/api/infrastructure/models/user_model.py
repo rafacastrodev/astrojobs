@@ -13,6 +13,7 @@ class UserModel(Base):
     name: Mapped[str] = mapped_column(String(120))
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     hashed_password: Mapped[str] = mapped_column(String(255))
+    role: Mapped[str] = mapped_column(String(20), default="user")
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
