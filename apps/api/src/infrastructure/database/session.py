@@ -21,3 +21,9 @@ def get_db() -> Generator[Session, None, None]:
         yield session
     finally:
         session.close()
+
+
+def init_db() -> None:
+    import infrastructure.models  # noqa: F401
+
+    Base.metadata.create_all(bind=engine)

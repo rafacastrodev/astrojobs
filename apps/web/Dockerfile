@@ -13,9 +13,6 @@ COPY . .
 
 WORKDIR /app/apps/web
 
-ARG VITE_API_URL=http://localhost
-ENV VITE_API_URL=$VITE_API_URL
-
 RUN CI=true pnpm run build
 
 FROM nginx:alpine

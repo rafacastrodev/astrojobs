@@ -9,6 +9,13 @@ import { defineConfig } from 'vite'
 const config = defineConfig({
   envDir: fileURLToPath(new URL('../..', import.meta.url)),
   resolve: { tsconfigPaths: true },
+  server: {
+    port: 3000,
+    proxy: {
+      '/auth': 'http://localhost:8000',
+      '/admin/documents': 'http://localhost:8000',
+    },
+  },
   plugins: [
     devtools(),
     tailwindcss(),

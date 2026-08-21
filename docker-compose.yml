@@ -10,12 +10,16 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - astrojobs:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
   frontend:
     build:
       context: .
       dockerfile: ./apps/web/Dockerfile
-      args:
-        VITE_API_URL: http://localhost
     ports:
       - "80:80"
     restart: unless-stopped
@@ -27,18 +31,14 @@ services:
     env_file:
       - .env
     environment:
-      # Inside the Docker network Postgres is reached via the "db" service
-      # name, not localhost/POSTGRES_PORT (those are for host-side access) —
-      # DATABASE_URL is cleared so apps/api builds it from these parts itself
-      # (see apps/api/src/infrastructure/database/config.py).
-      - DATABASE_URL=
-      - POSTGRES_HOST=db
-      - POSTGRES_PORT=5432
-      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "8000:8000"
     depends_on:
-      - db
-    expose:
-      - "8000"
+      db:
+        condition: service_healthy
 
 volumes:
   astrojobs:

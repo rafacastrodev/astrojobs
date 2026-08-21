@@ -1,4 +1,4 @@
-name: ci-astrojobs-workflow
+name: ci-cd
 
 on:
   push:
@@ -6,50 +6,18 @@ on:
       - main
 
 jobs:
-  test-api:
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: ./apps/api
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-
-      - name: Setup Python
-        run: uv python install 3.12
-
-      - name: Install dependencies
-        run: uv sync --locked --all-extras --dev
-
-      - name: Run tests
-        run: uv run pytest
   ci:
     runs-on: ubuntu-latest
-
     env:
       POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build containers
-        run: docker compose build
-
-      - name: Start services
-        run: docker compose up -d
-
-      - name: Show containers
-        run: docker compose ps
+      - name: Start API and database
+        run: docker compose up -d --build db api
 
       - name: Run API tests
         run: docker compose exec -T api uv run pytest
@@ -57,3 +25,25 @@ jobs:
       - name: Stop containers
         if: always()
         run: docker compose down
+
+  deploy:
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/astrojobs
+
+            git pull origin main
+
+            export POSTGRES_USER="${{ secrets.POSTGRES_USER }}"
+            export POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
+            export POSTGRES_DB="${{ secrets.POSTGRES_DB }}"
+
+            docker compose down
+            docker compose up -d --build
