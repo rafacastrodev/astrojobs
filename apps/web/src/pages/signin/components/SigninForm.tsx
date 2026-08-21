@@ -25,7 +25,9 @@ export const SigninForm = ({ onSwitchToSignup }: SigninFormProps) => {
       ) : null}
 
       <div>
-        <label className="mb-1.5 block text-sm text-muted-foreground">Email</label>
+        <label className="mb-1.5 block text-sm text-muted-foreground">
+          Email
+        </label>
         <Input
           placeholder="you@example.com"
           type="email"
@@ -33,15 +35,21 @@ export const SigninForm = ({ onSwitchToSignup }: SigninFormProps) => {
           {...register('email')}
         />
         {errors.email ? (
-          <p className="mt-1 text-sm text-destructive">{errors.email.message}</p>
+          <p className="mt-1 text-sm text-destructive">
+            {errors.email.message}
+          </p>
         ) : null}
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm text-muted-foreground">Password</label>
+        <label className="mb-1.5 block text-sm text-muted-foreground">
+          Password
+        </label>
         <PasswordInput placeholder="••••••••" {...register('password')} />
         {errors.password ? (
-          <p className="mt-1 text-sm text-destructive">{errors.password.message}</p>
+          <p className="mt-1 text-sm text-destructive">
+            {errors.password.message}
+          </p>
         ) : null}
       </div>
 
@@ -68,7 +76,7 @@ export const SigninForm = ({ onSwitchToSignup }: SigninFormProps) => {
         <button
           type="button"
           onClick={onSwitchToSignup}
-          className="text-foreground underline underline-offset-2"
+          className="text-foreground underline underline-offset-2 cursor-pointer"
         >
           Sign up
         </button>

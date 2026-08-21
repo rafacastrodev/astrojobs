@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "cd ./apps/web && pnpm dev",
+    "dev": "pnpm dev:web && cd ../../ && pnpm dev:api",
+    "dev:web": "cd ./apps/web && pnpm dev",
     "dev:api": "cd ./apps/api && uv run fastapi dev main.py",
     "prepare": "husky"
   },
