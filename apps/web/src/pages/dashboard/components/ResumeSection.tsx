@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 
 import { Button } from '@/components/Button'
 
+import { AnalysisPanel } from './AnalysisPanel'
 import { ACCEPTED_EXTENSIONS, useResumes } from '../hooks/useResumes'
 import type { Resume } from '../types'
 
@@ -14,6 +15,7 @@ const STATUS_LABELS: Record<Resume['status'], string> = {
 export const ResumeSection = () => {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDraggingOver, setIsDraggingOver] = useState(false)
+  const [expandedResumeId, setExpandedResumeId] = useState<number | null>(null)
   const {
     resumes,
     isLoading,
@@ -105,25 +107,39 @@ export const ResumeSection = () => {
             {resumes.map((resume) => (
               <li
                 key={resume.id}
-                className="flex flex-col gap-3 rounded-xl border border-border p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="rounded-xl border border-border p-4"
               >
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-card-foreground">
-                    {resume.source_filename}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {STATUS_LABELS[resume.status]} ·{' '}
-                    {new Date(resume.created_at).toLocaleDateString()}
-                  </p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-card-foreground">
+                      {resume.source_filename}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {STATUS_LABELS[resume.status]} ·{' '}
+                      {new Date(resume.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-4">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedResumeId(expandedResumeId === resume.id ? null : resume.id)
+                      }
+                      className="cursor-pointer text-sm text-muted-foreground transition hover:text-card-foreground"
+                    >
+                      {expandedResumeId === resume.id ? 'Fechar' : 'Analisar'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(resume.id)}
+                      disabled={deletingId === resume.id}
+                      className="cursor-pointer text-sm text-muted-foreground transition hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {deletingId === resume.id ? 'Removing…' : 'Remove'}
+                    </button>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(resume.id)}
-                  disabled={deletingId === resume.id}
-                  className="shrink-0 cursor-pointer text-sm text-muted-foreground transition hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {deletingId === resume.id ? 'Removing…' : 'Remove'}
-                </button>
+                {expandedResumeId === resume.id ? <AnalysisPanel resumeId={resume.id} /> : null}
               </li>
             ))}
           </ul>
