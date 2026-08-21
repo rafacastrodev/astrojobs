@@ -10,7 +10,7 @@
   "git": false,
   "install": true,
   "intent": true,
-  "routerOnly": false,
+  "routerOnly": true,
   "version": 1,
   "framework": "react",
   "chosenAddOns": [
