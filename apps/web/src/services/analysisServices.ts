@@ -12,6 +12,11 @@ async function analyze(resumeId: number, payload: AnalyzeResumePayload) {
   return response.data
 }
 
+async function listAnalyses(resumeId: number) {
+  const response = await api.get<AnalysisResult[]>(`/analysis/resumes/${resumeId}`)
+  return response.data
+}
+
 async function listJobs() {
   const response = await api.get<JobSummary[]>('/documents/jobs')
   return response.data
@@ -19,5 +24,6 @@ async function listJobs() {
 
 export const analysisServices = {
   analyze,
+  listAnalyses,
   listJobs,
 }

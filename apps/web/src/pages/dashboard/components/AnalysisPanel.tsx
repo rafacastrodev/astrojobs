@@ -1,5 +1,6 @@
 import { Button } from '@/components/Button'
 
+import { AnalysisCard } from './AnalysisCard'
 import { useResumeAnalysis } from '../hooks/useResumeAnalysis'
 
 type AnalysisPanelProps = {
@@ -21,7 +22,8 @@ export const AnalysisPanel = ({ resumeId }: AnalysisPanelProps) => {
     canSubmit,
     run,
     isAnalyzing,
-    result,
+    analyses,
+    analysesLoading,
     error,
   } = useResumeAnalysis(resumeId)
 
@@ -117,15 +119,15 @@ export const AnalysisPanel = ({ resumeId }: AnalysisPanelProps) => {
         </p>
       ) : null}
 
-      {result ? (
-        <div className="mt-4 rounded-lg border border-border bg-card p-4">
-          <p className="text-2xl font-semibold text-card-foreground">{result.score}/100</p>
-          <p className="mt-1 text-sm text-muted-foreground">{result.summary}</p>
-          <ul className="mt-3 flex flex-col gap-1 text-sm text-card-foreground">
-            {result.findings.map((finding, index) => (
-              <li key={index}>• {finding}</li>
-            ))}
-          </ul>
+      {analysesLoading ? (
+        <p className="mt-4 text-sm text-muted-foreground">Carregando análises anteriores…</p>
+      ) : null}
+
+      {analyses.length > 0 ? (
+        <div className="mt-4 flex flex-col gap-3">
+          {analyses.map((analysis) => (
+            <AnalysisCard key={analysis.id} analysis={analysis} />
+          ))}
         </div>
       ) : null}
     </div>

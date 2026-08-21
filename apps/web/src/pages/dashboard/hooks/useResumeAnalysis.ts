@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
 import { analysisServices } from '@/services/analysisServices'
@@ -10,10 +10,18 @@ type Mode = 'ats' | 'job'
 type JobInputMode = 'catalog' | 'pasted'
 
 export const useResumeAnalysis = (resumeId: number) => {
+  const queryClient = useQueryClient()
   const [mode, setMode] = useState<Mode>('ats')
   const [jobInputMode, setJobInputMode] = useState<JobInputMode>('catalog')
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null)
   const [pastedText, setPastedText] = useState('')
+
+  const analysesQueryKey = ['resume-analyses', resumeId]
+
+  const analyses = useQuery({
+    queryKey: analysesQueryKey,
+    queryFn: () => analysisServices.listAnalyses(resumeId),
+  })
 
   const jobs = useQuery({
     queryKey: ['catalog-jobs'],
@@ -31,6 +39,7 @@ export const useResumeAnalysis = (resumeId: number) => {
         job_text: jobSource === 'pasted' ? pastedText : undefined,
       })
     },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: analysesQueryKey }),
   })
 
   const canSubmit =
@@ -52,7 +61,8 @@ export const useResumeAnalysis = (resumeId: number) => {
     canSubmit,
     run: () => analyze.mutate(),
     isAnalyzing: analyze.isPending,
-    result: analyze.data ?? null,
+    analyses: Array.isArray(analyses.data) ? analyses.data : [],
+    analysesLoading: analyses.isLoading,
     error: analyze.isError ? getApiErrorMessage(analyze.error) : null,
   }
 }
