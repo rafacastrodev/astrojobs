@@ -1,8 +1,8 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 
-import { DashboardStub } from '#/pages/dashboard/components/DashboardStub'
-import { LoadingScreen } from '#/components/LoadingScreen'
-import { getCurrentUser } from '#/utils/auth/getCurrentUser.server'
+import { LoadingScreen } from '@/components/LoadingScreen'
+import { Dashboard } from '@/pages/dashboard/components/Dashboard'
+import { getCurrentUser } from '@/utils/auth/getCurrentUser.server'
 
 export const Route = createFileRoute('/dashboard')({
   beforeLoad: async () => {
@@ -19,5 +19,5 @@ export const Route = createFileRoute('/dashboard')({
 
 function DashboardPage() {
   const { user } = Route.useRouteContext()
-  return <DashboardStub name={user.name} />
+  return <Dashboard name={user.name} role={user.role} />
 }

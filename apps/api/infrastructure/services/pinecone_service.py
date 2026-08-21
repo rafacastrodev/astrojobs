@@ -1,20 +1,21 @@
 from pinecone import Pinecone
 
-from app.core.config import settings
+from core.config import settings
 
 
 class PineconeClient:
     def __init__(self):
-        self.client = Pinecone(
-            api_key=settings.PINECONE_API_KEY
-        )
+        if not settings.pinecone_api_key or not settings.pinecone_index_name:
+            raise RuntimeError(
+                "Pinecone is not configured. Set PINECONE_API_KEY and PINECONE_INDEX_NAME."
+            )
+        self.client = Pinecone(api_key=settings.pinecone_api_key)
+        self.index = self.client.Index(settings.pinecone_index_name)
 
-        self.index = self.client.Index(
-            settings.PINECONE_INDEX_NAME
-        )
+    def upsert(self, vectors: list[dict], namespace: str) -> None:
+        self.index.upsert(vectors=vectors, namespace=namespace)
 
-    def upsert(self, vectors: list[dict]):
-        self.index.upsert(vectors)
-
-    def query(self, query: str, top_k: int = 10) -> list[dict]:
-        return self.index.query(query, top_k=top_k)
+    def delete(self, ids: list[str], namespace: str) -> None:
+        if not ids:
+            return
+        self.index.delete(ids=ids, namespace=namespace)
