@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     pinecone_namespace_jobs: str = "jobs"
     embedding_dimensions: int = 384
 
+    # Cross-region inference profile id, e.g. "us.anthropic.claude-sonnet-4-6".
+    # Verify the current id with: aws bedrock list-foundation-models --region <region>
+    bedrock_model_id: str = ""
+
     aws_region: str = "us-east-1"
     aws_s3_bucket: str = ""
     # Empty means real AWS S3; set it to a LocalStack URL for dev and CI.

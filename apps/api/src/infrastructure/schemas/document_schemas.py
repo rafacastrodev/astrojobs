@@ -26,6 +26,12 @@ class ResumeResponse(BaseModel):
     updated_at: datetime
 
 
+class JobSummaryResponse(BaseModel):
+    id: int
+    title: str
+    source_filename: str
+
+
 class SyncDocumentsRequest(BaseModel):
     ids: list[int] | None = None
 
