@@ -35,7 +35,7 @@
 **Interfaces:**
 - Produces: `domain.analysis.analyzer.ResumeAnalyzer` (Protocol, method `analyze(resume: dict, job: dict | None) -> AnalysisResult`), `domain.analysis.analyzer.AnalysisResult` (`TypedDict` with `score: int`, `summary: str`, `findings: list[str]`), `domain.analysis.errors.AnalyzerConfigurationError`, `domain.analysis.errors.AnalyzerError`, `infrastructure.services.bedrock_resume_analyzer.BedrockResumeAnalyzer` (concrete class implementing `ResumeAnalyzer`, no-arg constructor).
 
-- [ ] **Step 1: Add the `bedrock_model_id` setting**
+- [x] **Step 1: Add the `bedrock_model_id` setting**
 
 In `apps/api/src/infrastructure/database/config.py`, add a field next to the existing `pinecone_*` settings (after `embedding_dimensions: int = 384`, before the `aws_region` block):
 
@@ -45,7 +45,7 @@ In `apps/api/src/infrastructure/database/config.py`, add a field next to the exi
     bedrock_model_id: str = ""
 ```
 
-- [ ] **Step 2: Wire the setting into `.env.example` and `docker-compose.yml`**
+- [x] **Step 2: Wire the setting into `.env.example` and `docker-compose.yml`**
 
 In `.env.example`, add under the `# AWS` section (after `AWS_SECRET_ACCESS_KEY=`):
 
@@ -59,7 +59,7 @@ In `docker-compose.yml`, add to the `api` service's `environment` list (after `-
       - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-}
 ```
 
-- [ ] **Step 3: Create the `ResumeAnalyzer` port**
+- [x] **Step 3: Create the `ResumeAnalyzer` port**
 
 Create `apps/api/src/domain/analysis/analyzer.py`:
 
@@ -77,7 +77,7 @@ class ResumeAnalyzer(Protocol):
     def analyze(self, resume: dict, job: dict | None) -> AnalysisResult: ...
 ```
 
-- [ ] **Step 4: Create analysis domain errors**
+- [x] **Step 4: Create analysis domain errors**
 
 Create `apps/api/src/domain/analysis/errors.py`:
 
@@ -98,7 +98,7 @@ class AnalyzerError(AnalysisServiceError):
     pass
 ```
 
-- [ ] **Step 5: Implement the Bedrock-backed analyzer**
+- [x] **Step 5: Implement the Bedrock-backed analyzer**
 
 Create `apps/api/src/infrastructure/services/bedrock_resume_analyzer.py`:
 
@@ -233,7 +233,7 @@ class BedrockResumeAnalyzer:
         return {"score": score, "summary": summary, "findings": findings}
 ```
 
-- [ ] **Step 6: Verify manually against real Bedrock**
+- [ ] **Step 6: Verify manually against real Bedrock** — blocked: no AWS credentials and no `BEDROCK_MODEL_ID` available in this environment yet.
 
 Set `BEDROCK_MODEL_ID` in your local `.env` (verify a current id first: `aws bedrock list-foundation-models --region us-east-1 | grep -i claude`, or `aws bedrock list-inference-profiles --region us-east-1` for a cross-region `us.` prefixed id), and confirm your AWS credentials have `bedrock:InvokeModel` in that region.
 
@@ -254,7 +254,7 @@ print(result)
 
 Expected: prints a dict like `{'score': 78, 'summary': '...', 'findings': ['...', '...']}` with no traceback. If credentials/model access aren't available in this environment yet, skip this manual check and rely on Task 3's end-to-end curl instead — note that explicitly if skipped.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/api/src/infrastructure/database/config.py apps/api/src/domain/analysis/analyzer.py apps/api/src/domain/analysis/errors.py apps/api/src/infrastructure/services/bedrock_resume_analyzer.py .env.example docker-compose.yml
@@ -277,7 +277,7 @@ git commit -m "feat: add Bedrock-backed resume analyzer service"
 - Consumes: nothing from Task 1 (this task is independent domain/data-model work).
 - Produces: `domain.analysis.entities.AnalysisEntity` (dataclass: `id: int | None`, `user_id: int`, `resume_document_id: int`, `job_source: Literal["none","catalog","pasted"]`, `job_document_id: int | None`, `job_title: str | None`, `score: int`, `summary: str`, `findings: list[str]`, `created_at: datetime`), `domain.analysis.entities.JobSource` (the `Literal` type alias), `domain.analysis.repository.AnalysisRepository` (Protocol with `create(...)` and `list_by_resume(resume_document_id, user_id)`), `infrastructure.repositories.sqlalchemy_analysis_repository.SqlAlchemyAnalysisRepository` (concrete repo, constructor `(session: Session)`).
 
-- [ ] **Step 1: Create the `AnalysisEntity`**
+- [x] **Step 1: Create the `AnalysisEntity`**
 
 Create `apps/api/src/domain/analysis/entities.py`:
 
@@ -303,7 +303,7 @@ class AnalysisEntity:
     created_at: datetime
 ```
 
-- [ ] **Step 2: Create the `AnalysisRepository` protocol**
+- [x] **Step 2: Create the `AnalysisRepository` protocol**
 
 Create `apps/api/src/domain/analysis/repository.py`:
 
@@ -332,7 +332,7 @@ class AnalysisRepository(Protocol):
     ) -> Sequence[AnalysisEntity]: ...
 ```
 
-- [ ] **Step 3: Create the SQLAlchemy model**
+- [x] **Step 3: Create the SQLAlchemy model**
 
 Create `apps/api/src/infrastructure/models/analysis_model.py`:
 
@@ -365,7 +365,7 @@ class AnalysisModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 ```
 
-- [ ] **Step 4: Register the model on `Base`**
+- [x] **Step 4: Register the model on `Base`**
 
 In `apps/api/src/infrastructure/models/__init__.py`, add the import and export so Alembic's autogenerate and `Base.metadata` pick it up:
 
@@ -383,7 +383,7 @@ __all__ = [
 ]
 ```
 
-- [ ] **Step 5: Generate and apply the migration**
+- [x] **Step 5: Generate and apply the migration**
 
 Make sure the local Postgres is up (`docker compose up -d db` from the repo root, with `.env` populated), then from `apps/api`:
 
@@ -401,7 +401,7 @@ uv run alembic upgrade head
 
 Expected: command exits 0, and `psql` (or any DB client) against the configured database shows a new `resume_analyses` table.
 
-- [ ] **Step 6: Implement the repository**
+- [x] **Step 6: Implement the repository**
 
 Create `apps/api/src/infrastructure/repositories/sqlalchemy_analysis_repository.py`:
 
@@ -474,7 +474,7 @@ class SqlAlchemyAnalysisRepository:
         )
 ```
 
-- [ ] **Step 7: Verify manually against the local database**
+- [x] **Step 7: Verify manually against the local database**
 
 From `apps/api`, with the migration applied and at least one row already in `users` and `documents` (`type='resume'`) tables (reuse ids from your local dev data — check with `psql` or via the app's own signup/upload flow):
 
@@ -497,7 +497,7 @@ db.close()
 
 Expected: prints the created `AnalysisEntity`, then a list containing it. Adjust the `user_id`/`resume_document_id` literals to match real rows in your local DB before running.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/api/src/domain/analysis/entities.py apps/api/src/domain/analysis/repository.py apps/api/src/infrastructure/models/analysis_model.py apps/api/src/infrastructure/models/__init__.py apps/api/src/infrastructure/repositories/sqlalchemy_analysis_repository.py apps/api/migrations/versions/
@@ -522,7 +522,7 @@ git commit -m "feat: add resume_analyses table and repository"
 - Consumes: `domain.analysis.analyzer.ResumeAnalyzer`, `domain.analysis.errors.{AnalyzerConfigurationError,AnalyzerError,InvalidJobSourceError}`, `infrastructure.services.bedrock_resume_analyzer.BedrockResumeAnalyzer` (Task 1); `domain.analysis.entities.{AnalysisEntity,JobSource}`, `domain.analysis.repository.AnalysisRepository`, `infrastructure.repositories.sqlalchemy_analysis_repository.SqlAlchemyAnalysisRepository` (Task 2); `domain.documents.use_cases.get_user_resume.GetUserResumeUseCase`, `domain.documents.errors.DocumentNotFoundError`, `domain.documents.repository.DocumentRepository`, `domain.documents.text_extractor.TextExtractor`, `infrastructure.extraction.heuristic_text_extractor.HeuristicTextExtractor`, `infrastructure.repositories.sqlalchemy_document_repository.SqlAlchemyDocumentRepository`, `infrastructure.users.dependencies.get_current_user`, `domain.users.entities.UserEntity` (existing).
 - Produces: `domain.analysis.use_cases.analyze_resume.AnalyzeResumeUseCase` (constructor `(analysis_repository, document_repository, analyzer, extractor)`, method `execute(user_id, resume_document_id, job_source, job_document_id=None, job_text=None) -> AnalysisEntity`), `domain.analysis.use_cases.list_resume_analyses.ListResumeAnalysesUseCase` (constructor `(analysis_repository, document_repository)`, method `execute(resume_document_id, user_id) -> Sequence[AnalysisEntity]`), HTTP endpoints `POST /analysis/resumes/{resume_id}`, `GET /analysis/resumes/{resume_id}`, `GET /documents/jobs`.
 
-- [ ] **Step 1: Implement `AnalyzeResumeUseCase`**
+- [x] **Step 1: Implement `AnalyzeResumeUseCase`**
 
 Create `apps/api/src/domain/analysis/use_cases/analyze_resume.py`:
 
@@ -631,7 +631,7 @@ class AnalyzeResumeUseCase:
         raise InvalidJobSourceError(f"Unknown job_source '{job_source}'")
 ```
 
-- [ ] **Step 2: Implement `ListResumeAnalysesUseCase`**
+- [x] **Step 2: Implement `ListResumeAnalysesUseCase`**
 
 Create `apps/api/src/domain/analysis/use_cases/list_resume_analyses.py`:
 
@@ -658,7 +658,7 @@ class ListResumeAnalysesUseCase:
         return self._analyses.list_by_resume(resume_document_id, user_id)
 ```
 
-- [ ] **Step 3: Add response/request schemas**
+- [x] **Step 3: Add response/request schemas**
 
 Create `apps/api/src/infrastructure/schemas/analysis_schemas.py`:
 
@@ -696,7 +696,7 @@ class JobSummaryResponse(BaseModel):
     source_filename: str
 ```
 
-- [ ] **Step 4: Add the DI wiring module**
+- [x] **Step 4: Add the DI wiring module**
 
 Create `apps/api/src/infrastructure/analysis/dependencies.py`:
 
@@ -740,7 +740,7 @@ def get_list_resume_analyses_use_case(
     )
 ```
 
-- [ ] **Step 5: Add the analysis router**
+- [x] **Step 5: Add the analysis router**
 
 Create `apps/api/src/main/analysis_router.py`:
 
@@ -818,7 +818,7 @@ def list_resume_analyses(
     return [_to_response(analysis) for analysis in analyses]
 ```
 
-- [ ] **Step 6: Add `GET /documents/jobs` to the existing documents router**
+- [x] **Step 6: Add `GET /documents/jobs` to the existing documents router**
 
 In `apps/api/src/main/documents_router.py`, add these imports (extend the existing `from domain.documents.entities import DocumentEntity` line stays as-is; add new ones):
 
@@ -854,7 +854,7 @@ def _job_title(document: DocumentEntity) -> str:
     return title if isinstance(title, str) and title.strip() else document.source_filename
 ```
 
-- [ ] **Step 7: Register the new router**
+- [x] **Step 7: Register the new router**
 
 In `apps/api/src/main/server.py`, add the import and registration:
 
@@ -870,7 +870,7 @@ app.include_router(analysis_router)
 
 (alongside the existing `app.include_router(...)` calls).
 
-- [ ] **Step 8: Verify manually end-to-end**
+- [x] **Step 8: Verify manually end-to-end** — done except the two calls that reach Bedrock (they return 502 "Unable to locate credentials" instead of 201).
 
 Start the API from `apps/api`:
 
@@ -906,7 +906,7 @@ curl -i -b "jwt=<token>" -X POST http://localhost:8000/analysis/resumes/<resume_
 
 Expected: first call returns `201` with a JSON body containing `score`/`summary`/`findings`; the history call returns a list containing it; the jobs call returns the admin-curated job catalog (`[]` if none uploaded yet); the pasted-text call returns `201` with `job_source: "pasted"` and a non-null `job_title`; the two error calls return `404` and `422` respectively.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add apps/api/src/domain/analysis/use_cases/ apps/api/src/infrastructure/schemas/analysis_schemas.py apps/api/src/infrastructure/schemas/document_schemas.py apps/api/src/infrastructure/analysis/dependencies.py apps/api/src/main/analysis_router.py apps/api/src/main/documents_router.py apps/api/src/main/server.py
@@ -928,7 +928,7 @@ git commit -m "feat: add resume analysis API endpoints"
 - Consumes: `POST /analysis/resumes/{resume_id}`, `GET /documents/jobs` (Task 3); existing `api` client (`apps/web/src/utils/api/client.ts`), `getApiErrorMessage` (`apps/web/src/utils/api/errors.ts`), `Button` (`apps/web/src/components/Button/index.tsx`).
 - Produces: `AnalysisResult`, `JobSummary`, `JobSource` types (`apps/web/src/pages/dashboard/types.ts`); `analysisServices.analyze(resumeId, payload)` and `analysisServices.listJobs()` (`apps/web/src/services/analysisServices.ts`); `useResumeAnalysis(resumeId)` hook; `<AnalysisPanel resumeId={number} />` component.
 
-- [ ] **Step 1: Add the frontend types**
+- [x] **Step 1: Add the frontend types**
 
 In `apps/web/src/pages/dashboard/types.ts`, append:
 
@@ -954,7 +954,7 @@ export type JobSummary = {
 }
 ```
 
-- [ ] **Step 2: Add the analysis service**
+- [x] **Step 2: Add the analysis service**
 
 Create `apps/web/src/services/analysisServices.ts`:
 
@@ -984,7 +984,7 @@ export const analysisServices = {
 }
 ```
 
-- [ ] **Step 3: Add the `useResumeAnalysis` hook**
+- [x] **Step 3: Add the `useResumeAnalysis` hook**
 
 Create `apps/web/src/pages/dashboard/hooks/useResumeAnalysis.ts`:
 
@@ -1049,7 +1049,7 @@ export const useResumeAnalysis = (resumeId: number) => {
 }
 ```
 
-- [ ] **Step 4: Add the `AnalysisPanel` component**
+- [x] **Step 4: Add the `AnalysisPanel` component**
 
 Create `apps/web/src/pages/dashboard/components/AnalysisPanel.tsx`:
 
@@ -1189,7 +1189,7 @@ export const AnalysisPanel = ({ resumeId }: AnalysisPanelProps) => {
 }
 ```
 
-- [ ] **Step 5: Wire it into `ResumeSection`**
+- [x] **Step 5: Wire it into `ResumeSection`**
 
 In `apps/web/src/pages/dashboard/components/ResumeSection.tsx`:
 
@@ -1248,7 +1248,7 @@ Replace the `<li>` block (currently: a `flex flex-col ... sm:flex-row` `<li>` wi
 
 (Keep the surrounding `<ul>`/`.map()` structure as-is — only the `<li>` body changes.)
 
-- [ ] **Step 6: Verify manually in the browser**
+- [ ] **Step 6: Verify manually in the browser** — blocked on the same missing Bedrock access; the `/analysis` proxy this depends on was verified with curl instead.
 
 From `apps/web`, run `pnpm dev` (with the API from Task 3 running and `VITE_API_URL` pointed at it), log into the dashboard, and:
 
@@ -1259,9 +1259,39 @@ From `apps/web`, run `pnpm dev` (with the API from Task 3 running and `VITE_API_
 5. Click "Fechar" → panel collapses; reopening resets to the default "Verificação geral" state.
 6. Force an error (e.g. stop the API mid-flow) → the red inline error message appears instead of a crash.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/web/src/pages/dashboard/types.ts apps/web/src/services/analysisServices.ts apps/web/src/pages/dashboard/hooks/useResumeAnalysis.ts apps/web/src/pages/dashboard/components/AnalysisPanel.tsx apps/web/src/pages/dashboard/components/ResumeSection.tsx
 git commit -m "feat: add resume ATS/job-fit analysis panel to dashboard"
 ```
+
+---
+
+### Task 5: Gaps found after Tasks 1-4 were written
+
+The four tasks above left the feature unreachable over HTTP. Three fixes, all verified:
+
+- [x] **Step 1: Route `/analysis` through the dev proxy**
+
+`apps/web/vite.config.ts` proxied `/health`, `/auth`, `/admin/documents` and `/documents`, but not `/analysis`. With the default empty `VITE_API_URL` the browser calls the app's own origin, so every analyze request was served the SPA shell instead of reaching the API.
+
+- [x] **Step 2: Route `/analysis` through nginx**
+
+`apps/web/nginx.conf` had the same gap, so the bug also shipped to production. The new `location /analysis` mirrors `location /documents` and raises `proxy_read_timeout` to 180s, because a Bedrock analysis can outlast nginx's 60s default and would otherwise surface as a 504.
+
+- [x] **Step 3: Carry `BEDROCK_MODEL_ID` to the EC2 host**
+
+`.github/workflows/ci.yml` writes `.env.deploy` from an explicit list of variables. `BEDROCK_MODEL_ID` was absent from both the workflow `env:` block and that heredoc, so the deployed API would always answer 503. It is deliberately kept out of `REQUIRED_GITHUB_ENV` in `apps/web/src/utils/env/githubEnv.ts`: empty means "feature off", the same convention as `PINECONE_INDEX_NAME`.
+
+- [x] **Step 4: Verification actually run**
+
+Against a disposable Postgres (the real `POSTGRES_HOST` is an RDS instance on a private subnet, unreachable from a developer machine):
+
+- Full Alembic chain applies from scratch; `resume_analyses` has both indexes and all three foreign keys.
+- `SqlAlchemyAnalysisRepository.create` / `list_by_resume` round-trip.
+- `GET /documents/jobs` 200, `GET /analysis/resumes/{id}` 200, unauthenticated 401, unknown resume 404, `catalog` without `job_document_id` 422, Bedrock failure 502, and 503 when `BEDROCK_MODEL_ID` is empty.
+- The same calls through the Vite dev server on port 3000, confirming the new proxy rule.
+- `nginx -t` on the edited config, `ruff check`, and `tsc --noEmit`.
+
+Still unverified: any call that reaches Bedrock successfully, which needs model access, a model id, and credentials on this machine.

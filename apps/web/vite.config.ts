@@ -16,6 +16,7 @@ const config = defineConfig({
       '/auth': 'http://localhost:8000',
       '/admin/documents': 'http://localhost:8000',
       '/documents': 'http://localhost:8000',
+      '/analysis': 'http://localhost:8000',
     },
   },
   plugins: [
