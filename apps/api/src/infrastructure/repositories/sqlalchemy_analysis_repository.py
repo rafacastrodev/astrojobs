@@ -72,6 +72,15 @@ class SqlAlchemyAnalysisRepository:
         )
         return [self._to_entity(model) for model in models]
 
+    def list_with_feedback(self) -> Sequence[AnalysisEntity]:
+        models = (
+            self._session.query(AnalysisModel)
+            .join(AnalysisFeedbackModel)
+            .order_by(AnalysisModel.created_at.asc())
+            .all()
+        )
+        return [self._to_entity(model) for model in models]
+
     @staticmethod
     def _to_entity(model: AnalysisModel) -> AnalysisEntity:
         return AnalysisEntity(

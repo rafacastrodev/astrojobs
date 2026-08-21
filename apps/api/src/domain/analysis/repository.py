@@ -28,6 +28,8 @@ class AnalysisRepository(Protocol):
         self, resume_document_id: int, user_id: int
     ) -> Sequence[AnalysisEntity]: ...
 
+    def list_with_feedback(self) -> Sequence[AnalysisEntity]: ...
+
 
 class AnalysisFeedbackRepository(Protocol):
     def upsert(
