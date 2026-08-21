@@ -1,0 +1,41 @@
+altgraph @ file:///AppleInternal/Library/BuildRoots/4~CQH2ugAdEkxx3ZkrZolIWlkoB3pJrxMjVv7CK8s/Library/Caches/com.apple.xbs/TemporaryDirectory.1I3Zwu/Sources/python3/altgraph-0.17.2-py2.py3-none-any.whl
+annotated-types==0.7.0
+argcomplete==3.7.0
+astroid==3.3.11
+certifi==2026.7.22
+charset-normalizer==3.5.1
+click==8.1.8
+dill==0.4.1
+fonttools==4.60.2
+future @ file:///AppleInternal/Library/BuildRoots/4~CQH2ugAdEkxx3ZkrZolIWlkoB3pJrxMjVv7CK8s/Library/Caches/com.apple.xbs/TemporaryDirectory.1I3Zwu/Sources/python3/future-0.18.2-py3-none-any.whl
+idna==3.19
+importlib_metadata==8.7.1
+isort==6.1.0
+macholib @ file:///AppleInternal/Library/BuildRoots/4~CQH2ugAdEkxx3ZkrZolIWlkoB3pJrxMjVv7CK8s/Library/Caches/com.apple.xbs/TemporaryDirectory.1I3Zwu/Sources/python3/macholib-1.15.2-py2.py3-none-any.whl
+mccabe==0.7.0
+numpy==2.0.2
+packaging==24.2
+pandas==2.3.3
+pinecone==7.3.0
+pinecone-plugin-assistant==1.8.0
+pinecone-plugin-interface==0.0.7
+pipx==1.11.1
+platformdirs==4.4.0
+pydantic==2.13.4
+pydantic-settings==2.11.0
+pydantic_core==2.46.4
+pylint==3.3.9
+pypdf==6.14.2
+python-dateutil==2.9.0.post0
+python-dotenv==1.2.1
+pytz==2026.3.post1
+requests==2.32.5
+six @ file:///AppleInternal/Library/BuildRoots/4~CQH2ugAdEkxx3ZkrZolIWlkoB3pJrxMjVv7CK8s/Library/Caches/com.apple.xbs/TemporaryDirectory.1I3Zwu/Sources/python3/six-1.15.0-py2.py3-none-any.whl
+tomli==2.4.1
+tomlkit==0.15.1
+typing-inspection==0.4.2
+typing_extensions==4.16.0
+tzdata==2026.3
+urllib3==2.6.3
+userpath==1.9.2
+zipp==3.23.1

@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+.git
+dist
+**/dist
+.venv
+__pycache__
+**/__pycache__
+.ruff_cache
+.pylintrc
+dist
+*.egg-info
+.env
+.git

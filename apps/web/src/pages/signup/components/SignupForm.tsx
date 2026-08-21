@@ -23,15 +23,23 @@ export const SignupForm = ({ onSwitchToSignin }: SignupFormProps) => {
       ) : null}
 
       <div>
-        <label className="mb-1.5 block text-sm text-muted-foreground">Full name</label>
-        <Input placeholder="Jane Doe" icon={<UserIcon />} {...register('name')} />
+        <label className="mb-1.5 block text-sm text-muted-foreground">
+          Full name
+        </label>
+        <Input
+          placeholder="Jane Doe"
+          icon={<UserIcon />}
+          {...register('name')}
+        />
         {errors.name ? (
           <p className="mt-1 text-sm text-destructive">{errors.name.message}</p>
         ) : null}
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm text-muted-foreground">Email</label>
+        <label className="mb-1.5 block text-sm text-muted-foreground">
+          Email
+        </label>
         <Input
           placeholder="you@example.com"
           type="email"
@@ -39,23 +47,36 @@ export const SignupForm = ({ onSwitchToSignin }: SignupFormProps) => {
           {...register('email')}
         />
         {errors.email ? (
-          <p className="mt-1 text-sm text-destructive">{errors.email.message}</p>
+          <p className="mt-1 text-sm text-destructive">
+            {errors.email.message}
+          </p>
         ) : null}
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm text-muted-foreground">Password</label>
+        <label className="mb-1.5 block text-sm text-muted-foreground">
+          Password
+        </label>
         <PasswordInput placeholder="••••••••" {...register('password')} />
         {errors.password ? (
-          <p className="mt-1 text-sm text-destructive">{errors.password.message}</p>
+          <p className="mt-1 text-sm text-destructive">
+            {errors.password.message}
+          </p>
         ) : null}
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm text-muted-foreground">Confirm password</label>
-        <PasswordInput placeholder="••••••••" {...register('confirmPassword')} />
+        <label className="mb-1.5 block text-sm text-muted-foreground">
+          Confirm password
+        </label>
+        <PasswordInput
+          placeholder="••••••••"
+          {...register('confirmPassword')}
+        />
         {errors.confirmPassword ? (
-          <p className="mt-1 text-sm text-destructive">{errors.confirmPassword.message}</p>
+          <p className="mt-1 text-sm text-destructive">
+            {errors.confirmPassword.message}
+          </p>
         ) : null}
       </div>
 
@@ -77,7 +98,7 @@ export const SignupForm = ({ onSwitchToSignin }: SignupFormProps) => {
         <button
           type="button"
           onClick={onSwitchToSignin}
-          className="text-foreground underline underline-offset-2"
+          className="text-foreground underline underline-offset-2 cursor-pointer"
         >
           Log in
         </button>

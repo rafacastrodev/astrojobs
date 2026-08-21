@@ -7,21 +7,38 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - astrojobs_db_data:/var/lib/postgresql/data
-  nginx:
-    image: nginx:alpine
+      - astrojobs:/var/lib/postgresql/data
+  frontend:
+    build:
+      context: .
+      dockerfile: ./apps/web/Dockerfile
+      args:
+        VITE_API_URL: http://localhost
     ports:
       - "80:80"
-  frontend:
-    build: ./apps/web
-    expose:
-      - "80"
+    restart: unless-stopped
+    depends_on:
+      - api
   api:
     build: ./apps/api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Inside the Docker network Postgres is reached via the "db" service
+      # name, not localhost/POSTGRES_PORT (those are for host-side access) —
+      # DATABASE_URL is cleared so apps/api builds it from these parts itself
+      # (see apps/api/src/infrastructure/database/config.py).
+      - DATABASE_URL=
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost}
+    depends_on:
+      - db
     expose:
       - "8000"
 
 volumes:
-  astrojobs_db_data:
+  astrojobs:

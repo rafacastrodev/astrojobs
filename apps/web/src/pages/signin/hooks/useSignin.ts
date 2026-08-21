@@ -1,6 +1,6 @@
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 
 import {
@@ -9,8 +9,8 @@ import {
   getApiErrorMessage,
   hasApiFieldErrors,
 } from '@/utils'
-import { loginSchema } from '@/utils/validation/authSchemas'
 import type { LoginFormValues } from '@/utils/validation/authSchemas'
+import { loginSchema } from '@/utils/validation/authSchemas'
 
 type User = {
   id: number
