@@ -42,8 +42,16 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Check GitHub env
-        run: node --experimental-strip-types --no-warnings apps/web/src/utils/env/checkGithubEnv.ts
+      - name: Configure AWS Credentials using ODIC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_SECRET_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: arn:aws:iam::956112822284:role/GitHubActions
+
+      - name: Verify Identity
+        run: aws sts get-caller-identity
 
       - name: Start API and database
         run: docker compose up -d --build db api
@@ -62,13 +70,6 @@ jobs:
       - name: Stop containers
         if: always()
         run: docker compose down
-
-  deploy:
-    needs: ci
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
       - name: Set up SSH
         run: |

@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import quote, urlsplit
 
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -11,10 +12,19 @@ _DEV_ENVIRONMENTS = {"development", "dev", "local"}
 _DOCKER_POSTGRES_HOST = "db"
 _LOCAL_POSTGRES_HOST = "localhost"
 _POSTGRES_PORT = 5432
+_LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
 
 
 def _running_in_docker() -> bool:
     return Path("/.dockerenv").exists()
+
+
+def _points_at_loopback(url: str) -> bool:
+    try:
+        return (urlsplit(url).hostname or "") in _LOOPBACK_HOSTS
+    except ValueError:
+        # A malformed URL is not something to silently rewrite.
+        return False
 
 
 class Settings(BaseSettings):
@@ -115,20 +125,33 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "POSTGRES_HOST is required when ENVIRONMENT is not development"
                 )
-            self.database_url = (
-                f"postgresql+psycopg://{self.postgres_user}:{self.postgres_password}"
-                f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
-            )
-        elif in_docker:
-            self.database_url = (
-                f"postgresql+psycopg://{self.postgres_user}:{self.postgres_password}"
-                f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
-            )
+            self.database_url = self._build_database_url()
+        elif in_docker and _points_at_loopback(self.database_url):
+            # Rewrite a developer's localhost URL to the compose service name.
+            # A URL aimed anywhere else — a managed database, for instance — is
+            # left alone: rebuilding it here would silently drop its host and
+            # any query parameters such as sslmode.
+            self.database_url = self._build_database_url()
 
         if self.frontend_origin is None:
             self.frontend_origin = "http://localhost"
 
         return self
+
+    def _build_database_url(self) -> str:
+        """Assembles the URL from the POSTGRES_* parts.
+
+        Credentials are percent-encoded: a generated password containing ``:``,
+        ``?``, ``@`` or ``/`` — which managed services routinely produce —
+        otherwise corrupts the URL, and the failure surfaces as an unrelated
+        "port could not be cast to integer" error.
+        """
+        user = quote(self.postgres_user, safe="")
+        password = quote(self.postgres_password, safe="")
+        return (
+            f"postgresql+psycopg://{user}:{password}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
 
 
 settings = Settings()

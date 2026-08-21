@@ -13,7 +13,10 @@ from infrastructure.database.config import settings
 from infrastructure.database.session import Base
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Alembic stores this in a ConfigParser, which treats "%" as interpolation
+# syntax. A percent-encoded password (managed databases generate passwords
+# with characters that must be encoded) otherwise fails to even load.
+config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
