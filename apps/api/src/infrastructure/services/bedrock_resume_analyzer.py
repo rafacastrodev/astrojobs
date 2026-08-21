@@ -103,7 +103,7 @@ class BedrockResumeAnalyzer:
                 inferenceConfig={"maxTokens": 2048, "temperature": 0.2},
                 toolConfig=_TOOL_CONFIG,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise AnalyzerError(f"Bedrock call failed: {exc}") from exc
 
         if response.get("stopReason") != "tool_use":
