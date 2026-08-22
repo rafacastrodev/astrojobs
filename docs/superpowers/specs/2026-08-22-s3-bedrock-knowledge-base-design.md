@@ -40,7 +40,7 @@ Everything else in the full diagram (Bedrock Agent, VPC/EKS/ALB, Pinecone-side s
 - **IAM role** for the KB (`AmazonBedrockExecutionRoleForKB-astrojobs`) — trust policy for `bedrock.amazonaws.com` with `aws:SourceAccount`/`aws:SourceArn` confused-deputy conditions; `bedrock:InvokeModel` on the Titan Embed v2 model ARN; `s3:GetObject`/`s3:ListBucket` on the bucket; `secretsmanager:GetSecretValue` on the Pinecone secret; `kms:Decrypt`/`kms:GenerateDataKey` on the KMS key.
 - **Guardrail** (`astrojobs-pii-guardrail`) — encrypted with the KMS key, versioned (a numbered version, never DRAFT referenced by anything). PII policy: `ANONYMIZE` for high-risk identifiers (national ID/SSN-equivalent, credit card, bank account numbers); name/email/phone left unmasked since surfacing contact info is the product's purpose. Created but not attached to anything yet.
 - **Lambda** (`sync-ingestion-trigger`) — receives S3 event notifications, calls `bedrock-agent:StartIngestionJob` on the `candidates` data source. No polling, no waiting for completion.
-- **IAM role** for the Lambda — trust for `lambda.amazonaws.com`; `bedrock:StartIngestionJob` scoped to the specific KB+data-source ARN; standard CloudWatch Logs permissions.
+- **IAM role** for the Lambda — trust for `lambda.amazonaws.com`; `bedrock:StartIngestionJob` scoped to the knowledge base's ARN (Bedrock's IAM model has no separate data-source resource type, so this can't be scoped any tighter than the whole KB); standard CloudWatch Logs permissions.
 - **S3 Event Notification** on the bucket — `s3:ObjectCreated:*`, filtered to suffix `.metadata.json` under prefix `resumes/`, targeting the Lambda.
 
 ### Application change (apps/api)
