@@ -66,6 +66,8 @@ class KnowledgeBaseStack(Stack):
             "RecruitersDataSource", "recruiters", "recruiters/"
         )
 
+        self.guardrail, self.guardrail_version = self._build_guardrail()
+
     def _build_kb_role(self) -> iam.Role:
         role = iam.Role(
             self,
@@ -152,3 +154,44 @@ class KnowledgeBaseStack(Stack):
                 ),
             ),
         )
+
+    def _build_guardrail(self) -> tuple[bedrock.CfnGuardrail, bedrock.CfnGuardrailVersion]:
+        guardrail = bedrock.CfnGuardrail(
+            self,
+            "PiiGuardrail",
+            name="astrojobs-pii-guardrail",
+            description=(
+                "Anonymizes high-risk PII (national ID, credit card, bank "
+                "account) in retrieval-augmented responses. Not attached to "
+                "any inference call yet — ready for the future Bedrock Agent."
+            ),
+            kms_key_arn=self.key.key_arn,
+            blocked_input_messaging=(
+                "This request was blocked because it contains sensitive "
+                "information that cannot be processed."
+            ),
+            blocked_outputs_messaging=(
+                "The response was blocked because it contains sensitive "
+                "information that cannot be returned."
+            ),
+            sensitive_information_policy_config=bedrock.CfnGuardrail.SensitiveInformationPolicyConfigProperty(
+                pii_entities_config=[
+                    bedrock.CfnGuardrail.PiiEntityConfigProperty(
+                        type="US_SOCIAL_SECURITY_NUMBER", action="ANONYMIZE"
+                    ),
+                    bedrock.CfnGuardrail.PiiEntityConfigProperty(
+                        type="CREDIT_DEBIT_CARD_NUMBER", action="ANONYMIZE"
+                    ),
+                    bedrock.CfnGuardrail.PiiEntityConfigProperty(
+                        type="US_BANK_ACCOUNT_NUMBER", action="ANONYMIZE"
+                    ),
+                ],
+            ),
+        )
+        version = bedrock.CfnGuardrailVersion(
+            self,
+            "PiiGuardrailVersion",
+            guardrail_identifier=guardrail.attr_guardrail_id,
+            description="Initial version",
+        )
+        return guardrail, version

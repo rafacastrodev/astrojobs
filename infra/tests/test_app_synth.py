@@ -141,3 +141,21 @@ def test_recruiters_data_source_scoped_to_recruiters_prefix():
             ),
         },
     )
+
+
+def test_guardrail_anonymizes_high_risk_pii():
+    template = _synth_kb_stack()
+    template.has_resource_properties(
+        "AWS::Bedrock::Guardrail",
+        {
+            "Name": "astrojobs-pii-guardrail",
+            "SensitiveInformationPolicyConfig": Match.object_like(
+                {
+                    "PiiEntitiesConfig": Match.array_with(
+                        [Match.object_like({"Type": "US_SOCIAL_SECURITY_NUMBER", "Action": "ANONYMIZE"})]
+                    )
+                }
+            ),
+        },
+    )
+    template.resource_count_is("AWS::Bedrock::GuardrailVersion", 1)
