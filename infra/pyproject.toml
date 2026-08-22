@@ -1,0 +1,23 @@
+[project]
+name = "astrojobs-infra"
+version = "0.1.0"
+description = "AstroJobs AWS infrastructure (CDK)"
+requires-python = ">=3.12"
+dependencies = [
+    "aws-cdk-lib>=2.255.0,<3.0.0",
+    "constructs>=10.0.0,<11.0.0",
+    "boto3>=1.35.0",
+    "pinecone>=9.1.0",
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.16.4",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
