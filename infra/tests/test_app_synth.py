@@ -9,6 +9,7 @@ def _synth_kb_stack() -> Template:
     stack = KnowledgeBaseStack(
         app,
         "TestKnowledgeBase",
+        pinecone_connection_string="https://astrojobs-kb-test.svc.us-east-1-aws.pinecone.io",
         env=Environment(account="123456789012", region="us-east-2"),
     )
     return Template.from_stack(stack)
@@ -67,6 +68,26 @@ def test_kb_role_trusts_bedrock_with_confused_deputy_conditions():
                             )
                         ]
                     )
+                }
+            ),
+        },
+    )
+
+
+def test_knowledge_base_uses_pinecone_storage():
+    template = _synth_kb_stack()
+    template.has_resource_properties(
+        "AWS::Bedrock::KnowledgeBase",
+        {
+            "Name": "astrojobs-kb",
+            "StorageConfiguration": Match.object_like(
+                {
+                    "Type": "PINECONE",
+                    "PineconeConfiguration": Match.object_like(
+                        {
+                            "ConnectionString": "https://astrojobs-kb-test.svc.us-east-1-aws.pinecone.io",
+                        }
+                    ),
                 }
             ),
         },

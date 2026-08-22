@@ -1,4 +1,5 @@
 from aws_cdk import Aws, RemovalPolicy, Stack
+from aws_cdk import aws_bedrock as bedrock
 from aws_cdk import aws_iam as iam
 from aws_cdk import aws_kms as kms
 from aws_cdk import aws_s3 as s3
@@ -10,7 +11,13 @@ EMBEDDING_MODEL_ID = "amazon.titan-embed-text-v2:0"
 
 
 class KnowledgeBaseStack(Stack):
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+    def __init__(
+        self,
+        scope: Construct,
+        construct_id: str,
+        pinecone_connection_string: str,
+        **kwargs,
+    ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         self.key = kms.Key(
@@ -50,6 +57,8 @@ class KnowledgeBaseStack(Stack):
 
         self.kb_role = self._build_kb_role()
 
+        self.knowledge_base = self._build_knowledge_base(pinecone_connection_string)
+
     def _build_kb_role(self) -> iam.Role:
         role = iam.Role(
             self,
@@ -80,3 +89,33 @@ class KnowledgeBaseStack(Stack):
         self.pinecone_secret.grant_read(role)
         self.key.grant_decrypt(role)
         return role
+
+    def _build_knowledge_base(
+        self, pinecone_connection_string: str
+    ) -> bedrock.CfnKnowledgeBase:
+        return bedrock.CfnKnowledgeBase(
+            self,
+            "KnowledgeBase",
+            name="astrojobs-kb",
+            description="Candidate and recruiter profiles for semantic search",
+            role_arn=self.kb_role.role_arn,
+            knowledge_base_configuration=bedrock.CfnKnowledgeBase.KnowledgeBaseConfigurationProperty(
+                type="VECTOR",
+                vector_knowledge_base_configuration=bedrock.CfnKnowledgeBase.VectorKnowledgeBaseConfigurationProperty(
+                    embedding_model_arn=(
+                        f"arn:{Aws.PARTITION}:bedrock:{Aws.REGION}::foundation-model/{EMBEDDING_MODEL_ID}"
+                    ),
+                ),
+            ),
+            storage_configuration=bedrock.CfnKnowledgeBase.StorageConfigurationProperty(
+                type="PINECONE",
+                pinecone_configuration=bedrock.CfnKnowledgeBase.PineconeConfigurationProperty(
+                    connection_string=pinecone_connection_string,
+                    credentials_secret_arn=self.pinecone_secret.secret_arn,
+                    field_mapping=bedrock.CfnKnowledgeBase.PineconeFieldMappingProperty(
+                        text_field="text",
+                        metadata_field="metadata",
+                    ),
+                ),
+            ),
+        )
