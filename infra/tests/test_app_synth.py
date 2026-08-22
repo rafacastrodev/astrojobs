@@ -92,3 +92,52 @@ def test_knowledge_base_uses_pinecone_storage():
             ),
         },
     )
+
+
+def test_candidates_data_source_scoped_to_resumes_prefix():
+    template = _synth_kb_stack()
+    template.has_resource_properties(
+        "AWS::Bedrock::DataSource",
+        {
+            "Name": "candidates",
+            "DataSourceConfiguration": Match.object_like(
+                {
+                    "Type": "S3",
+                    "S3Configuration": Match.object_like(
+                        {"InclusionPrefixes": ["resumes/"]}
+                    ),
+                }
+            ),
+            "VectorIngestionConfiguration": Match.object_like(
+                {
+                    "ChunkingConfiguration": Match.object_like(
+                        {
+                            "ChunkingStrategy": "FIXED_SIZE",
+                            "FixedSizeChunkingConfiguration": {
+                                "MaxTokens": 300,
+                                "OverlapPercentage": 15,
+                            },
+                        }
+                    )
+                }
+            ),
+        },
+    )
+
+
+def test_recruiters_data_source_scoped_to_recruiters_prefix():
+    template = _synth_kb_stack()
+    template.has_resource_properties(
+        "AWS::Bedrock::DataSource",
+        {
+            "Name": "recruiters",
+            "DataSourceConfiguration": Match.object_like(
+                {
+                    "Type": "S3",
+                    "S3Configuration": Match.object_like(
+                        {"InclusionPrefixes": ["recruiters/"]}
+                    ),
+                }
+            ),
+        },
+    )

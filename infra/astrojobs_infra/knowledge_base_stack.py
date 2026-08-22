@@ -59,6 +59,13 @@ class KnowledgeBaseStack(Stack):
 
         self.knowledge_base = self._build_knowledge_base(pinecone_connection_string)
 
+        self.candidates_data_source = self._build_data_source(
+            "CandidatesDataSource", "candidates", "resumes/"
+        )
+        self.recruiters_data_source = self._build_data_source(
+            "RecruitersDataSource", "recruiters", "recruiters/"
+        )
+
     def _build_kb_role(self) -> iam.Role:
         role = iam.Role(
             self,
@@ -115,6 +122,32 @@ class KnowledgeBaseStack(Stack):
                     field_mapping=bedrock.CfnKnowledgeBase.PineconeFieldMappingProperty(
                         text_field="text",
                         metadata_field="metadata",
+                    ),
+                ),
+            ),
+        )
+
+    def _build_data_source(
+        self, construct_id: str, name: str, prefix: str
+    ) -> bedrock.CfnDataSource:
+        return bedrock.CfnDataSource(
+            self,
+            construct_id,
+            name=name,
+            knowledge_base_id=self.knowledge_base.attr_knowledge_base_id,
+            data_source_configuration=bedrock.CfnDataSource.DataSourceConfigurationProperty(
+                type="S3",
+                s3_configuration=bedrock.CfnDataSource.S3DataSourceConfigurationProperty(
+                    bucket_arn=self.bucket.bucket_arn,
+                    inclusion_prefixes=[prefix],
+                ),
+            ),
+            vector_ingestion_configuration=bedrock.CfnDataSource.VectorIngestionConfigurationProperty(
+                chunking_configuration=bedrock.CfnDataSource.ChunkingConfigurationProperty(
+                    chunking_strategy="FIXED_SIZE",
+                    fixed_size_chunking_configuration=bedrock.CfnDataSource.FixedSizeChunkingConfigurationProperty(
+                        max_tokens=300,
+                        overlap_percentage=15,
                     ),
                 ),
             ),
