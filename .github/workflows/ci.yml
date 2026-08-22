@@ -203,16 +203,6 @@ jobs:
           AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
           BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-}
           MAX_UPLOAD_BYTES=${MAX_UPLOAD_BYTES:-5242880}
-          VITE_API_URL=
-          COGNITO_USER_POOL_ID=${{ secrets.COGNITO_USER_POOL_ID }}
-          COGNITO_CLIENT_ID=${{ secrets.COGNITO_CLIENT_ID }}
-          VITE_COGNITO_AUTHORITY=${{ secrets.VITE_COGNITO_AUTHORITY }}
-          VITE_COGNITO_CLIENT_ID=${{ secrets.VITE_COGNITO_CLIENT_ID }}
-          VITE_COGNITO_DOMAIN=${{ secrets.VITE_COGNITO_DOMAIN }}
-          VITE_COGNITO_SCOPE=${{ secrets.VITE_COGNITO_SCOPE }}
-          VITE_COGNITO_REDIRECT_PATH=/callback
-          VITE_COGNITO_LOGOUT_PATH=/login
-          VITE_COGNITO_PROVIDERS=${{ secrets.VITE_COGNITO_PROVIDERS }}
           EOF
 
       - name: Ship code to host

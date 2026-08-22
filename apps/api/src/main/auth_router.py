@@ -3,13 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from domain.users.entities import UserEntity
 from domain.users.errors import (
     EmailAlreadyExistsError,
-    EmailNotVerifiedError,
-    InvalidCognitoTokenError,
     InvalidCredentialsError,
     InvalidResetTokenError,
-)
-from domain.users.use_cases.authenticate_with_cognito import (
-    AuthenticateWithCognitoUseCase,
 )
 from domain.users.use_cases.login import LoginUseCase
 from domain.users.use_cases.request_password_reset import RequestPasswordResetUseCase
@@ -17,7 +12,6 @@ from domain.users.use_cases.reset_password import ResetPasswordUseCase
 from domain.users.use_cases.signup import SignupUseCase
 from infrastructure.database.config import settings
 from infrastructure.schemas.user_schemas import (
-    CognitoLoginRequest,
     ForgotPasswordRequest,
     LoginRequest,
     ResetPasswordRequest,
@@ -26,7 +20,6 @@ from infrastructure.schemas.user_schemas import (
 )
 from infrastructure.users.dependencies import (
     COOKIE_NAME,
-    get_authenticate_with_cognito_use_case,
     get_current_user,
     get_login_use_case,
     get_request_password_reset_use_case,
@@ -89,29 +82,6 @@ def login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
         )
-    _set_auth_cookie(response, token)
-    return _to_user_response(user)
-
-
-@router.post("/cognito", response_model=UserResponse)
-def login_with_cognito(
-    body: CognitoLoginRequest,
-    response: Response,
-    use_case: AuthenticateWithCognitoUseCase = Depends(
-        get_authenticate_with_cognito_use_case
-    ),
-) -> UserResponse:
-    """Exchanges a verified Cognito ID token for the app's own session cookie."""
-    try:
-        user, token = use_case.execute(body.id_token)
-    except InvalidCognitoTokenError:
-        # The reason stays in the logs; echoing it back only helps someone
-        # probing which part of the token failed validation.
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid social sign-in"
-        )
-    except EmailNotVerifiedError as exc:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc))
     _set_auth_cookie(response, token)
     return _to_user_response(user)
 

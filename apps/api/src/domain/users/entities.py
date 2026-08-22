@@ -14,4 +14,3 @@ class UserEntity:
     hashed_password: str | None
     role: UserRole
     created_at: datetime
-    cognito_sub: str | None = None

@@ -22,12 +22,6 @@ async function signUp({
   return response.data
 }
 
-/** Trades a verified Cognito ID token for the app's own session cookie. */
-async function signInWithCognito(idToken: string) {
-  const response = await api.post<User>('/auth/cognito', { id_token: idToken })
-  return response.data
-}
-
 async function signOut() {
   const response = await api.post<{ ok: boolean }>('/auth/logout')
   return response.data
@@ -60,7 +54,6 @@ async function resetPassword(token: string, values: ResetPasswordFormValues) {
 
 export const userServices = {
   signIn,
-  signInWithCognito,
   signUp,
   signOut,
   getCurrentUser,

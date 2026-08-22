@@ -1,3 +1,9 @@
-import { parseEnv } from './parseEnv'
+import z from 'zod'
 
-export const env = parseEnv(import.meta.env)
+const envSchema = z.object({
+  API_URL: z.string(),
+})
+
+export const env = envSchema.parse({
+  API_URL: import.meta.env.VITE_API_URL,
+})

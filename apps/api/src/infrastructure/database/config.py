@@ -65,30 +65,6 @@ class Settings(BaseSettings):
     aws_secret_access_key: str = ""
     max_upload_bytes: int = 5 * 1024 * 1024
 
-    # Social sign-in. Empty means the /auth/cognito endpoint stays unavailable.
-    cognito_user_pool_id: str = ""
-    cognito_client_id: str = ""
-
-    @property
-    def cognito_region(self) -> str:
-        """Pool ids are '<region>_<suffix>', so the region needs no own setting."""
-        return self.cognito_user_pool_id.split("_", 1)[0]
-
-    @property
-    def cognito_issuer(self) -> str:
-        return (
-            f"https://cognito-idp.{self.cognito_region}.amazonaws.com/"
-            f"{self.cognito_user_pool_id}"
-        )
-
-    @property
-    def cognito_jwks_url(self) -> str:
-        return f"{self.cognito_issuer}/.well-known/jwks.json"
-
-    @property
-    def cognito_enabled(self) -> bool:
-        return bool(self.cognito_user_pool_id and self.cognito_client_id)
-
     @field_validator("database_url", "postgres_host", "frontend_origin", mode="before")
     @classmethod
     def _empty_str_to_none(cls, value: object) -> object:
@@ -130,6 +106,7 @@ class Settings(BaseSettings):
                     "POSTGRES_HOST is required when ENVIRONMENT is not development"
                 )
             self.database_url = self._build_database_url()
+        # pyrefly: ignore [bad-argument-type]
         elif in_docker and _points_at_loopback(self.database_url):
             # Rewrite a developer's localhost URL to the compose service name.
             # A URL aimed anywhere else — a managed database, for instance — is
