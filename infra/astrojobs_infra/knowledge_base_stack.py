@@ -1,6 +1,7 @@
 from aws_cdk import RemovalPolicy, Stack
 from aws_cdk import aws_kms as kms
 from aws_cdk import aws_s3 as s3
+from aws_cdk import aws_secretsmanager as secretsmanager
 from constructs import Construct
 
 BUCKET_NAME = "astrojobs-resumes"
@@ -31,4 +32,16 @@ class KnowledgeBaseStack(Stack):
             enforce_ssl=True,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
             removal_policy=RemovalPolicy.RETAIN,
+        )
+
+        self.pinecone_secret = secretsmanager.Secret(
+            self,
+            "PineconeSecret",
+            secret_name="astrojobs/pinecone-kb",
+            description=(
+                "Pinecone connection info for the astrojobs-kb index. This "
+                "shell is populated manually by "
+                "scripts/bootstrap_pinecone_index.py — CDK only creates it."
+            ),
+            encryption_key=self.key,
         )

@@ -37,3 +37,11 @@ def test_bucket_uses_kms_and_blocks_public_access():
         "AWS::KMS::Key",
         {"EnableKeyRotation": True},
     )
+
+
+def test_pinecone_secret_is_encrypted_with_the_kms_key():
+    template = _synth_kb_stack()
+    template.has_resource_properties(
+        "AWS::SecretsManager::Secret",
+        {"Name": "astrojobs/pinecone-kb"},
+    )
