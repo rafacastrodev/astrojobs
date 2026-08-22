@@ -38,13 +38,68 @@ def test_bucket_uses_kms_and_blocks_public_access():
         "AWS::KMS::Key",
         {"EnableKeyRotation": True},
     )
-
-
-def test_pinecone_secret_is_encrypted_with_the_kms_key():
-    template = _synth_kb_stack()
     template.has_resource_properties(
-        "AWS::SecretsManager::Secret",
-        {"Name": "astrojobs/pinecone-kb"},
+        "AWS::S3::Bucket",
+        {
+            "BucketEncryption": {
+                "ServerSideEncryptionConfiguration": [
+                    {
+                        "ServerSideEncryptionByDefault": {
+                            "SSEAlgorithm": "aws:kms",
+                            "KMSMasterKeyID": {
+                                "Fn::GetAtt": [Match.string_like_regexp("KnowledgeBaseKey.*"), "Arn"]
+                            },
+                        }
+                    }
+                ]
+            }
+        },
+    )
+    template.has_resource_properties(
+        "AWS::S3::BucketPolicy",
+        Match.object_like(
+            {
+                "PolicyDocument": Match.object_like(
+                    {
+                        "Statement": Match.array_with(
+                            [
+                                Match.object_like(
+                                    {
+                                        "Effect": "Deny",
+                                        "Condition": {
+                                            "Bool": {"aws:SecureTransport": "false"}
+                                        },
+                                    }
+                                )
+                            ]
+                        )
+                    }
+                )
+            }
+        ),
+    )
+
+
+def test_pinecone_secret_is_imported_not_created():
+    """The secret is created out-of-band by the bootstrap script before
+    `cdk deploy`, because the KB validates its Pinecone credentials at
+    deploy time. CDK only imports it, so no Secret resource is synthesized.
+    """
+    template = _synth_kb_stack()
+    template.resource_count_is("AWS::SecretsManager::Secret", 0)
+    template.has_resource_properties(
+        "AWS::Bedrock::KnowledgeBase",
+        Match.object_like(
+            {
+                "StorageConfiguration": Match.object_like(
+                    {
+                        "PineconeConfiguration": Match.object_like(
+                            {"CredentialsSecretArn": Match.any_value()}
+                        )
+                    }
+                )
+            }
+        ),
     )
 
 
@@ -80,6 +135,19 @@ def test_knowledge_base_uses_pinecone_storage():
         "AWS::Bedrock::KnowledgeBase",
         {
             "Name": "astrojobs-kb",
+            "KnowledgeBaseConfiguration": Match.object_like(
+                {
+                    "VectorKnowledgeBaseConfiguration": Match.object_like(
+                        {
+                            "EmbeddingModelConfiguration": {
+                                "BedrockEmbeddingModelConfiguration": {
+                                    "Dimensions": 1024
+                                }
+                            }
+                        }
+                    )
+                }
+            ),
             "StorageConfiguration": Match.object_like(
                 {
                     "Type": "PINECONE",
@@ -121,6 +189,11 @@ def test_candidates_data_source_scoped_to_resumes_prefix():
                     )
                 }
             ),
+            "ServerSideEncryptionConfiguration": {
+                "KmsKeyArn": {
+                    "Fn::GetAtt": [Match.string_like_regexp("KnowledgeBaseKey.*"), "Arn"]
+                }
+            },
         },
     )
 
@@ -161,7 +234,12 @@ def test_guardrail_anonymizes_high_risk_pii():
     template.resource_count_is("AWS::Bedrock::GuardrailVersion", 1)
 
 
-def test_lambda_has_ingestion_permission_scoped_to_the_data_source():
+def test_lambda_has_ingestion_permission_scoped_to_the_knowledge_base():
+    """`bedrock:StartIngestionJob` must be scoped to the knowledge-base ARN.
+
+    There is no `.../data-source/{id}` ARN resource type in Bedrock's IAM
+    model, so scoping to one would deny every ingestion call.
+    """
     template = _synth_kb_stack()
     template.has_resource_properties(
         "AWS::Lambda::Function",
@@ -176,7 +254,16 @@ def test_lambda_has_ingestion_permission_scoped_to_the_data_source():
                         "Statement": Match.array_with(
                             [
                                 Match.object_like(
-                                    {"Action": "bedrock:StartIngestionJob"}
+                                    {
+                                        "Action": "bedrock:StartIngestionJob",
+                                        "Effect": "Allow",
+                                        "Resource": {
+                                            "Fn::GetAtt": [
+                                                "KnowledgeBase",
+                                                "KnowledgeBaseArn",
+                                            ]
+                                        },
+                                    }
                                 )
                             ]
                         )
@@ -185,7 +272,40 @@ def test_lambda_has_ingestion_permission_scoped_to_the_data_source():
             }
         ),
     )
+
+
+def test_bucket_notification_filters_on_metadata_sidecars_under_resumes():
+    template = _synth_kb_stack()
     template.has_resource_properties(
         "Custom::S3BucketNotifications",
-        Match.object_like({"BucketName": {"Ref": Match.any_value()}}),
+        Match.object_like(
+            {
+                "BucketName": {"Ref": Match.any_value()},
+                "NotificationConfiguration": {
+                    "LambdaFunctionConfigurations": [
+                        Match.object_like(
+                            {
+                                "Events": ["s3:ObjectCreated:*"],
+                                "Filter": {
+                                    "Key": {
+                                        "FilterRules": Match.array_with(
+                                            [
+                                                {
+                                                    "Name": "suffix",
+                                                    "Value": ".metadata.json",
+                                                },
+                                                {
+                                                    "Name": "prefix",
+                                                    "Value": "resumes/",
+                                                },
+                                            ]
+                                        )
+                                    }
+                                },
+                            }
+                        )
+                    ]
+                },
+            }
+        ),
     )

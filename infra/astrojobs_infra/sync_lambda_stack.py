@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from aws_cdk import Duration
 from aws_cdk import aws_bedrock as bedrock
 from aws_cdk import aws_iam as iam
@@ -24,7 +26,9 @@ class SyncLambdaConstruct(Construct):
             function_name="sync-ingestion-trigger",
             runtime=lambda_.Runtime.PYTHON_3_12,
             handler="handler.handler",
-            code=lambda_.Code.from_asset("lambda/sync_ingestion"),
+            code=lambda_.Code.from_asset(
+                str(Path(__file__).resolve().parents[1] / "lambda" / "sync_ingestion")
+            ),
             timeout=Duration.seconds(30),
             environment={
                 "KNOWLEDGE_BASE_ID": knowledge_base.attr_knowledge_base_id,
@@ -32,14 +36,10 @@ class SyncLambdaConstruct(Construct):
             },
         )
 
-        data_source_arn = (
-            f"{knowledge_base.attr_knowledge_base_arn}/data-source/"
-            f"{candidates_data_source.attr_data_source_id}"
-        )
         function.add_to_role_policy(
             iam.PolicyStatement(
                 actions=["bedrock:StartIngestionJob"],
-                resources=[data_source_arn],
+                resources=[knowledge_base.attr_knowledge_base_arn],
             )
         )
 

@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lambda" / "sync_in
 os.environ["KNOWLEDGE_BASE_ID"] = "kb-test"
 os.environ["CANDIDATES_DATA_SOURCE_ID"] = "ds-test"
 
-import handler  # noqa: E402
+import handler
 
 
 def _event():

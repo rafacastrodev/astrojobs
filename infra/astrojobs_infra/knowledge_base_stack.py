@@ -10,6 +10,9 @@ from astrojobs_infra.sync_lambda_stack import SyncLambdaConstruct
 
 BUCKET_NAME = "astrojobs-resumes"
 EMBEDDING_MODEL_ID = "amazon.titan-embed-text-v2:0"
+# Must match the Pinecone index dimension created by
+# scripts/bootstrap_pinecone_index.py.
+EMBEDDING_DIMENSIONS = 1024
 
 
 class KnowledgeBaseStack(Stack):
@@ -45,16 +48,12 @@ class KnowledgeBaseStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
         )
 
-        self.pinecone_secret = secretsmanager.Secret(
-            self,
-            "PineconeSecret",
-            secret_name="astrojobs/pinecone-kb",
-            description=(
-                "Pinecone connection info for the astrojobs-kb index. This "
-                "shell is populated manually by "
-                "scripts/bootstrap_pinecone_index.py — CDK only creates it."
-            ),
-            encryption_key=self.key,
+        # Created and populated out-of-band by
+        # scripts/bootstrap_pinecone_index.py before `cdk deploy`: the KB
+        # validates its Pinecone credentials at stack-deploy time, so the
+        # secret must already hold the API key by then.
+        self.pinecone_secret = secretsmanager.Secret.from_secret_name_v2(
+            self, "PineconeSecret", "astrojobs/pinecone-kb"
         )
 
         self.kb_role = self._build_kb_role()
@@ -106,7 +105,10 @@ class KnowledgeBaseStack(Stack):
         )
         self.bucket.grant_read(role)
         self.pinecone_secret.grant_read(role)
-        self.key.grant_decrypt(role)
+        # Ingestion writes transient data encrypted with this key, which needs
+        # data-key generation on top of the decrypt that grant_read already
+        # covers for reading bucket objects.
+        self.key.grant_encrypt_decrypt(role)
         return role
 
     def _build_knowledge_base(
@@ -123,6 +125,11 @@ class KnowledgeBaseStack(Stack):
                 vector_knowledge_base_configuration=bedrock.CfnKnowledgeBase.VectorKnowledgeBaseConfigurationProperty(
                     embedding_model_arn=(
                         f"arn:{Aws.PARTITION}:bedrock:{Aws.REGION}::foundation-model/{EMBEDDING_MODEL_ID}"
+                    ),
+                    embedding_model_configuration=bedrock.CfnKnowledgeBase.EmbeddingModelConfigurationProperty(
+                        bedrock_embedding_model_configuration=bedrock.CfnKnowledgeBase.BedrockEmbeddingModelConfigurationProperty(
+                            dimensions=EMBEDDING_DIMENSIONS,
+                        ),
                     ),
                 ),
             ),
@@ -147,6 +154,9 @@ class KnowledgeBaseStack(Stack):
             construct_id,
             name=name,
             knowledge_base_id=self.knowledge_base.attr_knowledge_base_id,
+            server_side_encryption_configuration=bedrock.CfnDataSource.ServerSideEncryptionConfigurationProperty(
+                kms_key_arn=self.key.key_arn,
+            ),
             data_source_configuration=bedrock.CfnDataSource.DataSourceConfigurationProperty(
                 type="S3",
                 s3_configuration=bedrock.CfnDataSource.S3DataSourceConfigurationProperty(
