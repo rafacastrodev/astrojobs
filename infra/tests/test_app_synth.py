@@ -159,3 +159,33 @@ def test_guardrail_anonymizes_high_risk_pii():
         },
     )
     template.resource_count_is("AWS::Bedrock::GuardrailVersion", 1)
+
+
+def test_lambda_has_ingestion_permission_scoped_to_the_data_source():
+    template = _synth_kb_stack()
+    template.has_resource_properties(
+        "AWS::Lambda::Function",
+        {"Runtime": "python3.12", "Handler": "handler.handler"},
+    )
+    template.has_resource_properties(
+        "AWS::IAM::Policy",
+        Match.object_like(
+            {
+                "PolicyDocument": Match.object_like(
+                    {
+                        "Statement": Match.array_with(
+                            [
+                                Match.object_like(
+                                    {"Action": "bedrock:StartIngestionJob"}
+                                )
+                            ]
+                        )
+                    }
+                )
+            }
+        ),
+    )
+    template.has_resource_properties(
+        "Custom::S3BucketNotifications",
+        Match.object_like({"BucketName": {"Ref": Match.any_value()}}),
+    )

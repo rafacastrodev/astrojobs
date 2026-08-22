@@ -6,6 +6,8 @@ from aws_cdk import aws_s3 as s3
 from aws_cdk import aws_secretsmanager as secretsmanager
 from constructs import Construct
 
+from astrojobs_infra.sync_lambda_stack import SyncLambdaConstruct
+
 BUCKET_NAME = "astrojobs-resumes"
 EMBEDDING_MODEL_ID = "amazon.titan-embed-text-v2:0"
 
@@ -67,6 +69,14 @@ class KnowledgeBaseStack(Stack):
         )
 
         self.guardrail, self.guardrail_version = self._build_guardrail()
+
+        self.sync_lambda = SyncLambdaConstruct(
+            self,
+            "SyncLambda",
+            bucket=self.bucket,
+            knowledge_base=self.knowledge_base,
+            candidates_data_source=self.candidates_data_source,
+        )
 
     def _build_kb_role(self) -> iam.Role:
         role = iam.Role(
