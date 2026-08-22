@@ -1,3 +1,4 @@
+import json
 import logging
 import uuid
 from pathlib import Path
@@ -79,7 +80,7 @@ class UploadResumeUseCase:
             raise StorageError(f"Could not store the uploaded file: {exc}") from exc
 
         try:
-            return self._documents.create(
+            document = self._documents.create(
                 "resume",
                 payload,
                 filename,
@@ -89,6 +90,33 @@ class UploadResumeUseCase:
         except Exception:
             self._discard(storage_key)
             raise
+
+        self._write_kb_metadata_sidecar(storage_key, user_id, document.id)  # type: ignore[arg-type]
+
+        return document
+
+    def _write_kb_metadata_sidecar(
+        self, storage_key: str, user_id: int, document_id: int
+    ) -> None:
+        sidecar = {
+            "metadataAttributes": {
+                "profile_type": {"value": "candidate", "type": "STRING"},
+                "user_id": {"value": user_id, "type": "NUMBER"},
+                "document_id": {"value": document_id, "type": "NUMBER"},
+            }
+        }
+        try:
+            self._storage.upload(
+                json.dumps(sidecar).encode("utf-8"),
+                f"{storage_key}.metadata.json",
+                "application/json",
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Failed to write KB metadata sidecar for document %s: %s",
+                document_id,
+                exc,
+            )
 
     def _discard(self, storage_key: str) -> None:
         try:
