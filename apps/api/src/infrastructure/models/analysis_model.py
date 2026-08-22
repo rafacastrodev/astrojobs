@@ -28,6 +28,9 @@ class AnalysisModel(Base):
     score: Mapped[int] = mapped_column(Integer, nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     findings: Mapped[list[Any]] = mapped_column(JSON, nullable=False)
+    years_of_experience: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    technologies: Mapped[list[Any]] = mapped_column(JSON, nullable=False, default=list)
+    companies: Mapped[list[Any]] = mapped_column(JSON, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     feedback: Mapped[AnalysisFeedbackModel | None] = relationship(

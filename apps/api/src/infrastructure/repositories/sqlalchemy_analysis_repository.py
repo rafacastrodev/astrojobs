@@ -38,6 +38,9 @@ class SqlAlchemyAnalysisRepository:
         score: int,
         summary: str,
         findings: list[str],
+        years_of_experience: int | None,
+        technologies: list[str],
+        companies: list[str],
     ) -> AnalysisEntity:
         model = AnalysisModel(
             user_id=user_id,
@@ -48,6 +51,9 @@ class SqlAlchemyAnalysisRepository:
             score=score,
             summary=summary,
             findings=findings,
+            years_of_experience=years_of_experience,
+            technologies=technologies,
+            companies=companies,
         )
         self._session.add(model)
         self._session.commit()
@@ -72,6 +78,21 @@ class SqlAlchemyAnalysisRepository:
         )
         return [self._to_entity(model) for model in models]
 
+    def get_latest_general(
+        self, resume_document_id: int, user_id: int
+    ) -> AnalysisEntity | None:
+        model = (
+            self._session.query(AnalysisModel)
+            .filter(
+                AnalysisModel.resume_document_id == resume_document_id,
+                AnalysisModel.user_id == user_id,
+                AnalysisModel.job_source == "none",
+            )
+            .order_by(AnalysisModel.created_at.desc())
+            .first()
+        )
+        return self._to_entity(model) if model else None
+
     def list_with_feedback(self) -> Sequence[AnalysisEntity]:
         models = (
             self._session.query(AnalysisModel)
@@ -93,6 +114,9 @@ class SqlAlchemyAnalysisRepository:
             score=model.score,
             summary=model.summary,
             findings=model.findings,
+            years_of_experience=model.years_of_experience,
+            technologies=model.technologies,
+            companies=model.companies,
             created_at=model.created_at,
             feedback=_to_feedback_entity(model.feedback) if model.feedback else None,
         )

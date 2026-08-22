@@ -32,5 +32,8 @@ class AnalysisResponse(BaseModel):
     score: int
     summary: str
     findings: list[str]
+    years_of_experience: int | None
+    technologies: list[str]
+    companies: list[str]
     created_at: datetime
     feedback: AnalysisFeedbackResponse | None = None

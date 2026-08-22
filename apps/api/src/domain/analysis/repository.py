@@ -20,6 +20,9 @@ class AnalysisRepository(Protocol):
         score: int,
         summary: str,
         findings: list[str],
+        years_of_experience: int | None,
+        technologies: list[str],
+        companies: list[str],
     ) -> AnalysisEntity: ...
 
     def get_by_id(self, analysis_id: int) -> AnalysisEntity | None: ...
@@ -27,6 +30,10 @@ class AnalysisRepository(Protocol):
     def list_by_resume(
         self, resume_document_id: int, user_id: int
     ) -> Sequence[AnalysisEntity]: ...
+
+    def get_latest_general(
+        self, resume_document_id: int, user_id: int
+    ) -> AnalysisEntity | None: ...
 
     def list_with_feedback(self) -> Sequence[AnalysisEntity]: ...
 

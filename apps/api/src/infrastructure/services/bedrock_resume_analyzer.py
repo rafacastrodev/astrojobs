@@ -44,8 +44,39 @@ _TOOL_CONFIG = {
                                     "concrete suggestions to fix them."
                                 ),
                             },
+                            "years_of_experience": {
+                                "type": ["integer", "null"],
+                                "minimum": 0,
+                                "description": (
+                                    "Total years of professional experience found in the "
+                                    "resume, or null if it cannot be determined."
+                                ),
+                            },
+                            "technologies": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": (
+                                    "Technologies, tools, languages and frameworks "
+                                    "explicitly mentioned in the resume."
+                                ),
+                            },
+                            "companies": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": (
+                                    "Names of the employers/companies the candidate worked "
+                                    "at, most recent first."
+                                ),
+                            },
                         },
-                        "required": ["score", "summary", "findings"],
+                        "required": [
+                            "score",
+                            "summary",
+                            "findings",
+                            "years_of_experience",
+                            "technologies",
+                            "companies",
+                        ],
                     }
                 },
             }
@@ -60,13 +91,23 @@ experiences, education, structure flags). If a job is also given, it is \
 structured JSON too (title, requirements, responsibilities, seniority, \
 employment_type).
 
-Score the resume from 0 (poor) to 100 (excellent):
+First extract these keywords from the resume text:
+- years_of_experience: total years of professional experience, estimated from \
+the dates in the experience entries. Null if it cannot be determined.
+- technologies: every technology, tool, language or framework explicitly \
+named in the resume.
+- companies: every employer name found in the experience section, most \
+recent first.
+
+Then score the resume from 0 (poor) to 100 (excellent):
 - If no job is given, score general ATS-friendliness: presence and clarity of \
 key sections (about/summary, experience, education), use of concrete, \
-keyword-rich language, and structural completeness.
+keyword-rich language, structural completeness, and the depth/recency of the \
+extracted years_of_experience, technologies and companies.
 - If a job is given, score how well the resume matches that job's \
 requirements and responsibilities in addition to general ATS-friendliness. \
-Call out missing keywords/skills the job asks for.
+Call out missing keywords/skills the job asks for, comparing them against the \
+extracted technologies.
 
 Always respond by calling the submit_resume_analysis tool exactly once. Never \
 respond with plain text. Keep findings specific and actionable (e.g. name the \
@@ -85,6 +126,7 @@ class BedrockResumeAnalyzer:
             region_name=settings.aws_region,
             aws_access_key_id=settings.aws_access_key_id or None,
             aws_secret_access_key=settings.aws_secret_access_key or None,
+            aws_session_token=settings.aws_session_token or None,
             config=Config(retries={"max_attempts": 5, "mode": "adaptive"}),
         )
 
@@ -122,7 +164,20 @@ class BedrockResumeAnalyzer:
             score = int(tool_input["score"])
             summary = str(tool_input["summary"])
             findings = [str(item) for item in tool_input["findings"]]
+            years_raw = tool_input["years_of_experience"]
+            years_of_experience = None if years_raw is None else int(years_raw)
+            technologies = [str(item) for item in tool_input["technologies"]]
+            companies = [str(item) for item in tool_input["companies"]]
         except (KeyError, TypeError, ValueError) as exc:
             raise AnalyzerError(f"Malformed analysis result from model: {exc}") from exc
         score = max(0, min(100, score))
-        return {"score": score, "summary": summary, "findings": findings}
+        if years_of_experience is not None:
+            years_of_experience = max(0, years_of_experience)
+        return {
+            "score": score,
+            "summary": summary,
+            "findings": findings,
+            "years_of_experience": years_of_experience,
+            "technologies": technologies,
+            "companies": companies,
+        }

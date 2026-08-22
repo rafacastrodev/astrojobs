@@ -50,6 +50,9 @@ def _to_response(analysis: AnalysisEntity) -> AnalysisResponse:
         score=analysis.score,
         summary=analysis.summary,
         findings=analysis.findings,
+        years_of_experience=analysis.years_of_experience,
+        technologies=analysis.technologies,
+        companies=analysis.companies,
         created_at=analysis.created_at,
         feedback=_to_feedback_response(analysis.feedback) if analysis.feedback else None,
     )

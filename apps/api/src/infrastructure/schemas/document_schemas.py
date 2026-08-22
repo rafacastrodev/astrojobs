@@ -3,6 +3,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
+from infrastructure.schemas.analysis_schemas import AnalysisResponse
+
 
 class DocumentResponse(BaseModel):
     id: int
@@ -24,6 +26,7 @@ class ResumeResponse(BaseModel):
     error_message: str | None
     created_at: datetime
     updated_at: datetime
+    latest_analysis: AnalysisResponse | None = None
 
 
 class JobSummaryResponse(BaseModel):

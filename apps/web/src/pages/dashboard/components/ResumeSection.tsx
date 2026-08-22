@@ -117,6 +117,20 @@ export const ResumeSection = () => {
                     <p className="text-sm text-muted-foreground">
                       {STATUS_LABELS[resume.status]} ·{' '}
                       {new Date(resume.created_at).toLocaleDateString()}
+                      {resume.latest_analysis ? (
+                        <>
+                          {' '}
+                          · <span className="font-medium text-card-foreground">
+                            {resume.latest_analysis.score}/100
+                          </span>
+                          {resume.latest_analysis.years_of_experience !== null
+                            ? ` · ${resume.latest_analysis.years_of_experience} anos`
+                            : ''}
+                          {resume.latest_analysis.technologies.length > 0
+                            ? ` · ${resume.latest_analysis.technologies.length} tecnologias`
+                            : ''}
+                        </>
+                      ) : null}
                     </p>
                   </div>
                   <div className="flex shrink-0 gap-4">

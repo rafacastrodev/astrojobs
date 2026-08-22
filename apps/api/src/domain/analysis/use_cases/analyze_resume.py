@@ -61,6 +61,9 @@ class AnalyzeResumeUseCase:
             score=result["score"],
             summary=result["summary"],
             findings=result["findings"],
+            years_of_experience=result["years_of_experience"],
+            technologies=result["technologies"],
+            companies=result["companies"],
         )
 
     def _resolve_job(

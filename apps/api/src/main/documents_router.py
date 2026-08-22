@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
+from domain.analysis.entities import AnalysisEntity
 from domain.documents.entities import DocumentEntity
 from domain.documents.errors import (
     DocumentNotFoundError,
@@ -21,11 +22,14 @@ from infrastructure.documents.dependencies import (
 )
 from infrastructure.schemas.document_schemas import JobSummaryResponse, ResumeResponse
 from infrastructure.users.dependencies import get_current_user
+from main.analysis_router import _to_response as _to_analysis_response
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
-def _to_resume_response(document: DocumentEntity) -> ResumeResponse:
+def _to_resume_response(
+    document: DocumentEntity, latest_analysis: AnalysisEntity | None = None
+) -> ResumeResponse:
     return ResumeResponse(
         id=document.id,  # type: ignore[arg-type]
         payload=document.payload,
@@ -34,6 +38,7 @@ def _to_resume_response(document: DocumentEntity) -> ResumeResponse:
         error_message=document.error_message,
         created_at=document.created_at,
         updated_at=document.updated_at,
+        latest_analysis=_to_analysis_response(latest_analysis) if latest_analysis else None,
     )
 
 
@@ -46,7 +51,7 @@ async def upload_resume(
     content = await file.read()
     filename = file.filename or "resume.txt"
     try:
-        document = use_case.execute(content, filename, user.id)
+        document, analysis = use_case.execute(content, filename, user.id)
     except FileTooLargeError as exc:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=str(exc)
@@ -55,7 +60,7 @@ async def upload_resume(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     except StorageError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
-    return _to_resume_response(document)
+    return _to_resume_response(document, analysis)
 
 
 @router.get("/resumes", response_model=list[ResumeResponse])
@@ -63,8 +68,11 @@ def list_resumes(
     user: UserEntity = Depends(get_current_user),
     use_case: ListUserResumesUseCase = Depends(get_list_user_resumes_use_case),
 ) -> list[ResumeResponse]:
-    documents = use_case.execute(user.id)
-    return [_to_resume_response(document) for document in documents]
+    documents_with_analysis = use_case.execute(user.id)
+    return [
+        _to_resume_response(document, latest_analysis)
+        for document, latest_analysis in documents_with_analysis
+    ]
 
 
 @router.delete("/resumes/{document_id}", status_code=status.HTTP_204_NO_CONTENT)

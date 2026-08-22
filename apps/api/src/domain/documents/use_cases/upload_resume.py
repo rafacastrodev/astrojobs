@@ -2,6 +2,9 @@ import logging
 import uuid
 from pathlib import Path
 
+from domain.analysis.entities import AnalysisEntity
+from domain.analysis.errors import AnalysisServiceError
+from domain.analysis.use_cases.analyze_resume import AnalyzeResumeUseCase
 from domain.documents.entities import DocumentEntity
 from domain.documents.errors import (
     ExtractionError,
@@ -38,14 +41,18 @@ class UploadResumeUseCase:
         extractor: TextExtractor,
         file_storage: FileStoragePort,
         max_file_bytes: int,
+        analyze_resume_use_case: AnalyzeResumeUseCase | None = None,
     ):
         self._documents = document_repository
         self._file_loader = file_loader
         self._extractor = extractor
         self._storage = file_storage
         self._max_file_bytes = max_file_bytes
+        self._analyze = analyze_resume_use_case
 
-    def execute(self, content: bytes, filename: str, user_id: int) -> DocumentEntity:
+    def execute(
+        self, content: bytes, filename: str, user_id: int
+    ) -> tuple[DocumentEntity, AnalysisEntity | None]:
         if not content:
             raise UnsupportedFileError("The uploaded file is empty")
         if len(content) > self._max_file_bytes:
@@ -79,7 +86,7 @@ class UploadResumeUseCase:
             raise StorageError(f"Could not store the uploaded file: {exc}") from exc
 
         try:
-            return self._documents.create(
+            document = self._documents.create(
                 "resume",
                 payload,
                 filename,
@@ -89,6 +96,28 @@ class UploadResumeUseCase:
         except Exception:
             self._discard(storage_key)
             raise
+
+        analysis = self._run_initial_analysis(document.id, user_id)  # type: ignore[arg-type]
+        return document, analysis
+
+    def _run_initial_analysis(
+        self, resume_document_id: int, user_id: int
+    ) -> AnalysisEntity | None:
+        if self._analyze is None:
+            return None
+        try:
+            return self._analyze.execute(
+                user_id=user_id,
+                resume_document_id=resume_document_id,
+                job_source="none",
+            )
+        except AnalysisServiceError as exc:
+            logger.warning(
+                "Initial resume analysis failed for document %s: %s",
+                resume_document_id,
+                exc,
+            )
+            return None
 
     def _discard(self, storage_key: str) -> None:
         try:

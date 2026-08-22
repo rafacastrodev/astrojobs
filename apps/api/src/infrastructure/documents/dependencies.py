@@ -1,6 +1,10 @@
+import logging
+
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
+from domain.analysis.errors import AnalyzerConfigurationError
+from domain.analysis.use_cases.analyze_resume import AnalyzeResumeUseCase
 from domain.documents.use_cases.create_document_from_upload import (
     CreateDocumentFromUploadUseCase,
 )
@@ -15,12 +19,32 @@ from infrastructure.database.config import settings
 from infrastructure.database.session import get_db
 from infrastructure.extraction.file_text_loader import CompositeFileTextLoader
 from infrastructure.extraction.heuristic_text_extractor import HeuristicTextExtractor
+from infrastructure.repositories.sqlalchemy_analysis_repository import (
+    SqlAlchemyAnalysisRepository,
+)
 from infrastructure.repositories.sqlalchemy_document_repository import (
     SqlAlchemyDocumentRepository,
 )
+from infrastructure.services.bedrock_resume_analyzer import BedrockResumeAnalyzer
 from infrastructure.services.hashing_embedder import HashingEmbedder
 from infrastructure.services.pinecone_service import PineconeClient
 from infrastructure.storage.s3_file_storage import S3FileStorage
+
+logger = logging.getLogger(__name__)
+
+
+def _build_analyze_resume_use_case(db: Session) -> AnalyzeResumeUseCase | None:
+    try:
+        analyzer = BedrockResumeAnalyzer()
+    except AnalyzerConfigurationError:
+        logger.info("Bedrock is not configured; resumes will upload without an initial score.")
+        return None
+    return AnalyzeResumeUseCase(
+        SqlAlchemyAnalysisRepository(db),
+        SqlAlchemyDocumentRepository(db),
+        analyzer,
+        HeuristicTextExtractor(),
+    )
 
 
 def get_create_document_use_case(
@@ -55,11 +79,14 @@ def get_upload_resume_use_case(db: Session = Depends(get_db)) -> UploadResumeUse
         HeuristicTextExtractor(),
         S3FileStorage(),
         max_file_bytes=settings.max_upload_bytes,
+        analyze_resume_use_case=_build_analyze_resume_use_case(db),
     )
 
 
 def get_list_user_resumes_use_case(db: Session = Depends(get_db)) -> ListUserResumesUseCase:
-    return ListUserResumesUseCase(SqlAlchemyDocumentRepository(db))
+    return ListUserResumesUseCase(
+        SqlAlchemyDocumentRepository(db), SqlAlchemyAnalysisRepository(db)
+    )
 
 
 def get_delete_user_resume_use_case(db: Session = Depends(get_db)) -> DeleteUserResumeUseCase:

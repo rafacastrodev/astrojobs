@@ -6,6 +6,7 @@ export type Resume = {
   error_message: string | null
   created_at: string
   updated_at: string
+  latest_analysis: AnalysisResult | null
 }
 
 export type JobSource = 'none' | 'catalog' | 'pasted'
@@ -28,6 +29,9 @@ export type AnalysisResult = {
   score: number
   summary: string
   findings: string[]
+  years_of_experience: number | null
+  technologies: string[]
+  companies: string[]
   created_at: string
   feedback: AnalysisFeedback | null
 }
