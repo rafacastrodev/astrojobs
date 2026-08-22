@@ -50,9 +50,9 @@ Everything else in the full diagram (Bedrock Agent, VPC/EKS/ALB, Pinecone-side s
 ```json
 {
   "metadataAttributes": {
-    "profile_type": {"value": "candidate", "type": "STRING"},
-    "user_id": {"value": "<user_id>", "type": "NUMBER"},
-    "document_id": {"value": "<document_id>", "type": "NUMBER"}
+    "profile_type": "candidate",
+    "user_id": <user_id>,
+    "document_id": <document_id>
   }
 }
 ```

@@ -297,7 +297,17 @@ EOF
 
 ---
 
-### Task 3: Secrets Manager secret shell + Pinecone bootstrap script
+### Task 3: Pinecone bootstrap script (index + secret) and the CDK secret import
+
+> **Corrected after review:** this task originally had CDK create an empty
+> secret shell that was filled in with `put-secret-value` *after*
+> `cdk deploy`. That ordering cannot work — the Bedrock KB validates its
+> Pinecone credentials at stack-deploy time, so the secret must already hold
+> the API key when the KB resource is created (and a rolled-back deploy would
+> schedule the CDK-owned secret for deletion, blocking retries). The bootstrap
+> script now creates *both* the Pinecone index and the AWS secret via boto3,
+> and CDK imports the secret by name. The steps below describe the corrected
+> mechanism.
 
 **Files:**
 - Modify: `infra/astrojobs_infra/knowledge_base_stack.py`
@@ -307,27 +317,38 @@ EOF
 
 **Interfaces:**
 - Consumes: `KnowledgeBaseStack.key` from Task 2.
-- Produces: `KnowledgeBaseStack.pinecone_secret` (`aws_cdk.aws_secretsmanager.Secret`, secret name `astrojobs/pinecone-kb`) — consumed by Task 4 (role read permission) and Task 5 (`CredentialsSecretArn`).
+- Produces: `KnowledgeBaseStack.pinecone_secret` (an `ISecret` imported by name `astrojobs/pinecone-kb`) — consumed by Task 4 (role read permission) and Task 5 (`CredentialsSecretArn`).
 
 - [ ] **Step 1: Write the failing assertion**
 
 Add to `infra/tests/test_app_synth.py`:
 
 ```python
-def test_pinecone_secret_is_encrypted_with_the_kms_key():
+def test_pinecone_secret_is_imported_not_created():
     template = _synth_kb_stack()
+    template.resource_count_is("AWS::SecretsManager::Secret", 0)
     template.has_resource_properties(
-        "AWS::SecretsManager::Secret",
-        {"Name": "astrojobs/pinecone-kb"},
+        "AWS::Bedrock::KnowledgeBase",
+        Match.object_like(
+            {
+                "StorageConfiguration": Match.object_like(
+                    {
+                        "PineconeConfiguration": Match.object_like(
+                            {"CredentialsSecretArn": Match.any_value()}
+                        )
+                    }
+                )
+            }
+        ),
     )
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd infra && uv run pytest tests/test_app_synth.py::test_pinecone_secret_is_encrypted_with_the_kms_key -v`
-Expected: FAIL — no `AWS::SecretsManager::Secret` resource yet.
+Run: `cd infra && uv run pytest tests/test_app_synth.py::test_pinecone_secret_is_imported_not_created -v`
+Expected: FAIL — the KB (and its `CredentialsSecretArn`) doesn't exist yet.
 
-- [ ] **Step 3: Add the secret shell**
+- [ ] **Step 3: Import the secret**
 
 In `infra/astrojobs_infra/knowledge_base_stack.py`, add the import and construct. Change the imports block to:
 
@@ -342,23 +363,22 @@ from constructs import Construct
 And after the `self.bucket = s3.Bucket(...)` block, add:
 
 ```python
-        self.pinecone_secret = secretsmanager.Secret(
-            self,
-            "PineconeSecret",
-            secret_name="astrojobs/pinecone-kb",
-            description=(
-                "Pinecone connection info for the astrojobs-kb index. This "
-                "shell is populated manually by "
-                "scripts/bootstrap_pinecone_index.py — CDK only creates it."
-            ),
-            encryption_key=self.key,
+        # Created and populated out-of-band by
+        # scripts/bootstrap_pinecone_index.py before `cdk deploy`: the KB
+        # validates its Pinecone credentials at stack-deploy time, so the
+        # secret must already hold the API key by then.
+        self.pinecone_secret = secretsmanager.Secret.from_secret_name_v2(
+            self, "PineconeSecret", "astrojobs/pinecone-kb"
         )
 ```
+
+An imported secret synthesizes no `AWS::SecretsManager::Secret` resource —
+CDK only builds a reference — so `cdk synth` works without the secret
+existing in any account. Only a real `cdk deploy` needs it to exist.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `cd infra && uv run pytest tests/test_app_synth.py -v`
-Expected: `4 passed`
 
 - [ ] **Step 5: Write the bootstrap script**
 
@@ -368,29 +388,65 @@ Create `infra/scripts/bootstrap_pinecone_index.py`:
 
 ```python
 """One-time script: creates the Pinecone serverless index the Knowledge
-Base connects to. Pinecone is third-party SaaS — CDK cannot provision it.
+Base connects to, and populates the AWS secret holding its API key.
 
-Run once, before the first `cdk deploy`:
+Both must exist *before* `cdk deploy`: Pinecone is third-party SaaS that CDK
+cannot provision, and the Bedrock Knowledge Base validates its Pinecone
+credentials when the stack creates it — so the secret cannot be a shell that
+CDK creates and someone fills in afterwards. CDK imports the secret by name
+instead.
 
-    PINECONE_API_KEY=<key> uv run python scripts/bootstrap_pinecone_index.py
+Order of operations:
 
-Then, using the printed host:
-1. Export it before `cdk deploy`:
+1. Run this script — it creates the Pinecone index AND the AWS secret:
+
+     PINECONE_API_KEY=<key> uv run python scripts/bootstrap_pinecone_index.py
+
+2. Export the printed host:
+
      export PINECONE_CONNECTION_STRING=<printed-host>
-2. Put the API key into the secret CDK creates:
-     aws secretsmanager put-secret-value \\
-       --secret-id astrojobs/pinecone-kb \\
-       --secret-string '{"apiKey":"<key>"}'
+
+3. Then deploy:
+
+     npx cdk deploy
+
+Re-running is safe: an existing index and an existing secret are both reused.
 """
 
+import json
 import os
 
+import boto3
+from botocore.exceptions import ClientError
 from pinecone import Pinecone, ServerlessSpec
 
 INDEX_NAME = "astrojobs-kb"
 DIMENSION = 1024
 CLOUD = "aws"
 REGION = os.environ.get("PINECONE_REGION", "us-east-1")
+SECRET_NAME = "astrojobs/pinecone-kb"
+SECRET_DESCRIPTION = (
+    "Pinecone API key for the astrojobs-kb index, read by the Bedrock "
+    "Knowledge Base. Created by scripts/bootstrap_pinecone_index.py."
+)
+
+
+def _ensure_secret(api_key: str) -> None:
+    """Create the secret, or overwrite its value if it already exists."""
+    client = boto3.client("secretsmanager")
+    secret_string = json.dumps({"apiKey": api_key})
+    try:
+        client.create_secret(
+            Name=SECRET_NAME,
+            Description=SECRET_DESCRIPTION,
+            SecretString=secret_string,
+        )
+        print(f"Created secret '{SECRET_NAME}'.")
+    except client.exceptions.ResourceExistsException:
+        client.put_secret_value(SecretId=SECRET_NAME, SecretString=secret_string)
+        print(f"Secret '{SECRET_NAME}' already exists, stored a new value.")
+    except ClientError as exc:
+        raise SystemExit(f"Could not write secret '{SECRET_NAME}': {exc}") from exc
 
 
 def main() -> None:
@@ -408,6 +464,8 @@ def main() -> None:
         )
         print(f"Created index '{INDEX_NAME}' ({DIMENSION} dims, {CLOUD}/{REGION}).")
 
+    _ensure_secret(api_key)
+
     description = client.describe_index(INDEX_NAME)
     print(f"\nHost: {description.host}")
     print("Export before 'cdk deploy':")
@@ -423,12 +481,14 @@ if __name__ == "__main__":
 ```bash
 git add infra/astrojobs_infra/knowledge_base_stack.py infra/tests/test_app_synth.py infra/scripts/
 git commit -m "$(cat <<'EOF'
-feat(infra): add Pinecone secret shell and index bootstrap script
+feat(infra): bootstrap the Pinecone index and its secret, import it in CDK
 
-The secret is created empty by CDK; scripts/bootstrap_pinecone_index.py
-is a one-time manual step (Pinecone is third-party SaaS, not
-CDK-provisionable) that creates the astrojobs-kb index and prints the
-connection string + a reminder to fill in the secret's API key.
+scripts/bootstrap_pinecone_index.py is a one-time manual step (Pinecone
+is third-party SaaS, not CDK-provisionable) that creates the astrojobs-kb
+index, stores the API key in the astrojobs/pinecone-kb secret via boto3,
+and prints the connection string. CDK imports that secret by name — the
+KB validates its Pinecone credentials at deploy time, so the secret must
+already be populated before `cdk deploy` runs.
 EOF
 )"
 ```
@@ -1296,9 +1356,9 @@ Add this method to `UploadResumeUseCase` (after `_run_initial_analysis`, before 
     ) -> None:
         sidecar = {
             "metadataAttributes": {
-                "profile_type": {"value": "candidate", "type": "STRING"},
-                "user_id": {"value": user_id, "type": "NUMBER"},
-                "document_id": {"value": document_id, "type": "NUMBER"},
+                "profile_type": "candidate",
+                "user_id": user_id,
+                "document_id": document_id,
             }
         }
         try:
@@ -1411,7 +1471,7 @@ docker exec astrojobs-localstack-1 awslocal s3 cp s3://astrojobs-resumes/resumes
 
 Expected JSON:
 ```json
-{"metadataAttributes": {"profile_type": {"value": "candidate", "type": "STRING"}, "user_id": {"value": <user_id>, "type": "NUMBER"}, "document_id": {"value": <document_id>, "type": "NUMBER"}}}
+{"metadataAttributes": {"profile_type": "candidate", "user_id": <user_id>, "document_id": <document_id>}}
 ```
 
 Now confirm delete cleans up the sidecar too:
@@ -1449,11 +1509,10 @@ EOF
 These are real prerequisites for a working deployment, but they're account/credential actions, not code:
 
 1. `cdk bootstrap aws://<account>/us-east-2` (once per account/region).
-2. `PINECONE_API_KEY=<key> uv run python infra/scripts/bootstrap_pinecone_index.py` — creates the Pinecone index, prints the connection string.
+2. `PINECONE_API_KEY=<key> uv run python infra/scripts/bootstrap_pinecone_index.py` — creates the Pinecone index, creates/populates the `astrojobs/pinecone-kb` secret with `{"apiKey":"<key>"}`, and prints the connection string. This must run **before** `cdk deploy`: the KB validates its Pinecone credentials when CloudFormation creates it, and CDK only *imports* the secret by name (it never creates it), so an unpopulated or missing secret fails the deploy. Re-running the script is safe.
 3. `export PINECONE_CONNECTION_STRING=<printed-host>`, then `cd infra && npx cdk deploy --all`. Confirm in the CloudFormation console (or `cdk diff` beforehand) that the bucket, KMS key, KB, both data sources, guardrail, Lambda, and event notification all show up — matches spec Verification step 1.
-4. `aws secretsmanager put-secret-value --secret-id astrojobs/pinecone-kb --secret-string '{"apiKey":"<key>"}'`.
-5. Point the real deployed `apps/api` at the real bucket/region (its `AWS_S3_BUCKET`/`AWS_S3_ENDPOINT_URL` env vars — not covered by this plan, which only adds the sidecar-writing code) so production uploads land in the real `astrojobs-resumes` bucket instead of localstack.
-6. Upload one real resume through the deployed app; confirm in CloudWatch Logs (`/aws/lambda/sync-ingestion-trigger`) that the Lambda fired and called `StartIngestionJob` without a `ConflictException` — matches spec Verification step 3.
-7. Poll `aws bedrock-agent get-ingestion-job --knowledge-base-id <id> --data-source-id <candidates-ds-id> --ingestion-job-id <job-id>` until `COMPLETE` — matches spec Verification step 4.
-8. Run `aws bedrock-agent-runtime retrieve --knowledge-base-id <id> --retrieval-query '{"text":"<something from the test resume>"}'`; confirm the resume comes back with a reasonable relevance score — matches spec Verification step 5.
-9. Delete the test resume through the app and confirm its `.metadata.json` sidecar is also gone from S3 — matches spec Verification step 6 (cleanup).
+4. Point the real deployed `apps/api` at the real bucket/region (its `AWS_S3_BUCKET`/`AWS_S3_ENDPOINT_URL` env vars — not covered by this plan, which only adds the sidecar-writing code) so production uploads land in the real `astrojobs-resumes` bucket instead of localstack.
+5. Upload one real resume through the deployed app; confirm in CloudWatch Logs (`/aws/lambda/sync-ingestion-trigger`) that the Lambda fired and called `StartIngestionJob` without a `ConflictException` — matches spec Verification step 3.
+6. Poll `aws bedrock-agent get-ingestion-job --knowledge-base-id <id> --data-source-id <candidates-ds-id> --ingestion-job-id <job-id>` until `COMPLETE` — matches spec Verification step 4.
+7. Run `aws bedrock-agent-runtime retrieve --knowledge-base-id <id> --retrieval-query '{"text":"<something from the test resume>"}'`; confirm the resume comes back with a reasonable relevance score — matches spec Verification step 5.
+8. Delete the test resume through the app and confirm its `.metadata.json` sidecar is also gone from S3 — matches spec Verification step 6 (cleanup).
