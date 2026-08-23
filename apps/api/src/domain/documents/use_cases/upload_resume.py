@@ -1,3 +1,4 @@
+import json
 import logging
 import uuid
 from pathlib import Path
@@ -97,6 +98,8 @@ class UploadResumeUseCase:
             self._discard(storage_key)
             raise
 
+        self._write_kb_metadata_sidecar(storage_key, user_id, document.id)  # type: ignore[arg-type]
+
         analysis = self._run_initial_analysis(document.id, user_id)  # type: ignore[arg-type]
         return document, analysis
 
@@ -118,6 +121,29 @@ class UploadResumeUseCase:
                 exc,
             )
             return None
+
+    def _write_kb_metadata_sidecar(
+        self, storage_key: str, user_id: int, document_id: int
+    ) -> None:
+        sidecar = {
+            "metadataAttributes": {
+                "profile_type": "candidate",
+                "user_id": user_id,
+                "document_id": document_id,
+            }
+        }
+        try:
+            self._storage.upload(
+                json.dumps(sidecar).encode("utf-8"),
+                f"{storage_key}.metadata.json",
+                "application/json",
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Failed to write KB metadata sidecar for document %s: %s",
+                document_id,
+                exc,
+            )
 
     def _discard(self, storage_key: str) -> None:
         try:
