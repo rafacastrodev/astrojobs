@@ -19,7 +19,10 @@ config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # Alembic runs inside the FastAPI lifespan. Keep Uvicorn's loggers alive so
+    # startup/migration failures include their traceback instead of looking like
+    # a silent container restart loop.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 

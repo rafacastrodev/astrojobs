@@ -85,6 +85,8 @@ jobs:
             sleep 5
           done
           docker compose logs --tail=100 api
+          container_id=$(docker compose ps -q api)
+          docker inspect --format '{{json .State}}' "$container_id"
           exit 1
 
       - name: Stop containers
