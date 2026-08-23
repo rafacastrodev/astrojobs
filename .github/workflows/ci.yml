@@ -23,7 +23,6 @@ env:
   EMBEDDING_DIMENSIONS: ${{ secrets.EMBEDDING_DIMENSIONS }}
   AWS_REGION: ${{ secrets.AWS_REGION }}
   AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-  BEDROCK_MODEL_ID: ${{ secrets.BEDROCK_MODEL_ID }}
   MAX_UPLOAD_BYTES: ${{ secrets.MAX_UPLOAD_BYTES }}
   FRONTEND_ORIGIN: ${{ secrets.FRONTEND_ORIGIN }}
   EC2_HOST: ${{ secrets.EC2_HOST }}
@@ -66,7 +65,7 @@ jobs:
           AWS_REGION=${AWS_REGION}
           AWS_S3_BUCKET=${AWS_S3_BUCKET}
           AWS_S3_ENDPOINT_URL=
-          BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-}
+          BEDROCK_MODEL_ID=
           MAX_UPLOAD_BYTES=${MAX_UPLOAD_BYTES:-5242880}
           EOF
 
@@ -136,7 +135,7 @@ jobs:
           AWS_REGION=${AWS_REGION}
           AWS_S3_BUCKET=${AWS_S3_BUCKET}
           AWS_S3_ENDPOINT_URL=
-          BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-}
+          BEDROCK_MODEL_ID=
           MAX_UPLOAD_BYTES=${MAX_UPLOAD_BYTES:-5242880}
           EOF
 
