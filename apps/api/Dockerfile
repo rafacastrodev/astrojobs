@@ -2,9 +2,6 @@ FROM python:3.12-slim
 
 RUN pip install --no-cache-dir uv
 
-# RDS certificate bundle, so PGSSLMODE=verify-full has a root to verify
-# against. Harmless when the database is a plain local container: nothing
-# reads it unless PGSSLROOTCERT points here.
 ADD https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
     /etc/ssl/certs/rds-global-bundle.pem
 RUN chmod 644 /etc/ssl/certs/rds-global-bundle.pem

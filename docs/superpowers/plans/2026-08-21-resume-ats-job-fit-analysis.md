@@ -25,6 +25,7 @@
 ### Task 1: Bedrock configuration + resume analyzer service
 
 **Files:**
+
 - Modify: `apps/api/src/infrastructure/database/config.py`
 - Modify: `.env.example`
 - Modify: `docker-compose.yml`
@@ -33,6 +34,7 @@
 - Create: `apps/api/src/infrastructure/services/bedrock_resume_analyzer.py`
 
 **Interfaces:**
+
 - Produces: `domain.analysis.analyzer.ResumeAnalyzer` (Protocol, method `analyze(resume: dict, job: dict | None) -> AnalysisResult`), `domain.analysis.analyzer.AnalysisResult` (`TypedDict` with `score: int`, `summary: str`, `findings: list[str]`), `domain.analysis.errors.AnalyzerConfigurationError`, `domain.analysis.errors.AnalyzerError`, `infrastructure.services.bedrock_resume_analyzer.BedrockResumeAnalyzer` (concrete class implementing `ResumeAnalyzer`, no-arg constructor).
 
 - [x] **Step 1: Add the `bedrock_model_id` setting**
@@ -56,7 +58,7 @@ BEDROCK_MODEL_ID=
 In `docker-compose.yml`, add to the `api` service's `environment` list (after `- AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}`):
 
 ```yaml
-      - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-}
+- BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-}
 ```
 
 - [x] **Step 3: Create the `ResumeAnalyzer` port**
@@ -235,7 +237,7 @@ class BedrockResumeAnalyzer:
 
 - [ ] **Step 6: Verify manually against real Bedrock** — blocked: no AWS credentials and no `BEDROCK_MODEL_ID` available in this environment yet.
 
-Set `BEDROCK_MODEL_ID` in your local `.env` (verify a current id first: `aws bedrock list-foundation-models --region us-east-1 | grep -i claude`, or `aws bedrock list-inference-profiles --region us-east-1` for a cross-region `us.` prefixed id), and confirm your AWS credentials have `bedrock:InvokeModel` in that region.
+Set `BEDROCK_MODEL_ID` in your local `.env` (verify a current id first: `aws bedrock list-foundation-models --region us-east-2 | grep -i claude`, or `aws bedrock list-inference-profiles --region us-east-2` for a cross-region `us.` prefixed id), and confirm your AWS credentials have `bedrock:InvokeModel` in that region.
 
 Run from `apps/api`:
 
@@ -266,6 +268,7 @@ git commit -m "feat: add Bedrock-backed resume analyzer service"
 ### Task 2: Analysis domain entity, repository, and data model
 
 **Files:**
+
 - Create: `apps/api/src/domain/analysis/entities.py`
 - Create: `apps/api/src/domain/analysis/repository.py`
 - Create: `apps/api/src/infrastructure/models/analysis_model.py`
@@ -274,6 +277,7 @@ git commit -m "feat: add Bedrock-backed resume analyzer service"
 - Create: `apps/api/src/infrastructure/repositories/sqlalchemy_analysis_repository.py`
 
 **Interfaces:**
+
 - Consumes: nothing from Task 1 (this task is independent domain/data-model work).
 - Produces: `domain.analysis.entities.AnalysisEntity` (dataclass: `id: int | None`, `user_id: int`, `resume_document_id: int`, `job_source: Literal["none","catalog","pasted"]`, `job_document_id: int | None`, `job_title: str | None`, `score: int`, `summary: str`, `findings: list[str]`, `created_at: datetime`), `domain.analysis.entities.JobSource` (the `Literal` type alias), `domain.analysis.repository.AnalysisRepository` (Protocol with `create(...)` and `list_by_resume(resume_document_id, user_id)`), `infrastructure.repositories.sqlalchemy_analysis_repository.SqlAlchemyAnalysisRepository` (concrete repo, constructor `(session: Session)`).
 
@@ -509,6 +513,7 @@ git commit -m "feat: add resume_analyses table and repository"
 ### Task 3: Use cases and API endpoints
 
 **Files:**
+
 - Create: `apps/api/src/domain/analysis/use_cases/analyze_resume.py`
 - Create: `apps/api/src/domain/analysis/use_cases/list_resume_analyses.py`
 - Create: `apps/api/src/infrastructure/schemas/analysis_schemas.py`
@@ -519,6 +524,7 @@ git commit -m "feat: add resume_analyses table and repository"
 - Modify: `apps/api/src/main/server.py`
 
 **Interfaces:**
+
 - Consumes: `domain.analysis.analyzer.ResumeAnalyzer`, `domain.analysis.errors.{AnalyzerConfigurationError,AnalyzerError,InvalidJobSourceError}`, `infrastructure.services.bedrock_resume_analyzer.BedrockResumeAnalyzer` (Task 1); `domain.analysis.entities.{AnalysisEntity,JobSource}`, `domain.analysis.repository.AnalysisRepository`, `infrastructure.repositories.sqlalchemy_analysis_repository.SqlAlchemyAnalysisRepository` (Task 2); `domain.documents.use_cases.get_user_resume.GetUserResumeUseCase`, `domain.documents.errors.DocumentNotFoundError`, `domain.documents.repository.DocumentRepository`, `domain.documents.text_extractor.TextExtractor`, `infrastructure.extraction.heuristic_text_extractor.HeuristicTextExtractor`, `infrastructure.repositories.sqlalchemy_document_repository.SqlAlchemyDocumentRepository`, `infrastructure.users.dependencies.get_current_user`, `domain.users.entities.UserEntity` (existing).
 - Produces: `domain.analysis.use_cases.analyze_resume.AnalyzeResumeUseCase` (constructor `(analysis_repository, document_repository, analyzer, extractor)`, method `execute(user_id, resume_document_id, job_source, job_document_id=None, job_text=None) -> AnalysisEntity`), `domain.analysis.use_cases.list_resume_analyses.ListResumeAnalysesUseCase` (constructor `(analysis_repository, document_repository)`, method `execute(resume_document_id, user_id) -> Sequence[AnalysisEntity]`), HTTP endpoints `POST /analysis/resumes/{resume_id}`, `GET /analysis/resumes/{resume_id}`, `GET /documents/jobs`.
 
@@ -918,6 +924,7 @@ git commit -m "feat: add resume analysis API endpoints"
 ### Task 4: Frontend — analysis panel on the dashboard
 
 **Files:**
+
 - Modify: `apps/web/src/pages/dashboard/types.ts`
 - Create: `apps/web/src/services/analysisServices.ts`
 - Create: `apps/web/src/pages/dashboard/hooks/useResumeAnalysis.ts`
@@ -925,6 +932,7 @@ git commit -m "feat: add resume analysis API endpoints"
 - Modify: `apps/web/src/pages/dashboard/components/ResumeSection.tsx`
 
 **Interfaces:**
+
 - Consumes: `POST /analysis/resumes/{resume_id}`, `GET /documents/jobs` (Task 3); existing `api` client (`apps/web/src/utils/api/client.ts`), `getApiErrorMessage` (`apps/web/src/utils/api/errors.ts`), `Button` (`apps/web/src/components/Button/index.tsx`).
 - Produces: `AnalysisResult`, `JobSummary`, `JobSource` types (`apps/web/src/pages/dashboard/types.ts`); `analysisServices.analyze(resumeId, payload)` and `analysisServices.listJobs()` (`apps/web/src/services/analysisServices.ts`); `useResumeAnalysis(resumeId)` hook; `<AnalysisPanel resumeId={number} />` component.
 
@@ -933,25 +941,25 @@ git commit -m "feat: add resume analysis API endpoints"
 In `apps/web/src/pages/dashboard/types.ts`, append:
 
 ```ts
-export type JobSource = 'none' | 'catalog' | 'pasted'
+export type JobSource = "none" | "catalog" | "pasted";
 
 export type AnalysisResult = {
-  id: number
-  resume_document_id: number
-  job_source: JobSource
-  job_document_id: number | null
-  job_title: string | null
-  score: number
-  summary: string
-  findings: string[]
-  created_at: string
-}
+  id: number;
+  resume_document_id: number;
+  job_source: JobSource;
+  job_document_id: number | null;
+  job_title: string | null;
+  score: number;
+  summary: string;
+  findings: string[];
+  created_at: string;
+};
 
 export type JobSummary = {
-  id: number
-  title: string
-  source_filename: string
-}
+  id: number;
+  title: string;
+  source_filename: string;
+};
 ```
 
 - [x] **Step 2: Add the analysis service**
@@ -959,29 +967,36 @@ export type JobSummary = {
 Create `apps/web/src/services/analysisServices.ts`:
 
 ```ts
-import type { JobSource, JobSummary, AnalysisResult } from '@/pages/dashboard/types'
-import { api } from '@/utils/api/client'
+import type {
+  JobSource,
+  JobSummary,
+  AnalysisResult,
+} from "@/pages/dashboard/types";
+import { api } from "@/utils/api/client";
 
 type AnalyzeResumePayload = {
-  job_source: JobSource
-  job_document_id?: number
-  job_text?: string
-}
+  job_source: JobSource;
+  job_document_id?: number;
+  job_text?: string;
+};
 
 async function analyze(resumeId: number, payload: AnalyzeResumePayload) {
-  const response = await api.post<AnalysisResult>(`/analysis/resumes/${resumeId}`, payload)
-  return response.data
+  const response = await api.post<AnalysisResult>(
+    `/analysis/resumes/${resumeId}`,
+    payload,
+  );
+  return response.data;
 }
 
 async function listJobs() {
-  const response = await api.get<JobSummary[]>('/documents/jobs')
-  return response.data
+  const response = await api.get<JobSummary[]>("/documents/jobs");
+  return response.data;
 }
 
 export const analysisServices = {
   analyze,
   listJobs,
-}
+};
 ```
 
 - [x] **Step 3: Add the `useResumeAnalysis` hook**
@@ -989,45 +1004,50 @@ export const analysisServices = {
 Create `apps/web/src/pages/dashboard/hooks/useResumeAnalysis.ts`:
 
 ```ts
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
-import { analysisServices } from '@/services/analysisServices'
-import { getApiErrorMessage } from '@/utils'
+import { analysisServices } from "@/services/analysisServices";
+import { getApiErrorMessage } from "@/utils";
 
-import type { JobSource } from '../types'
+import type { JobSource } from "../types";
 
-type Mode = 'ats' | 'job'
-type JobInputMode = 'catalog' | 'pasted'
+type Mode = "ats" | "job";
+type JobInputMode = "catalog" | "pasted";
 
 export const useResumeAnalysis = (resumeId: number) => {
-  const [mode, setMode] = useState<Mode>('ats')
-  const [jobInputMode, setJobInputMode] = useState<JobInputMode>('catalog')
-  const [selectedJobId, setSelectedJobId] = useState<number | null>(null)
-  const [pastedText, setPastedText] = useState('')
+  const [mode, setMode] = useState<Mode>("ats");
+  const [jobInputMode, setJobInputMode] = useState<JobInputMode>("catalog");
+  const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+  const [pastedText, setPastedText] = useState("");
 
   const jobs = useQuery({
-    queryKey: ['catalog-jobs'],
+    queryKey: ["catalog-jobs"],
     queryFn: analysisServices.listJobs,
-    enabled: mode === 'job' && jobInputMode === 'catalog',
-  })
+    enabled: mode === "job" && jobInputMode === "catalog",
+  });
 
   const analyze = useMutation({
     mutationFn: () => {
       const jobSource: JobSource =
-        mode === 'ats' ? 'none' : jobInputMode === 'catalog' ? 'catalog' : 'pasted'
+        mode === "ats"
+          ? "none"
+          : jobInputMode === "catalog"
+            ? "catalog"
+            : "pasted";
       return analysisServices.analyze(resumeId, {
         job_source: jobSource,
-        job_document_id: jobSource === 'catalog' ? (selectedJobId ?? undefined) : undefined,
-        job_text: jobSource === 'pasted' ? pastedText : undefined,
-      })
+        job_document_id:
+          jobSource === "catalog" ? (selectedJobId ?? undefined) : undefined,
+        job_text: jobSource === "pasted" ? pastedText : undefined,
+      });
     },
-  })
+  });
 
   const canSubmit =
-    mode === 'ats' ||
-    (jobInputMode === 'catalog' && selectedJobId !== null) ||
-    (jobInputMode === 'pasted' && pastedText.trim().length > 0)
+    mode === "ats" ||
+    (jobInputMode === "catalog" && selectedJobId !== null) ||
+    (jobInputMode === "pasted" && pastedText.trim().length > 0);
 
   return {
     mode,
@@ -1045,8 +1065,8 @@ export const useResumeAnalysis = (resumeId: number) => {
     isAnalyzing: analyze.isPending,
     result: analyze.data ?? null,
     error: analyze.isError ? getApiErrorMessage(analyze.error) : null,
-  }
-}
+  };
+};
 ```
 
 - [x] **Step 4: Add the `AnalysisPanel` component**
@@ -1054,13 +1074,13 @@ export const useResumeAnalysis = (resumeId: number) => {
 Create `apps/web/src/pages/dashboard/components/AnalysisPanel.tsx`:
 
 ```tsx
-import { Button } from '@/components/Button'
+import { Button } from "@/components/Button";
 
-import { useResumeAnalysis } from '../hooks/useResumeAnalysis'
+import { useResumeAnalysis } from "../hooks/useResumeAnalysis";
 
 type AnalysisPanelProps = {
-  resumeId: number
-}
+  resumeId: number;
+};
 
 export const AnalysisPanel = ({ resumeId }: AnalysisPanelProps) => {
   const {
@@ -1079,64 +1099,68 @@ export const AnalysisPanel = ({ resumeId }: AnalysisPanelProps) => {
     isAnalyzing,
     result,
     error,
-  } = useResumeAnalysis(resumeId)
+  } = useResumeAnalysis(resumeId);
 
   return (
     <div className="mt-4 rounded-lg border border-border bg-input/40 p-4">
       <div className="flex gap-2 text-sm">
         <button
           type="button"
-          onClick={() => setMode('ats')}
+          onClick={() => setMode("ats")}
           className={`cursor-pointer rounded-md px-3 py-1.5 ${
-            mode === 'ats'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-transparent text-muted-foreground'
+            mode === "ats"
+              ? "bg-primary text-primary-foreground"
+              : "bg-transparent text-muted-foreground"
           }`}
         >
           Verificação geral
         </button>
         <button
           type="button"
-          onClick={() => setMode('job')}
+          onClick={() => setMode("job")}
           className={`cursor-pointer rounded-md px-3 py-1.5 ${
-            mode === 'job'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-transparent text-muted-foreground'
+            mode === "job"
+              ? "bg-primary text-primary-foreground"
+              : "bg-transparent text-muted-foreground"
           }`}
         >
           Comparar com vaga
         </button>
       </div>
 
-      {mode === 'job' ? (
+      {mode === "job" ? (
         <div className="mt-3 flex flex-col gap-3">
           <div className="flex gap-3 text-xs text-muted-foreground">
             <button
               type="button"
-              onClick={() => setJobInputMode('catalog')}
-              className={`cursor-pointer ${jobInputMode === 'catalog' ? 'font-semibold text-card-foreground' : ''}`}
+              onClick={() => setJobInputMode("catalog")}
+              className={`cursor-pointer ${jobInputMode === "catalog" ? "font-semibold text-card-foreground" : ""}`}
             >
               Escolher vaga cadastrada
             </button>
             <span>·</span>
             <button
               type="button"
-              onClick={() => setJobInputMode('pasted')}
-              className={`cursor-pointer ${jobInputMode === 'pasted' ? 'font-semibold text-card-foreground' : ''}`}
+              onClick={() => setJobInputMode("pasted")}
+              className={`cursor-pointer ${jobInputMode === "pasted" ? "font-semibold text-card-foreground" : ""}`}
             >
               Colar descrição
             </button>
           </div>
 
-          {jobInputMode === 'catalog' ? (
+          {jobInputMode === "catalog" ? (
             <select
-              value={selectedJobId ?? ''}
+              value={selectedJobId ?? ""}
               onChange={(event) =>
-                setSelectedJobId(event.target.value ? Number(event.target.value) : null)
+                setSelectedJobId(
+                  event.target.value ? Number(event.target.value) : null,
+                )
               }
               className="rounded-md border border-border bg-card p-2 text-sm text-card-foreground"
             >
-              <option value="">{jobsLoading ? 'Carregando vagas…' : 'Selecione uma vaga'}</option>
+              <option value="">
+                {jobsLoading ? "Carregando vagas…" : "Selecione uma vaga"}
+              </option>
               {jobs.map((job) => (
                 <option key={job.id} value={job.id}>
                   {job.title}
@@ -1175,7 +1199,9 @@ export const AnalysisPanel = ({ resumeId }: AnalysisPanelProps) => {
 
       {result ? (
         <div className="mt-4 rounded-lg border border-border bg-card p-4">
-          <p className="text-2xl font-semibold text-card-foreground">{result.score}/100</p>
+          <p className="text-2xl font-semibold text-card-foreground">
+            {result.score}/100
+          </p>
           <p className="mt-1 text-sm text-muted-foreground">{result.summary}</p>
           <ul className="mt-3 flex flex-col gap-1 text-sm text-card-foreground">
             {result.findings.map((finding, index) => (
@@ -1185,8 +1211,8 @@ export const AnalysisPanel = ({ resumeId }: AnalysisPanelProps) => {
         </div>
       ) : null}
     </div>
-  )
-}
+  );
+};
 ```
 
 - [x] **Step 5: Wire it into `ResumeSection`**
@@ -1196,29 +1222,26 @@ In `apps/web/src/pages/dashboard/components/ResumeSection.tsx`:
 Add imports:
 
 ```ts
-import { AnalysisPanel } from './AnalysisPanel'
+import { AnalysisPanel } from "./AnalysisPanel";
 ```
 
 Add local state inside the `ResumeSection` component body (alongside the existing `isDraggingOver` state):
 
 ```ts
-const [expandedResumeId, setExpandedResumeId] = useState<number | null>(null)
+const [expandedResumeId, setExpandedResumeId] = useState<number | null>(null);
 ```
 
 Replace the `<li>` block (currently: a `flex flex-col ... sm:flex-row` `<li>` with the filename/status `<div>` and the `Remove` `<button>` as direct siblings) with:
 
 ```tsx
-<li
-  key={resume.id}
-  className="rounded-xl border border-border p-4"
->
+<li key={resume.id} className="rounded-xl border border-border p-4">
   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div className="min-w-0">
       <p className="truncate font-medium text-card-foreground">
         {resume.source_filename}
       </p>
       <p className="text-sm text-muted-foreground">
-        {STATUS_LABELS[resume.status]} ·{' '}
+        {STATUS_LABELS[resume.status]} ·{" "}
         {new Date(resume.created_at).toLocaleDateString()}
       </p>
     </div>
@@ -1230,7 +1253,7 @@ Replace the `<li>` block (currently: a `flex flex-col ... sm:flex-row` `<li>` wi
         }
         className="cursor-pointer text-sm text-muted-foreground transition hover:text-card-foreground"
       >
-        {expandedResumeId === resume.id ? 'Fechar' : 'Analisar'}
+        {expandedResumeId === resume.id ? "Fechar" : "Analisar"}
       </button>
       <button
         type="button"
@@ -1238,11 +1261,13 @@ Replace the `<li>` block (currently: a `flex flex-col ... sm:flex-row` `<li>` wi
         disabled={deletingId === resume.id}
         className="cursor-pointer text-sm text-muted-foreground transition hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {deletingId === resume.id ? 'Removing…' : 'Remove'}
+        {deletingId === resume.id ? "Removing…" : "Remove"}
       </button>
     </div>
   </div>
-  {expandedResumeId === resume.id ? <AnalysisPanel resumeId={resume.id} /> : null}
+  {expandedResumeId === resume.id ? (
+    <AnalysisPanel resumeId={resume.id} />
+  ) : null}
 </li>
 ```
 

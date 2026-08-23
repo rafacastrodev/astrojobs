@@ -4,6 +4,10 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   isLoading?: boolean
 }
 
+const Spinner = () => (
+  <span className="size-5 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+)
+
 export const Button = ({
   isLoading,
   disabled,
@@ -11,13 +15,18 @@ export const Button = ({
   className = '',
   ...props
 }: ButtonProps) => {
+  const stateClassName = isLoading
+    ? 'cursor-default bg-transparent text-primary'
+    : 'cursor-pointer bg-primary text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60'
+
   return (
     <button
       disabled={disabled || isLoading}
-      className={`w-full rounded-lg bg-primary px-4 py-2.5 font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 ${className} cursor-pointer`}
+      aria-busy={isLoading}
+      className={`flex w-full items-center justify-center rounded-lg px-4 py-2.5 font-medium transition ${stateClassName} ${className}`}
       {...props}
     >
-      {isLoading ? 'Loading…' : children}
+      {isLoading ? <Spinner /> : children}
     </button>
   )
 }

@@ -6,7 +6,7 @@ from aws_cdk import aws_s3 as s3
 from aws_cdk import aws_secretsmanager as secretsmanager
 from constructs import Construct
 
-from astrojobs_infra.sync_lambda_stack import SyncLambdaConstruct
+from infrastructure.cdk.stacks.sync_lambda_stack import SyncLambdaConstruct
 
 BUCKET_NAME = "astrojobs-resumes"
 EMBEDDING_MODEL_ID = "amazon.titan-embed-text-v2:0"
@@ -53,12 +53,20 @@ class KnowledgeBaseStack(Stack):
         # validates its Pinecone credentials at stack-deploy time, so the
         # secret must already hold the API key by then.
         self.pinecone_secret = secretsmanager.Secret.from_secret_name_v2(
-            self, "PineconeSecret", "astrojobs/pinecone-kb"
+            self, "PineconeSecret", "astrojobs-pinecone-api-key"
         )
 
         self.kb_role = self._build_kb_role()
 
         self.knowledge_base = self._build_knowledge_base(pinecone_connection_string)
+        # `role_arn=self.kb_role.role_arn` only makes CloudFormation wait for the
+        # Role resource itself, not for the separate IAM::Policy resource that
+        # `grant_read`/`add_to_policy` created with the actual permissions. Without
+        # this, Bedrock can call CreateKnowledgeBase before that policy is attached
+        # and fail with AccessDenied on secretsmanager:GetSecretValue / InvokeModel.
+        self.knowledge_base.node.add_dependency(
+            self.kb_role.node.find_child("DefaultPolicy")
+        )
 
         self.candidates_data_source = self._build_data_source(
             "CandidatesDataSource", "candidates", "resumes/"

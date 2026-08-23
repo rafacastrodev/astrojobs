@@ -4,8 +4,13 @@ import { SignupForm } from '@/pages/signup/components/SignupForm'
 
 import { useLoginPage } from '../hooks/useLoginPage'
 
-export const LoginPage = () => {
-  const { mode, title, subtitle, switchToSignin, switchToSignup } = useLoginPage()
+type LoginPageProps = {
+  initialMode?: 'signin' | 'signup'
+}
+
+export const LoginPage = ({ initialMode }: LoginPageProps) => {
+  const { mode, title, subtitle, switchToSignin, switchToSignup } =
+    useLoginPage(initialMode)
 
   return (
     <AuthLayout title={title} subtitle={subtitle}>

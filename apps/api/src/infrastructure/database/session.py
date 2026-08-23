@@ -6,9 +6,6 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from infrastructure.database.config import settings
 
-# Without this, autogenerate emits unnamed constraints, which batch migrations
-# reject outright and which downgrades cannot drop. Index names match what
-# SQLAlchemy already produced, so existing databases keep theirs.
 NAMING_CONVENTION = {
     "ix": "ix_%(column_0_label)s",
     "uq": "uq_%(table_name)s_%(column_0_name)s",
@@ -36,12 +33,6 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-    """Bring the database up to the latest Alembic revision.
-
-    Migrations own the schema, so this replaces the previous create_all: that
-    only ever created missing tables and silently skipped new columns on
-    tables that already existed.
-    """
     from alembic import command
     from alembic.config import Config
 

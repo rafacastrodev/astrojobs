@@ -13,8 +13,6 @@
       "source.organizeImports.eslint": "explicit"
     }
   },
-  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
-  "python.analysis.extraPaths": ["${workspaceFolder}/src"],
   "pylint.importStrategy": "fromEnvironment",
   "pylint.interpreter": ["${workspaceFolder}/.venv/bin/python"],
   "cSpell.language": "en"

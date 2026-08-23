@@ -2,8 +2,8 @@ import { useState } from 'react'
 
 type Mode = 'signin' | 'signup'
 
-export const useLoginPage = () => {
-  const [mode, setMode] = useState<Mode>('signin')
+export const useLoginPage = (initialMode: Mode = 'signin') => {
+  const [mode, setMode] = useState<Mode>(initialMode)
 
   return {
     mode,

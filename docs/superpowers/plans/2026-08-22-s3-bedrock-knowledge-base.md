@@ -8,6 +8,8 @@
 
 **Tech Stack:** AWS CDK v2 (Python, `aws-cdk-lib`), `aws_cdk.aws_bedrock` L1 (`Cfn*`) constructs for Bedrock resources (no mature L2 exists yet for Knowledge Base/DataSource/Guardrail), L2 constructs for S3/KMS/IAM/Lambda/Secrets Manager, `pinecone` Python SDK (already a dependency of `apps/api`), `pytest` + `aws_cdk.assertions` for infra tests.
 
+> **Note (post-hoc):** this plan's steps below are the historical record of how the CDK project was originally scaffolded, and its `infra/...` paths and `git add`/commit commands are left as-executed for accuracy. The project was later relocated from the standalone `infra/` directory into `apps/api/src/infrastructure/cdk/` (merged into `apps/api`'s `pyproject.toml`/`uv.lock` via a dedicated `cdk` dependency group, `astrojobs_infra` renamed to `stacks`) — see `docs/superpowers/specs/2026-08-22-s3-bedrock-knowledge-base-design.md` for the current layout.
+
 **Spec:** [docs/superpowers/specs/2026-08-22-s3-bedrock-knowledge-base-design.md](../specs/2026-08-22-s3-bedrock-knowledge-base-design.md)
 
 ## Global Constraints
@@ -27,6 +29,7 @@
 ### Task 1: CDK project scaffolding
 
 **Files:**
+
 - Create: `infra/pyproject.toml`
 - Create: `infra/package.json`
 - Create: `infra/cdk.json`
@@ -38,6 +41,7 @@
 - Create: `infra/tests/test_app_synth.py`
 
 **Interfaces:**
+
 - Produces: `astrojobs_infra.knowledge_base_stack.KnowledgeBaseStack` — a `Stack` subclass, constructor `(scope, construct_id, **kwargs)` for now (gains a required `pinecone_connection_string: str` kwarg in Task 5).
 
 - [ ] **Step 1: Create the CDK project files**
@@ -172,12 +176,14 @@ Expected: `1 passed`
 - [ ] **Step 4: Verify `cdk synth` works end-to-end**
 
 Run:
+
 ```bash
 cd infra
 uv sync
 npm install
 npx cdk synth
 ```
+
 Expected: synthesizes an (empty) `AstroJobsKnowledgeBase` stack with no errors.
 
 - [ ] **Step 5: Commit**
@@ -198,10 +204,12 @@ EOF
 ### Task 2: KMS key + S3 bucket
 
 **Files:**
+
 - Modify: `infra/astrojobs_infra/knowledge_base_stack.py`
 - Modify: `infra/tests/test_app_synth.py` (renamed in spirit — new assertions added to the same file, see below)
 
 **Interfaces:**
+
 - Consumes: `astrojobs_infra.knowledge_base_stack.KnowledgeBaseStack.__init__(scope, construct_id, **kwargs)` from Task 1.
 - Produces: `KnowledgeBaseStack.key` (`aws_cdk.aws_kms.Key`), `KnowledgeBaseStack.bucket` (`aws_cdk.aws_s3.Bucket`, physical name `astrojobs-resumes`) — both public attributes on the stack, used by Task 4 (role permissions) and Task 8 (the `SyncLambdaConstruct`, instantiated within this same stack).
 
@@ -300,22 +308,24 @@ EOF
 ### Task 3: Pinecone bootstrap script (index + secret) and the CDK secret import
 
 > **Corrected after review:** this task originally had CDK create an empty
-> secret shell that was filled in with `put-secret-value` *after*
+> secret shell that was filled in with `put-secret-value` _after_
 > `cdk deploy`. That ordering cannot work — the Bedrock KB validates its
 > Pinecone credentials at stack-deploy time, so the secret must already hold
 > the API key when the KB resource is created (and a rolled-back deploy would
 > schedule the CDK-owned secret for deletion, blocking retries). The bootstrap
-> script now creates *both* the Pinecone index and the AWS secret via boto3,
+> script now creates _both_ the Pinecone index and the AWS secret via boto3,
 > and CDK imports the secret by name. The steps below describe the corrected
 > mechanism.
 
 **Files:**
+
 - Modify: `infra/astrojobs_infra/knowledge_base_stack.py`
 - Modify: `infra/tests/test_app_synth.py`
 - Create: `infra/scripts/bootstrap_pinecone_index.py`
 - Create: `infra/scripts/__init__.py`
 
 **Interfaces:**
+
 - Consumes: `KnowledgeBaseStack.key` from Task 2.
 - Produces: `KnowledgeBaseStack.pinecone_secret` (an `ISecret` imported by name `astrojobs/pinecone-kb`) — consumed by Task 4 (role read permission) and Task 5 (`CredentialsSecretArn`).
 
@@ -423,7 +433,7 @@ from pinecone import Pinecone, ServerlessSpec
 INDEX_NAME = "astrojobs-kb"
 DIMENSION = 1024
 CLOUD = "aws"
-REGION = os.environ.get("PINECONE_REGION", "us-east-1")
+REGION = os.environ.get("PINECONE_REGION", "us-east-2")
 SECRET_NAME = "astrojobs/pinecone-kb"
 SECRET_DESCRIPTION = (
     "Pinecone API key for the astrojobs-kb index, read by the Bedrock "
@@ -498,10 +508,12 @@ EOF
 ### Task 4: Knowledge Base IAM role
 
 **Files:**
+
 - Modify: `infra/astrojobs_infra/knowledge_base_stack.py`
 - Modify: `infra/tests/test_app_synth.py`
 
 **Interfaces:**
+
 - Consumes: `KnowledgeBaseStack.key`, `.bucket`, `.pinecone_secret` from Tasks 2-3.
 - Produces: `KnowledgeBaseStack.kb_role` (`aws_cdk.aws_iam.Role`) — consumed by Task 5 (`RoleArn` on the `CfnKnowledgeBase`).
 
@@ -626,11 +638,13 @@ EOF
 ### Task 5: Bedrock Knowledge Base resource
 
 **Files:**
+
 - Modify: `infra/astrojobs_infra/knowledge_base_stack.py`
 - Modify: `infra/app.py`
 - Modify: `infra/tests/test_app_synth.py`
 
 **Interfaces:**
+
 - Consumes: `KnowledgeBaseStack.kb_role`, `.pinecone_secret` from Task 4; `KnowledgeBaseStack.__init__` now requires `pinecone_connection_string: str`.
 - Produces: `KnowledgeBaseStack.knowledge_base` (`aws_cdk.aws_bedrock.CfnKnowledgeBase`) — consumed by Task 6 (data sources) and Task 8 (Lambda's IAM policy / env vars, cross-stack).
 
@@ -776,9 +790,11 @@ Expected: `6 passed`
 
 Run: `cd infra && npx cdk synth`
 Expected: fails with `KeyError: 'PINECONE_CONNECTION_STRING'` (correct — the bootstrap script in Task 3 hasn't been run against a real Pinecone account yet, so there's no real value to supply). Re-run with a placeholder to confirm synth otherwise succeeds:
+
 ```bash
 PINECONE_CONNECTION_STRING=https://placeholder.pinecone.io npx cdk synth
 ```
+
 Expected: synthesizes without error.
 
 - [ ] **Step 6: Commit**
@@ -801,10 +817,12 @@ EOF
 ### Task 6: Data sources (candidates, recruiters)
 
 **Files:**
+
 - Modify: `infra/astrojobs_infra/knowledge_base_stack.py`
 - Modify: `infra/tests/test_app_synth.py`
 
 **Interfaces:**
+
 - Consumes: `KnowledgeBaseStack.knowledge_base`, `.bucket` from Tasks 5, 2.
 - Produces: `KnowledgeBaseStack.candidates_data_source`, `.recruiters_data_source` (both `aws_cdk.aws_bedrock.CfnDataSource`) — `candidates_data_source` consumed by Task 8 (Lambda IAM policy / env vars, cross-stack).
 
@@ -935,10 +953,12 @@ EOF
 ### Task 7: Guardrail
 
 **Files:**
+
 - Modify: `infra/astrojobs_infra/knowledge_base_stack.py`
 - Modify: `infra/tests/test_app_synth.py`
 
 **Interfaces:**
+
 - Consumes: `KnowledgeBaseStack.key` from Task 2.
 - Produces: `KnowledgeBaseStack.guardrail` (`aws_cdk.aws_bedrock.CfnGuardrail`), `.guardrail_version` (`aws_cdk.aws_bedrock.CfnGuardrailVersion`). Neither is consumed by anything else in this plan — the Guardrail is created but not attached to any inference call (out of scope per spec).
 
@@ -1048,9 +1068,10 @@ EOF
 
 ### Task 8: Sync Lambda (event-driven ingestion trigger)
 
-**Correction (ruled during implementation — see ledger):** the plan originally specified `SyncLambdaStack` as a second, independently-deployable `Stack`. That does not work: `s3.Bucket.add_event_notification()` always creates its `Custom::S3BucketNotifications` resource as a child of the bucket's own construct (it has no `scope` parameter), so that resource — which needs the Lambda's ARN — ends up living in `KnowledgeBaseStack`. Combined with the Lambda needing the KB/data-source IDs from `KnowledgeBaseStack`, this creates a two-way dependency between the two stacks, which CDK rejects (`DependencyCycle`). Fix: `SyncLambdaConstruct` is a plain `Construct` (not a `Stack`), instantiated *inside* `KnowledgeBaseStack`. Everything ends up in one CloudFormation stack (`AstroJobsKnowledgeBase`) — no cross-stack reference, no cycle. The file-per-responsibility split is preserved; only the deployment topology changes.
+**Correction (ruled during implementation — see ledger):** the plan originally specified `SyncLambdaStack` as a second, independently-deployable `Stack`. That does not work: `s3.Bucket.add_event_notification()` always creates its `Custom::S3BucketNotifications` resource as a child of the bucket's own construct (it has no `scope` parameter), so that resource — which needs the Lambda's ARN — ends up living in `KnowledgeBaseStack`. Combined with the Lambda needing the KB/data-source IDs from `KnowledgeBaseStack`, this creates a two-way dependency between the two stacks, which CDK rejects (`DependencyCycle`). Fix: `SyncLambdaConstruct` is a plain `Construct` (not a `Stack`), instantiated _inside_ `KnowledgeBaseStack`. Everything ends up in one CloudFormation stack (`AstroJobsKnowledgeBase`) — no cross-stack reference, no cycle. The file-per-responsibility split is preserved; only the deployment topology changes.
 
 **Files:**
+
 - Create: `infra/lambda/sync_ingestion/handler.py`
 - Create: `infra/astrojobs_infra/sync_lambda_stack.py` (defines `SyncLambdaConstruct`, despite the filename)
 - Modify: `infra/astrojobs_infra/knowledge_base_stack.py` (instantiates `SyncLambdaConstruct` from inside `KnowledgeBaseStack.__init__`)
@@ -1058,6 +1079,7 @@ EOF
 - Modify: `infra/tests/test_app_synth.py`
 
 **Interfaces:**
+
 - Consumes: `KnowledgeBaseStack.bucket`, `.knowledge_base`, `.candidates_data_source` (Tasks 2, 5, 6), passed into `SyncLambdaConstruct.__init__` from within `KnowledgeBaseStack`.
 - Produces: `infra/lambda/sync_ingestion/handler.handler(event, context)` — the Lambda entrypoint, tested directly in this task. `KnowledgeBaseStack.sync_lambda` (the `SyncLambdaConstruct` instance) — not consumed by anything later in this plan, but available for future work.
 
@@ -1330,10 +1352,12 @@ EOF
 ### Task 9: Write the KB metadata sidecar on resume upload
 
 **Files:**
+
 - Modify: `apps/api/src/domain/documents/use_cases/upload_resume.py`
 - Modify: `apps/api/src/domain/documents/use_cases/delete_user_resume.py`
 
 **Interfaces:**
+
 - Consumes: `FileStoragePort.upload(content: bytes, key: str, content_type: str) -> None` and `FileStoragePort.delete(key: str) -> None` (existing, unchanged — `apps/api/src/domain/documents/file_storage.py`).
 - Produces: nothing new consumed elsewhere — this is the last task.
 
@@ -1470,6 +1494,7 @@ docker exec astrojobs-localstack-1 awslocal s3 cp s3://astrojobs-resumes/resumes
 ```
 
 Expected JSON:
+
 ```json
 {"metadataAttributes": {"profile_type": "candidate", "user_id": <user_id>, "document_id": <document_id>}}
 ```
@@ -1509,7 +1534,7 @@ EOF
 These are real prerequisites for a working deployment, but they're account/credential actions, not code:
 
 1. `cdk bootstrap aws://<account>/us-east-2` (once per account/region).
-2. `PINECONE_API_KEY=<key> uv run python infra/scripts/bootstrap_pinecone_index.py` — creates the Pinecone index, creates/populates the `astrojobs/pinecone-kb` secret with `{"apiKey":"<key>"}`, and prints the connection string. This must run **before** `cdk deploy`: the KB validates its Pinecone credentials when CloudFormation creates it, and CDK only *imports* the secret by name (it never creates it), so an unpopulated or missing secret fails the deploy. Re-running the script is safe.
+2. `PINECONE_API_KEY=<key> uv run python infra/scripts/bootstrap_pinecone_index.py` — creates the Pinecone index, creates/populates the `astrojobs/pinecone-kb` secret with `{"apiKey":"<key>"}`, and prints the connection string. This must run **before** `cdk deploy`: the KB validates its Pinecone credentials when CloudFormation creates it, and CDK only _imports_ the secret by name (it never creates it), so an unpopulated or missing secret fails the deploy. Re-running the script is safe.
 3. `export PINECONE_CONNECTION_STRING=<printed-host>`, then `cd infra && npx cdk deploy --all`. Confirm in the CloudFormation console (or `cdk diff` beforehand) that the bucket, KMS key, KB, both data sources, guardrail, Lambda, and event notification all show up — matches spec Verification step 1.
 4. Point the real deployed `apps/api` at the real bucket/region (its `AWS_S3_BUCKET`/`AWS_S3_ENDPOINT_URL` env vars — not covered by this plan, which only adds the sidecar-writing code) so production uploads land in the real `astrojobs-resumes` bucket instead of localstack.
 5. Upload one real resume through the deployed app; confirm in CloudWatch Logs (`/aws/lambda/sync-ingestion-trigger`) that the Lambda fired and called `StartIngestionJob` without a `ConflictException` — matches spec Verification step 3.

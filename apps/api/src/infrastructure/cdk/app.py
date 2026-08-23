@@ -1,8 +1,12 @@
 import os
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from aws_cdk import App, Environment
 
-from astrojobs_infra.knowledge_base_stack import KnowledgeBaseStack
+from infrastructure.cdk.stacks.knowledge_base_stack import KnowledgeBaseStack
 
 app = App()
 

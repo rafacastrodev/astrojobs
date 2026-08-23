@@ -27,7 +27,8 @@ class SyncLambdaConstruct(Construct):
             runtime=lambda_.Runtime.PYTHON_3_12,
             handler="handler.handler",
             code=lambda_.Code.from_asset(
-                str(Path(__file__).resolve().parents[1] / "lambda" / "sync_ingestion")
+                str(Path(__file__).resolve().parents[1] / "lambda" / "sync_ingestion"),
+                exclude=["test_*.py", "__pycache__"],
             ),
             timeout=Duration.seconds(30),
             environment={

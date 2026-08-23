@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-23T00:00:00Z",
+  "title": "Design System: AstroJobs",
+  "extensions": {
+    "colorMeta": {
+      "background": {
+        "role": "neutral",
+        "displayName": "Near-Black",
+        "canonical": "#0a0a0a",
+        "tonalRamp": ["#0a0a0a", "#141414", "#18181b", "#27272a", "#3f3f46", "#52525b", "#a1a1aa", "#fafafa"]
+      },
+      "foreground": {
+        "role": "primary",
+        "displayName": "Chalk White",
+        "canonical": "#fafafa",
+        "tonalRamp": ["#0a0a0a", "#141414", "#18181b", "#27272a", "#3f3f46", "#52525b", "#a1a1aa", "#fafafa"]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Panel Black",
+        "canonical": "#141414"
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Muted Grey",
+        "canonical": "#a1a1aa"
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Seam Grey",
+        "canonical": "#27272a"
+      },
+      "ring": {
+        "role": "neutral",
+        "displayName": "Focus Grey",
+        "canonical": "#52525b"
+      },
+      "destructive": {
+        "role": "warning",
+        "displayName": "Warning Lamp Red",
+        "canonical": "#ef4444",
+        "tonalRamp": ["#450a0a", "#7f1d1d", "#991b1b", "#b91c1c", "#dc2626", "#ef4444", "#f87171", "#fecaca"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Martian Mono / Flap", "purpose": "Set only inside a FlapCell: headline, score, short status/tag words. Never a full sentence." },
+      "body": { "displayName": "Hanken Grotesk / Body", "purpose": "Every full sentence — subheads, finding descriptions, section copy." },
+      "label": { "displayName": "Martian Mono / Label", "purpose": "Small uppercase mono captions and numbered markers." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "flap-turn", "value": "rotateX(-100deg)->rotateX(0deg), 110ms ease-out, opacity 0.3->1", "purpose": "Per-character flip when a FlapCell's displayed character changes during its reveal cycle." },
+      { "name": "row-in", "value": "translateY(6px)->translateY(0), 260-400ms ease-out, opacity 0->1", "purpose": "Staggered entrance for findings rows and numbered steps once their section scrolls into view." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Inverted-fill CTA — used for every Sign up action.",
+      "html": "<a class=\"ds-btn-primary\" href=\"#\">Sign up free</a>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; background: #fafafa; color: #0a0a0a; border-radius: 8px; padding: 10px 20px; font-weight: 500; transition: opacity 0.2s; } .ds-btn-primary:hover { opacity: 0.9; } .ds-btn-primary:focus-visible { outline: 2px solid #52525b; outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Link",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary text-only action — used for Log in beside a primary CTA.",
+      "html": "<a class=\"ds-btn-ghost\" href=\"#\">Log in</a>",
+      "css": ".ds-btn-ghost { color: #a1a1aa; font-size: 0.875rem; transition: color 0.2s; } .ds-btn-ghost:hover { color: #fafafa; } .ds-btn-ghost:focus-visible { outline: 2px solid #52525b; outline-offset: 2px; }"
+    },
+    {
+      "name": "Flap Cell",
+      "kind": "custom",
+      "refersTo": "flap-cell",
+      "description": "Signature component: a fixed-width mechanical character cell with a simulated split-flap seam. Cycles through random characters before landing on its target on first scroll-into-view.",
+      "html": "<span class=\"ds-flap-cell\"><span class=\"ds-flap-fold\"></span><span class=\"ds-flap-seam\"></span><span class=\"ds-flap-char\">A</span></span>",
+      "css": ".ds-flap-cell { position: relative; display: inline-flex; align-items: center; justify-content: center; height: 1.6em; width: 1.05em; overflow: hidden; border-radius: 3px; border: 1px solid #27272a; background: #141414; color: #fafafa; font-family: 'Martian Mono', ui-monospace, monospace; text-align: center; } .ds-flap-fold { position: absolute; inset: 0 0 50% 0; background: linear-gradient(to bottom, transparent, rgba(10,10,10,0.25)); pointer-events: none; } .ds-flap-seam { position: absolute; left: 0; right: 0; top: 50%; height: 1px; transform: translateY(-50%); background: rgba(10,10,10,0.7); pointer-events: none; } .ds-flap-char { position: relative; z-index: 10; }"
+    },
+    {
+      "name": "Flap Cell — Critical",
+      "kind": "custom",
+      "refersTo": "flap-cell-critical",
+      "description": "Flap cell variant for a critical/failing finding's leading tag.",
+      "html": "<span class=\"ds-flap-cell ds-flap-cell--critical\"><span class=\"ds-flap-fold\"></span><span class=\"ds-flap-seam\"></span><span class=\"ds-flap-char\">F</span></span>",
+      "css": ".ds-flap-cell--critical { border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.1); color: #ef4444; }"
+    },
+    {
+      "name": "Sample Panel",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Bordered content panel — used for the illustrative sample-analysis board.",
+      "html": "<div class=\"ds-panel\"><p class=\"ds-panel-label\">SAMPLE ANALYSIS — ILLUSTRATIVE</p></div>",
+      "css": ".ds-panel { background: rgba(20,20,20,0.6); border: 1px solid #27272a; border-radius: 16px; padding: 20px 24px; } .ds-panel-label { font-family: 'Martian Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.2em; color: #a1a1aa; }"
+    },
+    {
+      "name": "Ruled Row",
+      "kind": "custom",
+      "refersTo": "ruled-row",
+      "description": "A findings/steps list row separated by a hairline border rather than an individual card.",
+      "html": "<div class=\"ds-ruled-row\"><span class=\"ds-flap-cell\">01</span><p>Row content</p></div>",
+      "css": ".ds-ruled-row { display: flex; align-items: flex-start; gap: 12px; padding: 24px 0; border-bottom: 1px solid #27272a; } .ds-ruled-row p { color: #a1a1aa; font-size: 0.875rem; }"
+    },
+    {
+      "name": "Header Nav",
+      "kind": "nav",
+      "refersTo": "header",
+      "description": "Flat top navigation: wordmark left, auth-aware action right (Log in/Sign up when signed out, single Dashboard button when signed in).",
+      "html": "<header class=\"ds-header\"><span class=\"ds-header-brand\">ASTROJOBS</span><a class=\"ds-btn-primary\" href=\"#\">Sign up</a></header>",
+      "css": ".ds-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid #27272a; } .ds-header-brand { font-family: 'Martian Mono', ui-monospace, monospace; font-size: 0.875rem; letter-spacing: 0.15em; color: #fafafa; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Departures Board",
+    "overview": "AstroJobs reads its own product output the way a concourse board reads a flight: a result arrives by resolving into place, one fixed-width character at a time, not by fading in. The system was chosen by running an assigned direction (drawn by lot from a grounded candidate list) against six catalog challengers on two axes — audience identification and product clarity — and the split-flap board won both outright: its mechanical, satisfying reveal is the closest visual analogue this product has to \"your score is ready,\" and its native palette (matte near-black boards, white cells, one reserved warning color) was already the app's own dark theme before this surface existed. The palette is deliberately narrow: the app's pre-existing near-black/near-white pair, plus the single existing destructive red repurposed as the board's one warning lamp. No new hues were introduced for this surface — restraint here is a constraint inherited from the product's existing screens, not a stylistic choice invented for the landing page alone.",
+    "keyCharacteristics": [
+      "Fixed-cell mechanical typography (Martian Mono) for anything that \"resolves\" — headlines, scores, status tags — set apart from ordinary prose.",
+      "A strictly two-tone palette: near-black and near-white, with red reserved exclusively for a failing/critical signal, never decoration.",
+      "Flat, bordered surfaces — no gradients, no glass, no soft glow shadows.",
+      "Content structured as ruled rows (findings lists, numbered steps) rather than bordered card grids."
+    ],
+    "rules": [
+      { "name": "The One Warning Lamp Rule", "body": "destructive (#ef4444) is the only color outside the black/white pair anywhere in the system. It marks exactly one thing: a failing or critical finding. It never decorates a heading, a hover state, or an icon that isn't reporting a failure.", "section": "colors" },
+      { "name": "The Mechanical/Human Split Rule", "body": "Martian Mono speaks only through discrete, boxed character cells. Hanken Grotesk carries every full sentence. A headline never sets in Hanken Grotesk, and a paragraph never sets in Martian Mono — swapping their jobs breaks the board metaphor.", "section": "typography" },
+      { "name": "The No-Glow Rule", "body": "Nothing outside a FlapCell's internal seam ever carries a shadow, glow, or gradient. Depth comes from a bordered panel one tone lighter than its ground, full stop.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do reserve destructive red exclusively for a critical/failing finding — never for emphasis, decoration, or a second accent.",
+      "Do set any text that \"resolves\" (headline, score, short status tags) in Martian Mono inside a FlapCell; set every full sentence in Hanken Grotesk.",
+      "Do trigger a FlapCell reveal once per element, on first scroll-into-view, and skip the character-cycle entirely under prefers-reduced-motion.",
+      "Do separate list rows (findings, steps) with a single hairline border rather than individual card boxes."
+    ],
+    "donts": [
+      "Don't introduce a color outside the existing background/foreground/card/muted/border/primary/destructive set.",
+      "Don't add a drop shadow, glow, or gradient anywhere outside a FlapCell's internal fold seam.",
+      "Don't set a full sentence in Martian Mono, or a headline/score in Hanken Grotesk.",
+      "Don't replay a FlapCell's character-cycle on every scroll past it — it fires once, the first time it enters view."
+    ]
+  }
+}

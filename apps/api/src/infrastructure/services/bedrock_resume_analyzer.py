@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from typing import Any
 
 import boto3
@@ -121,13 +122,13 @@ class BedrockResumeAnalyzer:
                 "Bedrock is not configured. Set BEDROCK_MODEL_ID."
             )
         self._model_id = settings.bedrock_model_id
+        if settings.aws_bearer_token_bedrock:
+            os.environ["AWS_BEARER_TOKEN_BEDROCK"] = settings.aws_bearer_token_bedrock
         self._client = boto3.client(
             "bedrock-runtime",
             region_name=settings.aws_region,
-            aws_access_key_id=settings.aws_access_key_id or None,
-            aws_secret_access_key=settings.aws_secret_access_key or None,
-            aws_session_token=settings.aws_session_token or None,
             config=Config(retries={"max_attempts": 5, "mode": "adaptive"}),
+            **settings.aws_client_credentials(),
         )
 
     def analyze(self, resume: dict[str, Any], job: dict[str, Any] | None) -> AnalysisResult:

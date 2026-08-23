@@ -1,0 +1,46 @@
+text,profile_type,user_id,document_id,source_filename,skills
+"Jane Candidate
+Software Engineer
+
+Experience
+- Built APIs with Python and FastAPI
+- Worked with PostgreSQL and AWS S3
+
+Skills: Python, SQL, AWS",candidate,3,4,sample_resume.txt,"Python,SQL,AWS"
+"Rafael Castro
+Software Engineer
+São Paulo, Brazil
+
+Summary
+Backend engineer with 6 years building APIs, data pipelines, and hiring tools.
+Comfortable with Python, FastAPI, PostgreSQL, AWS, and React.
+
+Experience
+Senior Software Engineer — AstroLabs (2022–present)
+- Designed resume ingestion and matching APIs used by recruiters
+- Deployed services on AWS (ECS, S3, Bedrock) with Postgres
+- Reduced time-to-first-review by 40% with structured ATS scoring
+
+Software Engineer — Norte Digital (2019–2022)
+- Built REST APIs in Python and Node.js
+- Introduced integration tests and CI on GitHub Actions
+
+Education
+B.Sc. Computer Science — USP, 2019
+
+Skills
+Python, TypeScript, FastAPI, React, PostgreSQL, AWS, Docker, Pinecone",candidate,3,5,rafael-castro-cv.txt,"Python,TypeScript,FastAPI,React,PostgreSQL,AWS,Docker,Pinecone"
+"Marina Souza
+Product Designer
+Rio de Janeiro, Brazil
+
+Summary
+Product designer focused on hiring and onboarding flows. Works with research, prototyping, and design systems.
+
+Experience
+Product Designer — Orbit HR (2021–present)
+- Designed the candidate dashboard and resume-upload experience
+- Ran usability tests that cut drop-off on signup by 22%
+
+Skills
+Figma, User Research, Design Systems, Accessibility",candidate,8,12,marina-souza-cv.txt,"Figma,User Research,Design Systems,Accessibility"

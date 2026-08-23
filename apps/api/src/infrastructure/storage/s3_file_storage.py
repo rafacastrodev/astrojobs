@@ -10,12 +10,20 @@ class S3FileStorage:
         if not settings.aws_s3_bucket:
             raise RuntimeError("S3 is not configured. Set AWS_S3_BUCKET.")
         self._bucket = settings.aws_s3_bucket
+        local_credentials = bool(settings.aws_s3_endpoint_url)
+        access_key = settings.aws_access_key_id or (
+            "test" if local_credentials else None
+        )
+        secret_key = settings.aws_secret_access_key or (
+            "test" if local_credentials else None
+        )
         self._client = boto3.client(
             "s3",
             region_name=settings.aws_region,
             endpoint_url=settings.aws_s3_endpoint_url or None,
-            aws_access_key_id=settings.aws_access_key_id or None,
-            aws_secret_access_key=settings.aws_secret_access_key or None,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            aws_session_token=settings.aws_session_token or None,
             config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
         )
 
@@ -26,7 +34,7 @@ class S3FileStorage:
             self._client.head_bucket(Bucket=self._bucket)
         except ClientError:
             params: dict[str, object] = {"Bucket": self._bucket}
-            if settings.aws_region != "us-east-1":
+            if settings.aws_region != "us-east-2":
                 params["CreateBucketConfiguration"] = {
                     "LocationConstraint": settings.aws_region
                 }

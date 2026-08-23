@@ -1,5 +1,5 @@
 {
-  "name": "astrojobs-infra-cli",
+  "name": "astrojobs-api-cdk-cli",
   "private": true,
   "devDependencies": {
     "aws-cdk": "2.1138.0"

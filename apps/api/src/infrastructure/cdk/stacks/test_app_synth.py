@@ -1,7 +1,14 @@
+import sys
+from pathlib import Path
+
+_SRC = Path(__file__).resolve().parents[3]
+if str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
+
 from aws_cdk import App, Environment
 from aws_cdk.assertions import Match, Template
 
-from astrojobs_infra.knowledge_base_stack import KnowledgeBaseStack
+from infrastructure.cdk.stacks.knowledge_base_stack import KnowledgeBaseStack
 
 
 def _synth_kb_stack() -> Template:
@@ -47,7 +54,10 @@ def test_bucket_uses_kms_and_blocks_public_access():
                         "ServerSideEncryptionByDefault": {
                             "SSEAlgorithm": "aws:kms",
                             "KMSMasterKeyID": {
-                                "Fn::GetAtt": [Match.string_like_regexp("KnowledgeBaseKey.*"), "Arn"]
+                                "Fn::GetAtt": [
+                                    Match.string_like_regexp("KnowledgeBaseKey.*"),
+                                    "Arn",
+                                ]
                             },
                         }
                     }
@@ -101,6 +111,9 @@ def test_pinecone_secret_is_imported_not_created():
             }
         ),
     )
+    synthesized = str(template.to_json())
+    assert "astrojobs-pinecone-api-key" in synthesized
+    assert "astrojobs/pinecone-kb" not in synthesized
 
 
 def test_kb_role_trusts_bedrock_with_confused_deputy_conditions():
@@ -191,7 +204,10 @@ def test_candidates_data_source_scoped_to_resumes_prefix():
             ),
             "ServerSideEncryptionConfiguration": {
                 "KmsKeyArn": {
-                    "Fn::GetAtt": [Match.string_like_regexp("KnowledgeBaseKey.*"), "Arn"]
+                    "Fn::GetAtt": [
+                        Match.string_like_regexp("KnowledgeBaseKey.*"),
+                        "Arn",
+                    ]
                 }
             },
         },
@@ -225,7 +241,14 @@ def test_guardrail_anonymizes_high_risk_pii():
             "SensitiveInformationPolicyConfig": Match.object_like(
                 {
                     "PiiEntitiesConfig": Match.array_with(
-                        [Match.object_like({"Type": "US_SOCIAL_SECURITY_NUMBER", "Action": "ANONYMIZE"})]
+                        [
+                            Match.object_like(
+                                {
+                                    "Type": "US_SOCIAL_SECURITY_NUMBER",
+                                    "Action": "ANONYMIZE",
+                                }
+                            )
+                        ]
                     )
                 }
             ),

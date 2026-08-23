@@ -9,6 +9,9 @@ instead.
 
 Order of operations:
 
+Run from apps/api/src/infrastructure/cdk/ (this project moved out of the
+standalone infra/ directory):
+
 1. Run this script — it creates the Pinecone index AND the AWS secret:
 
      PINECONE_API_KEY=<key> uv run python scripts/bootstrap_pinecone_index.py
@@ -19,7 +22,7 @@ Order of operations:
 
 3. Then deploy:
 
-     npx cdk deploy
+     uv run cdk deploy
 
 Re-running is safe: an existing index and an existing secret are both reused.
 """
@@ -35,7 +38,8 @@ INDEX_NAME = "astrojobs-kb"
 DIMENSION = 1024
 CLOUD = "aws"
 REGION = os.environ.get("PINECONE_REGION", "us-east-1")
-SECRET_NAME = "astrojobs/pinecone-kb"
+AWS_REGION = os.environ.get("AWS_REGION", "us-east-2")
+SECRET_NAME = "astrojobs-pinecone-api-key"
 SECRET_DESCRIPTION = (
     "Pinecone API key for the astrojobs-kb index, read by the Bedrock "
     "Knowledge Base. Created by scripts/bootstrap_pinecone_index.py."
@@ -44,7 +48,7 @@ SECRET_DESCRIPTION = (
 
 def _ensure_secret(api_key: str) -> None:
     """Create the secret, or overwrite its value if it already exists."""
-    client = boto3.client("secretsmanager")
+    client = boto3.client("secretsmanager", region_name=AWS_REGION)
     secret_string = json.dumps({"apiKey": api_key})
     try:
         client.create_secret(

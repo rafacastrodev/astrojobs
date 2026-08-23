@@ -28,7 +28,7 @@ Everything else in the full diagram (Bedrock Agent, VPC/EKS/ALB, Pinecone-side s
 
 ## Architecture
 
-### Resources (all in new `infra/` CDK app, Python)
+### Resources (all in the `apps/api/src/infrastructure/cdk/` CDK app, Python — originally scaffolded as a standalone `infra/` project, later merged into `apps/api`)
 
 - **S3 bucket** `astrojobs-resumes` — created by this stack (does not exist in real AWS yet), SSE-KMS with the new customer-managed key, `enforceSSL`, `RemovalPolicy.RETAIN`.
 - **KMS key** (customer-managed) — reused for: bucket encryption, KB transient-data encryption during ingestion, Guardrail configuration encryption.
@@ -72,28 +72,27 @@ Bedrock KB allows only one ingestion job at a time per data source. If a second 
 
 ## Bootstrap (manual, one-time, before first `cdk deploy`)
 
-1. Run `infra/scripts/bootstrap_pinecone_index.py` to create the `astrojobs-kb` Pinecone serverless index (1024 dimensions), reusing the connection pattern already in `apps/api/src/infrastructure/services/pinecone_service.py`.
+1. Run `apps/api/src/infrastructure/cdk/scripts/bootstrap_pinecone_index.py` to create the `astrojobs-kb` Pinecone serverless index (1024 dimensions), reusing the connection pattern already in `apps/api/src/infrastructure/services/pinecone_service.py`.
 2. Put the index host and API key into the Secrets Manager secret the stack created (`aws secretsmanager put-secret-value` or console) — never committed to code.
 
 ## CDK project layout
 
 ```
-infra/
+apps/api/src/infrastructure/cdk/
   app.py
   cdk.json
-  pyproject.toml
-  astrojobs_infra/
+  package.json                  # pins the aws-cdk CLI; installed independently via npm
+  stacks/
     knowledge_base_stack.py     # bucket, KMS, secret shell, KB role, KB, 2 data sources, Guardrail
     sync_lambda_stack.py        # Lambda, S3 event notification, Lambda role
   lambda/
     sync_ingestion/handler.py
   scripts/
     bootstrap_pinecone_index.py
-  tests/
-    test_knowledge_base_stack.py   # aws_cdk.assertions.Template-based checks
+  stacks/test_app_synth.py      # aws_cdk.assertions.Template-based checks
 ```
 
-New top-level directory, sibling to `apps/`, with its own `uv`-managed `pyproject.toml` — independent lifecycle from `apps/api`, not part of the pnpm workspace.
+Originally scaffolded as a standalone top-level `infra/` directory with its own `uv`-managed `pyproject.toml`, independent of `apps/api`. Later merged into `apps/api/src/infrastructure/cdk/`, sharing `apps/api`'s `pyproject.toml`/`uv.lock` via a dedicated `cdk` dependency group (kept out of the production Docker image) — the Node CDK CLI's `package.json` stays nested at this path specifically so it doesn't join the pnpm workspace (which only matches direct children of `apps/`).
 
 ## Errors / edge cases
 

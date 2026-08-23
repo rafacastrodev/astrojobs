@@ -1,0 +1,35 @@
+{
+  "metadataAttributes": {
+    "dataset": "candidate-resumes",
+    "profile_type": "candidate"
+  },
+  "documentStructureConfiguration": {
+    "type": "RECORD_BASED_STRUCTURE_METADATA",
+    "recordBasedStructureMetadata": {
+      "contentFields": [
+        {
+          "fieldName": "text"
+        }
+      ],
+      "metadataFieldsSpecification": {
+        "fieldsToInclude": [
+          {
+            "fieldName": "profile_type"
+          },
+          {
+            "fieldName": "user_id"
+          },
+          {
+            "fieldName": "document_id"
+          },
+          {
+            "fieldName": "source_filename"
+          },
+          {
+            "fieldName": "skills"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,13 +1,7 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 
-import { LoadingScreen } from '@/components/LoadingScreen'
-import { userServices } from '@/services/userServices'
+import { LandingPage } from '@/pages/landing/components/LandingPage'
 
 export const Route = createFileRoute('/')({
-  beforeLoad: async () => {
-    const user = await userServices.getCurrentUser()
-    throw redirect({ to: user ? '/dashboard' : '/login' })
-  },
-  pendingComponent: LoadingScreen,
-  pendingMs: 0,
+  component: LandingPage,
 })

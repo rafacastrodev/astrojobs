@@ -1,11 +1,7 @@
 import os
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from botocore.exceptions import ClientError
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lambda" / "sync_ingestion"))
 
 os.environ["KNOWLEDGE_BASE_ID"] = "kb-test"
 os.environ["CANDIDATES_DATA_SOURCE_ID"] = "ds-test"

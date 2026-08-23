@@ -6,3 +6,5 @@
 .env
 *.db
 *api.egg-info/
+src/infrastructure/cdk/node_modules/
+src/infrastructure/cdk/cdk.out/
