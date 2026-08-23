@@ -70,8 +70,11 @@ jobs:
           MAX_UPLOAD_BYTES=${MAX_UPLOAD_BYTES:-5242880}
           EOF
 
-      - name: Start API and database
-        run: POSTGRES_HOST=db PGSSLMODE= docker compose up -d --build --wait db api
+      - name: Start database
+        run: docker compose up -d --wait db
+
+      - name: Build and start API
+        run: POSTGRES_HOST=db PGSSLMODE= docker compose up -d --build --wait api
 
       - name: Stop containers
         if: always()
