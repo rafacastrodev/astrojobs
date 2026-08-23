@@ -1,7 +1,7 @@
 """add resume_analyses table
 
 Revision ID: 85f0ccefb40a
-Revises: c411423c3dee
+Revises: 3f41dae8ebfe
 Create Date: 2026-08-21 17:29:18.409530
 
 """
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '85f0ccefb40a'
-down_revision: str | Sequence[str] | None = 'c411423c3dee'
+down_revision: str | Sequence[str] | None = '3f41dae8ebfe'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
