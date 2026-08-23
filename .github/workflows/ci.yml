@@ -75,7 +75,7 @@ jobs:
 
       - name: Build and start API
         run: |
-          POSTGRES_HOST=db PGSSLMODE= docker compose up -d --build api
+          POSTGRES_HOST=db PGSSLMODE=disable PGSSLROOTCERT= docker compose up -d --build api
           for i in $(seq 1 30); do
             code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:8000/health || true)
             if [ "$code" = "200" ]; then
