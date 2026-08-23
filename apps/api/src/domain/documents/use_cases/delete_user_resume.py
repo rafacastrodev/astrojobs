@@ -41,7 +41,7 @@ class DeleteUserResumeUseCase:
                 self._storage.delete(f"{document.storage_key}.metadata.json")
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
-                    "Failed to delete KB metadata sidecar for %s: %s",
+                    "Failed to delete legacy metadata sidecar for %s: %s",
                     document.storage_key,
                     exc,
                 )

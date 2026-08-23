@@ -62,7 +62,7 @@ jobs:
           PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
           PINECONE_NAMESPACE_RESUMES=${PINECONE_NAMESPACE_RESUMES:-resumes}
           PINECONE_NAMESPACE_JOBS=${PINECONE_NAMESPACE_JOBS:-jobs}
-          EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS:-384}
+          EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS:-1024}
           AWS_REGION=${AWS_REGION}
           AWS_S3_BUCKET=${AWS_S3_BUCKET}
           AWS_S3_ENDPOINT_URL=
@@ -71,7 +71,7 @@ jobs:
           EOF
 
       - name: Start API and database
-        run: POSTGRES_HOST=db PGSSLMODE= docker compose up -d --build db api
+        run: POSTGRES_HOST=db PGSSLMODE= docker compose up -d --build --wait db api
 
       - name: Stop containers
         if: always()
@@ -91,84 +91,6 @@ jobs:
             StrictHostKeyChecking accept-new
           EOF
           chmod 600 ~/.ssh/config
-
-      - name: Provision host
-        run: |
-          ssh deploy-target 'sudo bash -s' <<'PROVISION'
-          set -euo pipefail
-          COMPOSE_VERSION=v2.32.4
-          log() { echo "[provision] $*"; }
-
-          if ! command -v docker >/dev/null 2>&1; then
-            log "installing docker"
-            if command -v dnf >/dev/null 2>&1; then
-              dnf install -y docker
-            else
-              export DEBIAN_FRONTEND=noninteractive
-              apt-get update -qq
-              apt-get install -y -qq docker.io
-            fi
-          fi
-
-          if ! docker compose version >/dev/null 2>&1; then
-            log "installing docker compose ${COMPOSE_VERSION}"
-            mkdir -p /usr/local/lib/docker/cli-plugins
-            curl -fsSL \
-              "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-$(uname -m)" \
-              -o /usr/local/lib/docker/cli-plugins/docker-compose
-            chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
-          fi
-
-          systemctl enable --now docker
-          usermod -aG docker "${SUDO_USER:-ubuntu}"
-
-          if [ ! -f /etc/docker/daemon.json ]; then
-            log "capping container log size"
-            mkdir -p /etc/docker
-            printf '%s\n' '{"log-driver":"json-file","log-opts":{"max-size":"10m","max-file":"3"}}' \
-              > /etc/docker/daemon.json
-            systemctl restart docker
-          fi
-
-          if [ ! -f /etc/systemd/system/docker-prune.timer ]; then
-            log "scheduling weekly image prune"
-            printf '%s\n' \
-              '[Unit]' 'Description=Reclaim unused Docker data' \
-              '[Service]' 'Type=oneshot' \
-              'ExecStart=/usr/bin/docker system prune -af --filter until=168h' \
-              'ExecStart=/usr/bin/docker builder prune -af --filter until=168h' \
-              > /etc/systemd/system/docker-prune.service
-            printf '%s\n' \
-              '[Unit]' 'Description=Weekly Docker cleanup' \
-              '[Timer]' 'OnCalendar=weekly' 'Persistent=true' \
-              '[Install]' 'WantedBy=timers.target' \
-              > /etc/systemd/system/docker-prune.timer
-            systemctl daemon-reload
-            systemctl enable --now docker-prune.timer
-          fi
-
-          ram_mb=$(free -m | awk '/^Mem:/{print $2}')
-          free_mb=$(df -m --output=avail / | tail -1 | tr -d ' ')
-          if swapon --show | grep -q /swapfile; then
-            log "swap already present"
-          elif [ "${ram_mb}" -ge 3000 ]; then
-            log "skipping swap: ${ram_mb}MB RAM is enough"
-          elif [ "$((free_mb - 4096))" -ge 2048 ]; then
-            log "creating 2G swapfile (${ram_mb}MB RAM, ${free_mb}MB free)"
-            dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none
-            chmod 600 /swapfile
-            mkswap /swapfile >/dev/null
-            swapon /swapfile
-            grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
-          else
-            log "WARNING: ${ram_mb}MB RAM and only ${free_mb}MB disk free."
-            log "WARNING: the frontend build may be OOM-killed."
-          fi
-
-          mkdir -p "/home/${SUDO_USER:-ubuntu}/astrojobs"
-          chown "${SUDO_USER:-ubuntu}:${SUDO_USER:-ubuntu}" "/home/${SUDO_USER:-ubuntu}/astrojobs"
-          log "done"
-          PROVISION
 
       - name: Compose .env
         run: |
@@ -194,7 +116,7 @@ jobs:
           PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
           PINECONE_NAMESPACE_RESUMES=${PINECONE_NAMESPACE_RESUMES:-resumes}
           PINECONE_NAMESPACE_JOBS=${PINECONE_NAMESPACE_JOBS:-jobs}
-          EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS:-384}
+          EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS:-1024}
           AWS_REGION=${AWS_REGION}
           AWS_S3_BUCKET=${AWS_S3_BUCKET}
           AWS_S3_ENDPOINT_URL=
@@ -221,7 +143,7 @@ jobs:
           sg docker -c 'docker compose ps'
           DEPLOY
 
-      - name: Verify
+      - name: Verify deployment
         run: |
           for i in $(seq 1 30); do
             code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://${EC2_HOST}/health" || true)
@@ -232,5 +154,5 @@ jobs:
             sleep 5
           done
           echo "health check never returned 200 (last: ${code:-none})"
-          ssh deploy-target "cd ~/astrojobs && sg docker -c 'docker compose logs --tail=50'"
+          ssh deploy-target "cd ~/astrojobs && sg docker -c 'docker compose logs --tail=100 api frontend'"
           exit 1

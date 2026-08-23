@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     pinecone_index_name: str = ""
     pinecone_namespace_resumes: str = "resumes"
     pinecone_namespace_jobs: str = "jobs"
-    embedding_dimensions: int = 384
+    embedding_dimensions: int = 1024
 
     # Cross-region inference profile id, e.g. "us.anthropic.claude-sonnet-4-6".
     # Verify the current id with: aws bedrock list-foundation-models --region <region>

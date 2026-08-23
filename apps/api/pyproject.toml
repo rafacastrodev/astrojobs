@@ -34,14 +34,9 @@ dev = [
     "ruff>=0.16.4",
     "pytest>=8.0.0",
 ]
-cdk = [
-    "aws-cdk-lib>=2.255.0,<3.0.0",
-    "constructs>=10.0.0,<11.0.0",
-]
-
 [tool.pytest.ini_options]
 testpaths = ["src"]
-norecursedirs = [".venv", "node_modules", "cdk.out", "__pycache__", "*.egg-info"]
+norecursedirs = [".venv", "node_modules", "__pycache__", "*.egg-info"]
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = [
