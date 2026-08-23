@@ -2,11 +2,10 @@ name: ci-cd
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 concurrency:
-  group: ci-cd-${{ github.ref }}
+  group: production
   cancel-in-progress: true
 
 permissions:
@@ -14,121 +13,30 @@ permissions:
   id-token: write
 
 env:
-  POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-  POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-  POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
-  POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
-  JWT_SECRET: ${{ secrets.JWT_SECRET }}
-  JWT_EXPIRES_MINUTES: ${{ secrets.JWT_EXPIRES_MINUTES }}
-  PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
-  PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
-  PINECONE_NAMESPACE_RESUMES: ${{ secrets.PINECONE_NAMESPACE_RESUMES }}
-  PINECONE_NAMESPACE_JOBS: ${{ secrets.PINECONE_NAMESPACE_JOBS }}
-  EMBEDDING_DIMENSIONS: ${{ secrets.EMBEDDING_DIMENSIONS }}
-  AWS_REGION: ${{ secrets.AWS_REGION }}
-  AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-  MAX_UPLOAD_BYTES: ${{ secrets.MAX_UPLOAD_BYTES }}
-  FRONTEND_ORIGIN: ${{ secrets.FRONTEND_ORIGIN }}
-  EC2_HOST: ${{ secrets.EC2_HOST }}
+  AWS_REGION: us-east-2
   EC2_INSTANCE_ID: i-079d9fce38404b208
   DEPLOY_BUCKET: astrojobs-s3
   AWS_DEPLOY_ROLE_ARN: arn:aws:iam::956112822284:role/astrojobs-github-deploy
 
 jobs:
-  ci:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Compose .env
+      - name: Validate and build containers
         run: |
-          umask 077
-          case "${FRONTEND_ORIGIN}" in
-            https://*) cookie_secure=true ;;
-            *)         cookie_secure=false ;;
-          esac
-          cat > .env <<EOF
-          POSTGRES_USER=${POSTGRES_USER}
-          POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-          POSTGRES_DB=${POSTGRES_DB}
-          POSTGRES_HOST=${POSTGRES_HOST}
-          PGSSLMODE=verify-full
-          PGSSLROOTCERT=/etc/ssl/certs/rds-global-bundle.pem
-          JWT_SECRET=${JWT_SECRET}
-          JWT_EXPIRES_MINUTES=${JWT_EXPIRES_MINUTES:-10080}
-          COOKIE_SECURE=${cookie_secure}
-          FRONTEND_ORIGIN=${FRONTEND_ORIGIN}
-          ENVIRONMENT=production
-          PINECONE_API_KEY=${PINECONE_API_KEY}
-          PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
-          PINECONE_NAMESPACE_RESUMES=${PINECONE_NAMESPACE_RESUMES:-resumes}
-          PINECONE_NAMESPACE_JOBS=${PINECONE_NAMESPACE_JOBS:-jobs}
-          EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS:-1024}
-          AWS_REGION=${AWS_REGION}
-          AWS_S3_BUCKET=${AWS_S3_BUCKET}
-          AWS_S3_ENDPOINT_URL=
-          BEDROCK_MODEL_ID=
-          MAX_UPLOAD_BYTES=${MAX_UPLOAD_BYTES:-5242880}
-          EOF
+          cp .env.example .env
+          docker compose config --quiet
+          docker compose build api frontend
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{ env.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-
-      - name: Package and upload deployment
-        run: |
-          deployment_archive="${RUNNER_TEMP}/astrojobs-${GITHUB_SHA}.tar.gz"
-          tar -czf "${deployment_archive}" \
-            --exclude='.git' --exclude='node_modules' --exclude='.venv' \
-            --exclude='dist' --exclude='__pycache__' --exclude='*.pyc' \
-            --exclude='.env' \
-            .
-          aws s3 cp "${deployment_archive}" "s3://${DEPLOY_BUCKET}/deployments/${GITHUB_SHA}/deployment.tar.gz"
-          aws s3 cp .env "s3://${DEPLOY_BUCKET}/deployments/${GITHUB_SHA}/.env"
-
-      - name: Deploy through Systems Manager
-        run: |
-          jq -n \
-            --arg bucket "${DEPLOY_BUCKET}" \
-            --arg sha "${GITHUB_SHA}" \
-            '{commands: [
-              "set -euo pipefail",
-              "install -d -o ubuntu -g ubuntu /home/ubuntu/astrojobs",
-              "aws s3 cp s3://" + $bucket + "/deployments/" + $sha + "/deployment.tar.gz /tmp/astrojobs-deployment.tar.gz",
-              "tar -xzf /tmp/astrojobs-deployment.tar.gz -C /home/ubuntu/astrojobs",
-              "aws s3 cp s3://" + $bucket + "/deployments/" + $sha + "/.env /home/ubuntu/astrojobs/.env",
-              "chown -R ubuntu:ubuntu /home/ubuntu/astrojobs",
-              "chmod 600 /home/ubuntu/astrojobs/.env",
-              "cd /home/ubuntu/astrojobs",
-              "sg docker -c '\''docker compose -p astrojobs up -d --build --remove-orphans'\''",
-              "rm -f /tmp/astrojobs-deployment.tar.gz"
-            ]}' > ssm-parameters.json
-
-          command_id=$(aws ssm send-command \
-            --instance-ids "${EC2_INSTANCE_ID}" \
-            --document-name AWS-RunShellScript \
-            --comment "Deploy AstroJobs ${GITHUB_SHA}" \
-            --parameters file://ssm-parameters.json \
-            --query 'Command.CommandId' --output text)
-          echo "SSM command: ${command_id}"
-
-          status="Pending"
-          for i in $(seq 1 60); do
-            sleep 10
-            status=$(aws ssm get-command-invocation \
-              --command-id "${command_id}" \
-              --instance-id "${EC2_INSTANCE_ID}" \
-              --query Status --output text 2>/dev/null || echo "Pending")
-            case "${status}" in
-              Success|Failed|Cancelled|TimedOut) break ;;
-            esac
-          done
-
-          aws ssm get-command-invocation \
-            --command-id "${command_id}" \
-            --instance-id "${EC2_INSTANCE_ID}" \
-            --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}' \
-            --output text
-          test "${status}" = "Success"
+      - name: Deploy with Systems Manager
+        run: scripts/deploy-ci.sh
