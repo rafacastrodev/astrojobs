@@ -93,6 +93,9 @@ jobs:
           docker inspect --format '{{json .State}}' "$container_id"
           exit 1
 
+      - name: Build frontend
+        run: docker compose build frontend
+
       - name: Stop containers
         if: always()
         run: docker compose down
@@ -137,12 +140,13 @@ jobs:
 
       - name: Package and upload deployment
         run: |
-          tar -czf deployment.tar.gz \
+          deployment_archive="${RUNNER_TEMP}/astrojobs-${GITHUB_SHA}.tar.gz"
+          tar -czf "${deployment_archive}" \
             --exclude='.git' --exclude='node_modules' --exclude='.venv' \
             --exclude='dist' --exclude='__pycache__' --exclude='*.pyc' \
-            --exclude='.env' --exclude='.env.deploy' --exclude='deployment.tar.gz' \
+            --exclude='.env' --exclude='.env.deploy' \
             .
-          aws s3 cp deployment.tar.gz "s3://${DEPLOY_BUCKET}/deployments/${GITHUB_SHA}/deployment.tar.gz"
+          aws s3 cp "${deployment_archive}" "s3://${DEPLOY_BUCKET}/deployments/${GITHUB_SHA}/deployment.tar.gz"
           aws s3 cp .env.deploy "s3://${DEPLOY_BUCKET}/deployments/${GITHUB_SHA}/.env"
 
       - name: Deploy through Systems Manager
