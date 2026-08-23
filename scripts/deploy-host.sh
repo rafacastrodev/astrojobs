@@ -3,6 +3,8 @@ set -euo pipefail
 
 cd /home/ubuntu/astrojobs
 
+docker rm -f astrojobs-api astrojobs-frontend 2>/dev/null || true
+
 docker compose -p astrojobs config --quiet
 sg docker -c 'docker compose -p astrojobs up -d --build --remove-orphans --wait --wait-timeout 300'
 docker compose -p astrojobs ps
