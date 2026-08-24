@@ -4,7 +4,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from domain.documents.errors import UnsafeContentError, UnsupportedFileError
+from domain.documents.errors import (
+    SafetyServiceError,
+    UnsafeContentError,
+    UnsupportedFileError,
+)
 from infrastructure.security.openai_content_safety import OpenAIContentSafetyChecker
 from infrastructure.security.pii_redactor import ResumePiiRedactor
 from infrastructure.security.resume_file_validator import ResumeFileSafetyValidator
@@ -71,6 +75,20 @@ class _Moderations:
         return SimpleNamespace(results=[SimpleNamespace(flagged=self.flagged)])
 
 
+class _RecordingModerations:
+    def __init__(self):
+        self.inputs: list[str] = []
+
+    def create(self, **kwargs):
+        self.inputs.append(kwargs["input"])
+        return SimpleNamespace(results=[SimpleNamespace(flagged=False)])
+
+
+class _FailingModerations:
+    def create(self, **_kwargs):
+        raise RuntimeError("upstream unavailable")
+
+
 def _checker(flagged: bool = False) -> OpenAIContentSafetyChecker:
     checker = OpenAIContentSafetyChecker.__new__(OpenAIContentSafetyChecker)
     checker._client = SimpleNamespace(moderations=_Moderations(flagged))
@@ -85,3 +103,22 @@ def test_rejects_prompt_injection_before_moderation() -> None:
 def test_rejects_moderation_flag() -> None:
     with pytest.raises(UnsafeContentError, match="safety"):
         _checker(flagged=True).check("ordinary resume content")
+
+
+def test_moderates_large_resume_one_chunk_per_request() -> None:
+    checker = OpenAIContentSafetyChecker.__new__(OpenAIContentSafetyChecker)
+    moderations = _RecordingModerations()
+    checker._client = SimpleNamespace(moderations=moderations)
+
+    checker.check("a" * (checker.CHUNK_CHARS + 1))
+
+    assert [len(value) for value in moderations.inputs] == [checker.CHUNK_CHARS, 1]
+    assert all(isinstance(value, str) for value in moderations.inputs)
+
+
+def test_wraps_moderation_service_failure() -> None:
+    checker = OpenAIContentSafetyChecker.__new__(OpenAIContentSafetyChecker)
+    checker._client = SimpleNamespace(moderations=_FailingModerations())
+
+    with pytest.raises(SafetyServiceError, match="Could not verify"):
+        checker.check("ordinary resume content")

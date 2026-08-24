@@ -531,8 +531,11 @@ export interface components {
         };
         /** SignupRequest */
         SignupRequest: {
-            /** Name */
-            name: string;
+            /**
+             * Username
+             * @description Unique username containing only letters and numbers
+             */
+            username: string;
             /**
              * Email
              * Format: email

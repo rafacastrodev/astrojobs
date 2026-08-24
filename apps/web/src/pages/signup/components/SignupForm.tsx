@@ -35,21 +35,23 @@ export const SignupForm = ({ onSwitchToSignin }: SignupFormProps) => {
 
       <div>
         <label
-          htmlFor="signup-name"
+          htmlFor="signup-username"
           className="mb-1.5 block text-sm text-muted-foreground"
         >
-          Full name
+          Username
         </label>
         <Input
-          id="signup-name"
-          placeholder="Jane Doe"
-          autoComplete="name"
-          aria-invalid={Boolean(errors.name)}
+          id="signup-username"
+          placeholder="janedoe"
+          autoComplete="username"
+          aria-invalid={Boolean(errors.username)}
           icon={<UserIcon />}
-          {...register('name')}
+          {...register('username')}
         />
-        {errors.name ? (
-          <p className="mt-1 text-sm text-destructive">{errors.name.message}</p>
+        {errors.username ? (
+          <p className="mt-1 text-sm text-destructive">
+            {errors.username.message}
+          </p>
         ) : null}
       </div>
 

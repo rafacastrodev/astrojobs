@@ -1786,11 +1786,13 @@
       },
       "SignupRequest": {
         "properties": {
-          "name": {
+          "username": {
             "type": "string",
-            "maxLength": 120,
-            "minLength": 1,
-            "title": "Name"
+            "maxLength": 30,
+            "minLength": 3,
+            "pattern": "^[A-Za-z0-9]+$",
+            "title": "Username",
+            "description": "Unique username containing only letters and numbers"
           },
           "email": {
             "type": "string",
@@ -1806,7 +1808,7 @@
         },
         "type": "object",
         "required": [
-          "name",
+          "username",
           "email",
           "password"
         ],

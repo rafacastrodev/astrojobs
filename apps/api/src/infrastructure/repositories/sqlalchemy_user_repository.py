@@ -16,6 +16,14 @@ class SqlAlchemyUserRepository:
         )
         return self._to_entity(model) if model else None
 
+    def get_by_name(self, name: str) -> UserEntity | None:
+        model = (
+            self._session.query(UserModel)
+            .filter(UserModel.name == name)
+            .one_or_none()
+        )
+        return self._to_entity(model) if model else None
+
     def get_by_id(self, user_id: int) -> UserEntity | None:
         model = self._session.get(UserModel, user_id)
         return self._to_entity(model) if model else None

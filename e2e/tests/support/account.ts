@@ -8,11 +8,11 @@ export function uniqueEmail(prefix = 'e2e'): string {
   return `${prefix}.${stamp}@example.com`
 }
 
-export async function signUp(page: Page, email: string, name = 'E2E Runner') {
+export async function signUp(page: Page, email: string, name = 'e2erunner') {
   await page.goto('/login?mode=signup')
   await page.getByRole('heading', { name: 'Create an account' }).waitFor()
 
-  await page.locator('#signup-name').fill(name)
+  await page.locator('#signup-username').fill(name)
   await page.locator('#signup-email').fill(email)
   await page.locator('#signup-password').fill(PASSWORD)
   await page.locator('#signup-confirm-password').fill(PASSWORD)
@@ -34,7 +34,7 @@ export async function signIn(page: Page, email: string, password = PASSWORD) {
   await submit.click()
 }
 
-export async function expectSignedIn(page: Page, name = 'E2E Runner') {
+export async function expectSignedIn(page: Page, name = 'e2erunner') {
   await expect(page).toHaveURL(/\/dashboard/)
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
   await expect(page.getByText(`Signed in as ${name}`)).toBeVisible()

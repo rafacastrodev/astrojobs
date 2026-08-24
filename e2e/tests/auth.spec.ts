@@ -82,7 +82,7 @@ test.describe('authentication', () => {
     const submit = page.getByRole('button', { name: 'Sign up' })
     await expect(submit).toBeDisabled()
 
-    await page.locator('#signup-name').fill('E2E Runner')
+    await page.locator('#signup-username').fill('e2erunner')
     await page.locator('#signup-email').fill(uniqueEmail('validation'))
     await page.locator('#signup-password').fill('short1')
     await page.locator('#signup-confirm-password').fill('short1')

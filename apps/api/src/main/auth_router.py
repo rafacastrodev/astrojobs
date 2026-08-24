@@ -5,6 +5,7 @@ from domain.users.errors import (
     EmailAlreadyExistsError,
     InvalidCredentialsError,
     InvalidResetTokenError,
+    UsernameAlreadyExistsError,
 )
 from domain.users.use_cases.login import LoginUseCase
 from domain.users.use_cases.request_password_reset import RequestPasswordResetUseCase
@@ -61,10 +62,14 @@ def signup(
     use_case: SignupUseCase = Depends(get_signup_use_case),
 ) -> UserResponse:
     try:
-        user, token = use_case.execute(body.name, body.email, body.password)
+        user, token = use_case.execute(body.username, body.email, body.password)
     except EmailAlreadyExistsError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Email already in use"
+        )
+    except UsernameAlreadyExistsError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Username already in use"
         )
     _set_auth_cookie(response, token)
     return _to_user_response(user)

@@ -60,11 +60,13 @@ const confirmPasswordSchema = z.string().min(1, 'Confirm your password')
 
 export const signupSchema = z
   .object({
-    name: z
+    username: z
       .string()
       .trim()
-      .min(1, 'Name is required')
-      .max(120, 'Name must be at most 120 characters'),
+      .min(3, 'Username must be at least 3 characters')
+      .max(30, 'Username must be at most 30 characters')
+      .regex(/^[A-Za-z0-9]+$/, 'Use letters and numbers only')
+      .transform((value) => value.toLowerCase()),
     email: emailSchema,
     password: passwordSchema,
     confirmPassword: confirmPasswordSchema,

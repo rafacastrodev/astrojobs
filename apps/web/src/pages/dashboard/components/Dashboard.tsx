@@ -4,14 +4,17 @@ import { Button } from '@/components/Button'
 import { Logo } from '@/components/Logo'
 
 import { useDashboard } from '../hooks/useDashboard'
+import { ProfileSection } from './ProfileSection'
 import { ResumeSection } from './ResumeSection'
 
 type DashboardProps = {
   name: string
+  email: string
   role: 'user' | 'admin'
+  createdAt: string
 }
 
-export const Dashboard = ({ name, role }: DashboardProps) => {
+export const Dashboard = ({ name, email, role, createdAt }: DashboardProps) => {
   const { handleLogout, isLoggingOut } = useDashboard()
 
   return (
@@ -23,7 +26,9 @@ export const Dashboard = ({ name, role }: DashboardProps) => {
             <div>
               <p className="text-sm text-muted-foreground">AstroJobs</p>
               <h1 className="text-2xl font-semibold">Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Signed in as {name}</p>
+              <p className="text-sm text-muted-foreground">
+                Signed in as {name}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -36,14 +41,26 @@ export const Dashboard = ({ name, role }: DashboardProps) => {
               </Link>
             ) : null}
             <div className="w-28">
-              <Button onClick={handleLogout} isLoading={isLoggingOut} className="!py-2 text-sm">
+              <Button
+                onClick={handleLogout}
+                isLoading={isLoggingOut}
+                className="!py-2 text-sm"
+              >
                 Log out
               </Button>
             </div>
           </div>
         </header>
 
-        <ResumeSection />
+        <main className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <ResumeSection />
+          <ProfileSection
+            name={name}
+            email={email}
+            role={role}
+            createdAt={createdAt}
+          />
+        </main>
       </div>
     </div>
   )

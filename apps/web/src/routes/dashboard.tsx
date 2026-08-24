@@ -19,5 +19,12 @@ export const Route = createFileRoute('/dashboard')({
 
 function DashboardPage() {
   const { user } = Route.useRouteContext()
-  return <Dashboard name={user.name} role={user.role} />
+  return (
+    <Dashboard
+      name={user.name}
+      email={user.email}
+      role={user.role}
+      createdAt={user.created_at}
+    />
+  )
 }

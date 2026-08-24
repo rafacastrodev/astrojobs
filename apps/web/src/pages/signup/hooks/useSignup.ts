@@ -18,7 +18,7 @@ export const useSignup = () => {
     resolver: zodResolver(signupSchema),
     mode: 'onChange',
     defaultValues: {
-      name: '',
+      username: '',
       email: '',
       password: '',
       confirmPassword: '',

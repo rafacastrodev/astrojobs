@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import ClassVar
 
@@ -9,6 +10,8 @@ from domain.documents.errors import (
     UnsafeContentError,
 )
 from infrastructure.database.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class OpenAIContentSafetyChecker:
@@ -36,15 +39,27 @@ class OpenAIContentSafetyChecker:
             text[start : start + self.CHUNK_CHARS]
             for start in range(0, len(text), self.CHUNK_CHARS)
         ] or [""]
-        try:
-            response = self._client.moderations.create(
-                model=settings.openai_moderation_model,
-                input=chunks,
-            )
-        except Exception as exc:
-            raise SafetyServiceError("Could not verify resume content safety") from exc
-        if any(result.flagged for result in response.results):
-            raise UnsafeContentError("Resume content did not pass the safety check")
+        for chunk in chunks:
+            try:
+                response = self._client.moderations.create(
+                    model=settings.openai_moderation_model,
+                    input=chunk,
+                )
+            except Exception as exc:
+                # Keep resume contents out of logs, but retain the upstream error
+                # type/message so production failures are diagnosable.
+                logger.exception(
+                    "OpenAI moderation request failed (model=%s, chunk_chars=%d)",
+                    settings.openai_moderation_model,
+                    len(chunk),
+                )
+                raise SafetyServiceError(
+                    "Could not verify resume content safety"
+                ) from exc
+            if any(result.flagged for result in response.results):
+                raise UnsafeContentError(
+                    "Resume content did not pass the safety check"
+                )
 
     @staticmethod
     def _build_client() -> OpenAI:

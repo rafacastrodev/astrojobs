@@ -39,7 +39,7 @@ describe('authentication schemas', () => {
     'rejects different password confirmations',
     (schema) => {
       const result = schema.safeParse({
-        name: 'Person',
+        username: 'person',
         email: 'person@example.com',
         password: 'password1',
         confirmPassword: 'different123',
@@ -53,6 +53,20 @@ describe('authentication schemas', () => {
           ]),
         )
       }
+    },
+  )
+
+  it.each(['Rafael Castro', 'rafael-castro', 'rafael_castro', 'rafael!'])(
+    'rejects an invalid username: %s',
+    (username) => {
+      const result = signupSchema.safeParse({
+        username,
+        email: 'person@example.com',
+        password: 'password1',
+        confirmPassword: 'password1',
+      })
+
+      expect(result.success).toBe(false)
     },
   )
 })

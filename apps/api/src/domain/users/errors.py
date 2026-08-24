@@ -3,6 +3,11 @@ class EmailAlreadyExistsError(Exception):
         super().__init__(f"Email already in use: {email}")
 
 
+class UsernameAlreadyExistsError(Exception):
+    def __init__(self, username: str):
+        super().__init__(f"Username already in use: {username}")
+
+
 class InvalidCredentialsError(Exception):
     def __init__(self):
         super().__init__("Invalid email or password")
