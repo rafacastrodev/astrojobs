@@ -218,7 +218,7 @@ export const ResumeSection = () => {
                           </span>
                           {` · ${ATS_CATEGORY_LABELS[resume.latest_analysis.ats_category]}`}
                           {resume.latest_analysis.years_of_experience !== null
-                            ? ` · ${resume.latest_analysis.years_of_experience} anos`
+                            ? ` · ${resume.latest_analysis.years_of_experience} years`
                             : ''}
                           {resume.latest_analysis.technologies.length > 0
                             ? ` · ${resume.latest_analysis.technologies.length} technologies`

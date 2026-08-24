@@ -28,6 +28,11 @@ from domain.documents.errors import (
     SyncConfigurationError,
     UnsupportedFileError,
 )
+from domain.documents.experience_grouping import grouped_resume_payload
+from domain.documents.recruiter_access import (
+    recruiter_owned_jobs,
+    require_recruiter_job,
+)
 from domain.documents.technology_catalog import TECHNOLOGIES
 from domain.documents.use_cases.close_job import CloseJobUseCase
 from domain.documents.use_cases.create_document_from_upload import (
@@ -123,6 +128,11 @@ async def upload_document(
     user: UserEntity = Depends(require_recruiter),
     use_case: CreateDocumentFromUploadUseCase = Depends(get_create_document_use_case),
 ) -> DocumentResponse:
+    if type == "resume":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Recruiters cannot upload resumes",
+        )
     content = await file.read()
     filename = file.filename or "upload.txt"
     try:
@@ -309,7 +319,7 @@ def list_matching_resumes(
                 for job in match.matched_jobs
                 if job.id is not None
             ],
-            payload=match.document.payload,
+            payload=grouped_resume_payload(match.document.payload),
             summary=match.summary,
             applied_job_ids=list(
                 applications.list_job_ids_for_applicant(match.document.user_id)
@@ -333,11 +343,12 @@ def list_documents(
     user: UserEntity = Depends(require_recruiter),
     use_case: ListDocumentsUseCase = Depends(get_list_documents_use_case),
 ) -> list[DocumentResponse]:
-    documents = [
-        document
-        for document in use_case.execute(doc_type=type, status=doc_status)
-        if document.type != "job" or document.user_id == user.id
-    ]
+    if type == "resume":
+        return []
+    documents = recruiter_owned_jobs(
+        list(use_case.execute(doc_type=type, status=doc_status)),
+        user.id,
+    )
     return [_to_document_response(document) for document in documents]
 
 
@@ -348,9 +359,7 @@ def get_document(
     use_case: GetDocumentUseCase = Depends(get_document_use_case),
 ) -> DocumentResponse:
     try:
-        document = use_case.execute(document_id)
-        if document.type == "job" and document.user_id != user.id:
-            raise DocumentNotFoundError("Job not found")
+        document = require_recruiter_job(use_case.execute(document_id), user.id)
     except DocumentNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     return _to_document_response(document)
@@ -378,10 +387,10 @@ def delete_document(
     use_case: DeleteDocumentUseCase = Depends(get_delete_document_use_case),
 ) -> None:
     try:
-        document = document_use_case.execute(document_id)
-        if document.type == "job" and document.user_id != user.id:
-            raise DocumentNotFoundError("Job not found")
-        use_case.execute(document_id)
+        document = require_recruiter_job(
+            document_use_case.execute(document_id), user.id
+        )
+        use_case.execute(document.id)  # type: ignore[arg-type]
     except DocumentNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except PublishedJobCannotBeDeletedError as exc:

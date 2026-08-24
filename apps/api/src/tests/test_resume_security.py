@@ -33,6 +33,37 @@ def test_rejects_active_pdf() -> None:
         )
 
 
+def test_rejects_open_action_javascript() -> None:
+    with pytest.raises(UnsafeContentError, match="active"):
+        ResumeFileSafetyValidator().validate(
+            b"%PDF-1.7\n/OpenAction << /S /JavaScript /JS (app.alert) >>",
+            "resume.pdf",
+        )
+
+
+def test_accepts_pdf_open_action_page_view() -> None:
+    ResumeFileSafetyValidator().validate(
+        b"%PDF-1.7\n/OpenAction << /S /GoTo /D [ 0 /FitH ] >>",
+        "resume.pdf",
+    )
+
+
+def test_redacts_direct_identifiers_and_keeps_year_ranges() -> None:
+    result = ResumePiiRedactor().redact(
+        "Maria Silva\nmaria@example.com\n+55 81 99999-0000\n"
+        "QA Analyst - Beta Systems (2019-2022)\nBSc USP (2015-2018)\n"
+        "CPF 123.456.789-00"
+    )
+    assert "maria@example.com" not in result.redacted_text
+    assert "99999-0000" not in result.redacted_text
+    assert "123.456.789-00" not in result.redacted_text
+    assert "2019-2022" in result.redacted_text
+    assert "2015-2018" in result.redacted_text
+    assert result.redacted_text.count("[PHONES_REDACTED]") == 1
+    assert result.contact["emails"] == ["maria@example.com"]
+    assert result.contact["phones"] == ["+55 81 99999-0000"]
+
+
 def test_accepts_minimal_docx_container() -> None:
     content = _docx(
         {

@@ -15,9 +15,9 @@ class ResumeFileSafetyValidator:
     _PDF_ACTIVE_MARKERS = (
         b"/JavaScript",
         b"/JS ",
+        b"/JS(",
         b"/EmbeddedFile",
         b"/Launch",
-        b"/OpenAction",
     )
 
     def validate(self, content: bytes, filename: str) -> None:

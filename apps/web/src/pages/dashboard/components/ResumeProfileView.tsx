@@ -154,7 +154,7 @@ export const ResumeProfileView = ({ payload, analysis }: Props) => {
 
       {analysis ? (
         <section>
-          <h4 className="font-semibold">Dados</h4>
+          <h4 className="font-semibold">Profile data</h4>
           <dl className="mt-2 flex flex-col gap-1 text-muted-foreground">
             <div>
               <dt className="inline font-medium text-card-foreground">ATS: </dt>
@@ -166,9 +166,11 @@ export const ResumeProfileView = ({ payload, analysis }: Props) => {
             {analysis.years_of_experience != null ? (
               <div>
                 <dt className="inline font-medium text-card-foreground">
-                  Experiência:{' '}
+                  Experience:{' '}
                 </dt>
-                <dd className="inline">{analysis.years_of_experience} anos</dd>
+                <dd className="inline">
+                  {analysis.years_of_experience} years
+                </dd>
               </div>
             ) : null}
           </dl>

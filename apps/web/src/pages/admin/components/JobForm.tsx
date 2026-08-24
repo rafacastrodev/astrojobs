@@ -93,16 +93,18 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
         )
       }}
     >
-      <label className="grid gap-1 text-sm">
+      <label className="grid gap-1 text-sm" htmlFor="job-title">
         <span className="font-medium">Title</span>
         <input
+          id="job-title"
+          name="title"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           maxLength={200}
           className="rounded-lg border border-border bg-input p-3"
         />
       </label>
-      <label className="grid gap-1 text-sm">
+      <label className="grid gap-1 text-sm" htmlFor="job-technologies">
         <span className="font-medium">Technologies</span>
         <p className="text-muted-foreground">
           Add the stack you need. These are used to find matching resumes.
@@ -129,6 +131,8 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
             </span>
           ))}
           <input
+            id="job-technologies"
+            name="technologies"
             list="technology-catalog"
             value={draftTech}
             onChange={(event) => {
@@ -174,9 +178,11 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
         ) : null}
       </label>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-1 text-sm">
+        <label className="grid gap-1 text-sm" htmlFor="job-seniority">
           <span className="font-medium">Seniority</span>
           <select
+            id="job-seniority"
+            name="seniority"
             value={seniority}
             onChange={(event) =>
               setSeniority(event.target.value as JobSeniority)
@@ -192,9 +198,11 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
             <option value="staff">Staff</option>
           </select>
         </label>
-        <label className="grid gap-1 text-sm">
+        <label className="grid gap-1 text-sm" htmlFor="job-work-mode">
           <span className="font-medium">Work mode</span>
           <select
+            id="job-work-mode"
+            name="work_mode"
             value={workMode}
             onChange={(event) => setWorkMode(event.target.value as JobWorkMode)}
             className={selectClassName}
@@ -204,9 +212,11 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
             <option value="on-site">On-site</option>
           </select>
         </label>
-        <label className="grid gap-1 text-sm">
+        <label className="grid gap-1 text-sm" htmlFor="job-region">
           <span className="font-medium">Region</span>
           <input
+            id="job-region"
+            name="region"
             value={region}
             onChange={(event) => setRegion(event.target.value)}
             maxLength={120}
@@ -214,9 +224,11 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
             className="rounded-lg border border-border bg-input p-3"
           />
         </label>
-        <label className="grid gap-1 text-sm">
+        <label className="grid gap-1 text-sm" htmlFor="job-employment-type">
           <span className="font-medium">Contract type</span>
           <select
+            id="job-employment-type"
+            name="employment_type"
             value={employmentType}
             onChange={(event) =>
               setEmploymentType(event.target.value as JobEmploymentType)
@@ -231,9 +243,11 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
           </select>
         </label>
       </div>
-      <label className="grid gap-1 text-sm">
+      <label className="grid gap-1 text-sm" htmlFor="job-description">
         <span className="font-medium">Description</span>
         <textarea
+          id="job-description"
+          name="description"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           rows={5}

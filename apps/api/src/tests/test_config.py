@@ -1,5 +1,8 @@
 import os
 
+import pytest
+from pydantic import ValidationError
+
 from infrastructure.database.config import Settings, _drop_empty_libpq_env
 
 _ACCESS_POINT = "arn:aws:s3:us-east-1:956112822284:accesspoint/astrojobs-s3-access"
@@ -115,9 +118,30 @@ def test_agentcore_gateway_url_enables_kb_retrieval():
 
 def test_production_does_not_use_pgvector():
     assert (
-        _settings(environment="production", postgres_host="db.example").uses_pgvector
+        _settings(
+            environment="production",
+            postgres_host="db.example",
+            pinecone_api_key="pc-key",
+            pinecone_index_name="astrojobs",
+        ).uses_pgvector
         is False
     )
+
+
+def test_production_requires_pinecone():
+    with pytest.raises(ValidationError, match="PINECONE"):
+        _settings(environment="production", postgres_host="db.example")
+
+
+def test_production_forces_secure_cookies():
+    settings = _settings(
+        environment="production",
+        postgres_host="db.example",
+        pinecone_api_key="pc-key",
+        pinecone_index_name="astrojobs",
+        cookie_secure=False,
+    )
+    assert settings.cookie_secure is True
 
 
 def test_development_defaults_to_localstack_only_without_real_s3(monkeypatch):

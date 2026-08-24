@@ -91,13 +91,10 @@ def signup(
         user, token = use_case.execute(
             body.username, body.email, body.password, body.role
         )
-    except EmailAlreadyExistsError:
+    except (EmailAlreadyExistsError, UsernameAlreadyExistsError):
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Email already in use"
-        )
-    except UsernameAlreadyExistsError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Username already in use"
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Could not create this account",
         )
     _set_auth_cookie(response, token)
     return _to_user_response(user)

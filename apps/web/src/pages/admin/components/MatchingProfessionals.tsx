@@ -163,7 +163,7 @@ export const MatchingProfessionals = ({
                         ),
                       ) * 100,
                     )}
-                    % match
+                    % stack match
                   </span>
                 </div>
                 <ApplicantProfileView
@@ -264,10 +264,10 @@ export const MatchingProfessionals = ({
             className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl"
           >
             <h3 className="text-lg font-semibold text-card-foreground">
-              Send job offer
+              Send offer for {target.jobTitle}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              {target.jobTitle}
+              This offer is for that role only. Confirm before sending.
             </p>
             <label className="mt-5 block text-sm font-medium text-card-foreground">
               Message

@@ -1,6 +1,8 @@
 import re
 from typing import Any
 
+from domain.documents.technology_catalog import flatten_tech_stack, normalize_tech_stack
+
 _DATE_RANGE = re.compile(
     r"(?i)(?:\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{4}|\b\d{4}\b)"
     r"\s*(?:-|–|—|to)\s*"
@@ -37,10 +39,14 @@ def group_experiences(items: list[Any]) -> list[dict[str, Any]]:
 def grouped_resume_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(payload, dict):
         return payload
-    experiences = payload.get("experiences")
-    if not isinstance(experiences, list):
-        return payload
-    return {**payload, "experiences": group_experiences(experiences)}
+    result = dict(payload)
+    experiences = result.get("experiences")
+    if isinstance(experiences, list):
+        result["experiences"] = group_experiences(experiences)
+    stack = normalize_tech_stack(result.get("tech_stack"), result.get("skills"))
+    result["tech_stack"] = stack
+    result["skills"] = flatten_tech_stack(stack)
+    return result
 
 
 def split_experience_blocks(block: str) -> list[str]:

@@ -155,7 +155,8 @@ class Settings(BaseSettings):
                 "http://127.0.0.1:3000",
             }
             return sorted(origins)
-        return [_PRODUCTION_FRONTEND_ORIGIN]
+        origin = (self.frontend_origin or _PRODUCTION_FRONTEND_ORIGIN).rstrip("/")
+        return sorted({origin, _PRODUCTION_FRONTEND_ORIGIN})
 
     @property
     def uses_pgvector(self) -> bool:
@@ -237,6 +238,14 @@ class Settings(BaseSettings):
             raise ValueError(
                 "POSTGRES_HOST is required when ENVIRONMENT is not development"
             )
+
+        if not self.is_development:
+            if not self.pinecone_api_key.strip() or not self.pinecone_index_name.strip():
+                raise ValueError(
+                    "PINECONE_API_KEY and PINECONE_INDEX_NAME are required "
+                    "when ENVIRONMENT is not development"
+                )
+            self.cookie_secure = True
 
         if self.frontend_origin is None:
             self.frontend_origin = (

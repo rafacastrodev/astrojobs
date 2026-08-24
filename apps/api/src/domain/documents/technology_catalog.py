@@ -111,6 +111,11 @@ _ALIASES = {
 }
 
 _BY_KEY = {technology.casefold(): technology for technology in TECHNOLOGIES}
+_SECTION_PREFIX = re.compile(
+    r"^(?:languages?|frameworks?|databases?|cloud|tools?|other|testing|"
+    r"skills?|tech(?:nical)?\s*skills?|tech\s*stack)\s*:\s*",
+    re.IGNORECASE,
+)
 
 TECH_STACK_CATEGORIES = (
     "languages",
@@ -213,7 +218,8 @@ _TECHNOLOGY_CATEGORY: dict[str, str] = {
 
 
 def canonical_technology(value: str) -> str | None:
-    key = value.strip().casefold()
+    cleaned = _SECTION_PREFIX.sub("", value.strip()).strip()
+    key = cleaned.casefold()
     if not key:
         return None
     return _ALIASES.get(key) or _BY_KEY.get(key)
@@ -271,7 +277,7 @@ def normalize_tech_stack(*groups: object) -> dict[str, list[str]]:
     seen: dict[str, str] = {}
     for group in groups:
         for raw in _iter_tech_values(group):
-            canonical = canonical_technology(raw) or raw.strip()
+            canonical = canonical_technology(raw)
             if not canonical:
                 continue
             key = canonical.casefold()

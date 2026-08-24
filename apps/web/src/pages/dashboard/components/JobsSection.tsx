@@ -137,7 +137,7 @@ const JobCard = ({
           </span>
         ) : resumeId != null ? (
           <span className="shrink-0 rounded-full border border-border px-3 py-1 text-sm font-medium text-card-foreground">
-            {Math.round(Math.max(0, Math.min(1, job.score)) * 100)}% match
+            {Math.round(Math.max(0, Math.min(1, job.score)) * 100)}% stack match
           </span>
         ) : null}
         <button
@@ -284,7 +284,7 @@ export const JobsSection = ({ focusJobId }: { focusJobId?: number }) => {
       <h2 className="text-lg font-semibold text-card-foreground">Open jobs</h2>
       <p className="mt-2 text-sm text-muted-foreground">
         {hasResume
-          ? 'Best matches first, with the newest roles first when scores tie.'
+          ? 'Ranked by stack overlap with your resume.'
           : 'Newest roles first. Upload a resume to rank them by match.'}
       </p>
       <div className="mt-6">

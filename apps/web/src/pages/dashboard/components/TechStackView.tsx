@@ -24,7 +24,10 @@ const uniqueStrings = (values: string[]) => {
   const seen = new Set<string>()
   const result: string[] = []
   for (const value of values) {
-    const trimmed = value.trim()
+    const trimmed = value.replace(
+      /^(languages?|frameworks?|databases?|cloud|tools?|other|testing|skills?|tech(?:nical)?\s*skills?|tech\s*stack)\s*:\s*/i,
+      '',
+    ).trim()
     if (!trimmed) continue
     const key = trimmed.toLocaleLowerCase()
     if (seen.has(key)) continue

@@ -73,7 +73,9 @@ test.describe('authentication', () => {
     await logOut(page)
 
     await signUp(page, email)
-    await expect(page.getByRole('alert')).toContainText('Email already in use')
+    await expect(page.getByRole('alert')).toContainText(
+      'Could not create this account',
+    )
     await expect(page).not.toHaveURL(/\/dashboard/)
   })
 

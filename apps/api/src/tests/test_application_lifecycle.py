@@ -96,6 +96,16 @@ def _use_case(application, *, notification_failure=False):
     )
 
 
+def test_fun03_recruiter_can_reject_and_notify() -> None:
+    use_case, applications, notifications, _ = _use_case(_application("reviewing"))
+
+    updated = use_case.execute(41, 10, "Recruiter", "rejected")
+
+    assert updated.status == "rejected"
+    assert applications.updates == [(41, "rejected", 10)]
+    assert notifications.calls[0]["activity_data"]["status"] == "rejected"
+
+
 def test_recruiter_moves_application_to_reviewing_and_notifies_professional():
     use_case, applications, notifications, transaction = _use_case(_application())
 
