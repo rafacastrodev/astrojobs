@@ -4,3 +4,4 @@ AstroJobs is an AI-first platform that helps users create and improve their prof
 
 - [System Requirements](http://github.com/rafacastrodev/astrojobs/blob/main/docs/system-requirements.md)
 - [Tech Stack](http://github.com/rafacastrodev/astrojobs/blob/main/docs/tech-stack.md)
+- [Next Steps](http://github.com/rafacastrodev/astrojobs/blob/main/docs/next-steps.md)

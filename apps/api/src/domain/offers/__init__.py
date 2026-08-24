@@ -1,0 +1,1 @@
+"""Recruiter job offers."""

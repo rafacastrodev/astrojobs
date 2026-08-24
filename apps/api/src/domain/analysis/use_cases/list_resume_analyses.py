@@ -15,6 +15,8 @@ class ListResumeAnalysesUseCase:
         self._analyses = analysis_repository
         self._get_resume = GetUserResumeUseCase(document_repository)
 
-    def execute(self, resume_document_id: int, user_id: int) -> Sequence[AnalysisEntity]:
+    def execute(
+        self, resume_document_id: int, user_id: int
+    ) -> Sequence[AnalysisEntity]:
         self._get_resume.execute(resume_document_id, user_id)
         return self._analyses.list_by_resume(resume_document_id, user_id)

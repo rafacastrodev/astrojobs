@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from datetime import UTC, datetime
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -36,7 +37,9 @@ class SqlAlchemyDocumentRepository:
         except IntegrityError as exc:
             self._session.rollback()
             if "uq_documents_user_type_content_hash" in str(exc.orig or exc):
-                raise DuplicateDocumentError("This resume was already uploaded") from exc
+                raise DuplicateDocumentError(
+                    "This resume was already uploaded"
+                ) from exc
             raise
         self._session.refresh(model)
         return self._to_entity(model)
@@ -80,7 +83,9 @@ class SqlAlchemyDocumentRepository:
         user_id: int,
         doc_type: DocumentType | None = None,
     ) -> Sequence[DocumentEntity]:
-        query = self._session.query(DocumentModel).filter(DocumentModel.user_id == user_id)
+        query = self._session.query(DocumentModel).filter(
+            DocumentModel.user_id == user_id
+        )
         if doc_type is not None:
             query = query.filter(DocumentModel.type == doc_type)
         models = query.order_by(DocumentModel.created_at.desc()).all()
@@ -124,6 +129,13 @@ class SqlAlchemyDocumentRepository:
         model.error_message = error_message
         self._session.commit()
         self._session.refresh(model)
+        return self._to_entity(model)
+
+    def close_job(self, document_id: int) -> DocumentEntity:
+        model = self._require(document_id)
+        if model.closed_at is None:
+            model.closed_at = datetime.now(UTC)
+            self._session.flush()
         return self._to_entity(model)
 
     def mark_analysis_completed(self, document_id: int) -> DocumentEntity:
@@ -182,6 +194,7 @@ class SqlAlchemyDocumentRepository:
             user_id=model.user_id,
             storage_key=model.storage_key,
             content_hash=model.content_hash,
+            closed_at=model.closed_at,
             analysis_status=model.analysis_status,  # type: ignore[arg-type]
             analysis_error_message=model.analysis_error_message,
         )

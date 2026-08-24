@@ -90,7 +90,9 @@ def _parse_gemini(
         response.raise_for_status()
     data = response.json()
     candidates = data.get("candidates") or []
-    parts = ((candidates[0].get("content") or {}).get("parts") or []) if candidates else []
+    parts = (
+        ((candidates[0].get("content") or {}).get("parts") or []) if candidates else []
+    )
     text = "".join(str(part.get("text") or "") for part in parts)
     if not text.strip():
         raise RuntimeError("The language model did not return structured output")

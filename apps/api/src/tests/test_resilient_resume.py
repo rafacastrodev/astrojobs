@@ -73,7 +73,9 @@ def test_resilient_analyzer_falls_back_when_primary_fails():
             error.body = {"error": {"code": "insufficient_quota"}}
             raise AnalyzerError("OpenAI has no remaining credits") from error
 
-    result = ResilientResumeAnalyzer(_QuotaAnalyzer(), HeuristicResumeAnalyzer()).analyze(
+    result = ResilientResumeAnalyzer(
+        _QuotaAnalyzer(), HeuristicResumeAnalyzer()
+    ).analyze(
         {"summary": "Engineer", "skills": ["Python"]},
         None,
     )

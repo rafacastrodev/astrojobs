@@ -13,11 +13,20 @@ logger = logging.getLogger(__name__)
 class OpenAIContentSafetyChecker:
     CHUNK_CHARS = 20_000
     _INJECTION_PATTERNS: ClassVar[tuple[re.Pattern[str], ...]] = (
-        re.compile(r"\bignore (?:all |any )?(?:previous|prior|above) instructions?\b", re.IGNORECASE),
+        re.compile(
+            r"\bignore (?:all |any )?(?:previous|prior|above) instructions?\b",
+            re.IGNORECASE,
+        ),
         re.compile(r"\b(?:system|developer|assistant)\s*prompt\s*:", re.IGNORECASE),
         re.compile(r"<\/?(?:system|developer|assistant)>", re.IGNORECASE),
-        re.compile(r"\b(?:award|give|assign) (?:me |this resume )?(?:a )?(?:score|rating)\b", re.IGNORECASE),
-        re.compile(r"\bdo not (?:analy[sz]e|review|score) (?:this|the) (?:resume|document)\b", re.IGNORECASE),
+        re.compile(
+            r"\b(?:award|give|assign) (?:me |this resume )?(?:a )?(?:score|rating)\b",
+            re.IGNORECASE,
+        ),
+        re.compile(
+            r"\bdo not (?:analy[sz]e|review|score) (?:this|the) (?:resume|document)\b",
+            re.IGNORECASE,
+        ),
     )
 
     def __init__(self) -> None:
@@ -51,9 +60,7 @@ class OpenAIContentSafetyChecker:
                 )
                 return
             if any(result.flagged for result in response.results):
-                raise UnsafeContentError(
-                    "Resume content did not pass the safety check"
-                )
+                raise UnsafeContentError("Resume content did not pass the safety check")
 
     @staticmethod
     def _build_client() -> OpenAI:

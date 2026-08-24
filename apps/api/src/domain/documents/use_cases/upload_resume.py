@@ -175,9 +175,7 @@ class UploadResumeUseCase:
                 return True
         return False
 
-    def _analyze(
-        self, document: DocumentEntity, user_id: int
-    ) -> AnalysisEntity | None:
+    def _analyze(self, document: DocumentEntity, user_id: int) -> AnalysisEntity | None:
         if document.id is None:
             return None
         try:
@@ -203,7 +201,9 @@ class UploadResumeUseCase:
             self._documents.mark_analysis_completed(document.id)
             return analysis
         except Exception as exc:  # noqa: BLE001
-            logger.warning("Initial analysis failed for document %s: %s", document.id, exc)
+            logger.warning(
+                "Initial analysis failed for document %s: %s", document.id, exc
+            )
             message = (
                 str(exc)
                 if isinstance(exc, AnalyzerError)
@@ -254,4 +254,6 @@ class UploadResumeUseCase:
         try:
             self._storage.delete(storage_key)
         except Exception as exc:  # noqa: BLE001
-            logger.warning("Failed to clean up orphaned object %s: %s", storage_key, exc)
+            logger.warning(
+                "Failed to clean up orphaned object %s: %s", storage_key, exc
+            )

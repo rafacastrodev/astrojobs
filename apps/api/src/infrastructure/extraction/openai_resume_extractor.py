@@ -1,4 +1,3 @@
-
 from pydantic import BaseModel, ConfigDict, Field
 
 from domain.documents.entities import DocumentType
@@ -7,7 +6,12 @@ from domain.documents.errors import (
     ExtractionError,
     ExtractionServiceError,
 )
-from domain.documents.technology_catalog import flatten_tech_stack, normalize_tech_stack
+from domain.documents.experience_grouping import group_experiences
+from domain.documents.technology_catalog import (
+    flatten_tech_stack,
+    normalize_tech_stack,
+    technologies_in_text,
+)
 from infrastructure.database.config import settings
 from infrastructure.openai_errors import is_openai_forbidden, is_openai_quota_error
 from infrastructure.services.llm_client import make_llm_client, parse_structured
@@ -104,11 +108,14 @@ Keep descriptions and highlights in the resume's original language.
 Put the candidate's real name in full_name when it appears at the top of the resume.
 
 Triage work history carefully:
-- Create one experiences item per distinct job (one company + one role + one period).
-- Never merge two jobs into a single blob of text.
-- For each job extract only job_title, company, location, start_date, end_date, and current.
-- description and highlights must be what the person did or achieved, not a technology list.
-- Ignore skills headings, tech stacks, and tool lists when splitting experiences.
+- A work experience starts at a job heading (role, company, and/or dates) and includes
+  EVERYTHING after it until the next job heading: bullets, paragraphs, and in-role Tech Stack lines.
+- Create exactly one experiences item per job heading. Never emit a bullet, sentence, or
+  "Tech Stack:" line as its own experiences item.
+- Never merge two distinct jobs into a single item.
+- Fill job_title, company, location, start_date, end_date, and current from the heading.
+- Put the work between that heading and the next heading into highlights (one string per bullet)
+  and description (non-bullet prose). Keep in-role Tech Stack lines in highlights.
 
 Put every technology mentioned anywhere in the resume into tech_stack, grouped as
 languages, frameworks, databases, cloud, tools, or other. Deduplicate within each group.
@@ -146,10 +153,10 @@ class OpenAIResumeExtractor:
             raise
         except Exception as exc:
             raise ExtractionServiceError(self._service_error_message(exc)) from exc
-        return self._finalize(profile.model_dump())
+        return self._finalize(profile.model_dump(), source_text=text)
 
     @staticmethod
-    def _finalize(payload: dict) -> dict:
+    def _finalize(payload: dict, source_text: str = "") -> dict:
         experiences = []
         for item in payload.get("experiences") or []:
             if not isinstance(item, dict):
@@ -170,15 +177,16 @@ class OpenAIResumeExtractor:
                     ],
                 }
             )
-        payload["experiences"] = [
-            item
-            for item in experiences
-            if item["job_title"] or item["company"] or item["description"] or item["highlights"]
-        ]
+        payload["experiences"] = group_experiences(experiences)
         stack = normalize_tech_stack(
             payload.get("tech_stack"),
             payload.get("skills"),
-            [item.get("technologies") for item in payload.get("projects") or [] if isinstance(item, dict)],
+            [
+                item.get("technologies")
+                for item in payload.get("projects") or []
+                if isinstance(item, dict)
+            ],
+            technologies_in_text(source_text),
         )
         payload["tech_stack"] = stack
         payload["skills"] = flatten_tech_stack(stack)
@@ -188,9 +196,7 @@ class OpenAIResumeExtractor:
     def _service_error_message(exc: Exception) -> str:
         if is_openai_quota_error(exc):
             if settings.is_development:
-                return (
-                    "The language model has no remaining credits. Add credits in billing and try again."
-                )
+                return "The language model has no remaining credits. Add credits in billing and try again."
             return "Resume extraction is temporarily unavailable. Please try again shortly."
         if is_openai_forbidden(exc):
             if settings.is_development:

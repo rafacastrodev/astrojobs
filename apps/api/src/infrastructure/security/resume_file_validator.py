@@ -35,19 +35,28 @@ class ResumeFileSafetyValidator:
 
     def _validate_pdf(self, content: bytes) -> None:
         if not content.startswith(b"%PDF-"):
-            raise UnsupportedFileError("The file extension does not match a PDF document")
+            raise UnsupportedFileError(
+                "The file extension does not match a PDF document"
+            )
         if any(marker in content for marker in self._PDF_ACTIVE_MARKERS):
             raise UnsafeContentError("PDF contains active or embedded content")
 
     def _validate_docx(self, content: bytes) -> None:
         if not content.startswith(b"PK"):
-            raise UnsupportedFileError("The file extension does not match a DOCX document")
+            raise UnsupportedFileError(
+                "The file extension does not match a DOCX document"
+            )
         try:
             with zipfile.ZipFile(BytesIO(content)) as archive:
                 infos = archive.infolist()
                 names = {info.filename for info in infos}
-                if "[Content_Types].xml" not in names or "word/document.xml" not in names:
-                    raise UnsupportedFileError("The DOCX container is missing required parts")
+                if (
+                    "[Content_Types].xml" not in names
+                    or "word/document.xml" not in names
+                ):
+                    raise UnsupportedFileError(
+                        "The DOCX container is missing required parts"
+                    )
                 if len(infos) > self.MAX_ARCHIVE_ENTRIES:
                     raise UnsafeContentError("DOCX contains too many archive entries")
                 total_uncompressed = sum(info.file_size for info in infos)
@@ -56,10 +65,14 @@ class ResumeFileSafetyValidator:
                 for info in infos:
                     compressed = max(info.compress_size, 1)
                     if info.file_size / compressed > self.MAX_COMPRESSION_RATIO:
-                        raise UnsafeContentError("DOCX contains a suspicious compressed entry")
+                        raise UnsafeContentError(
+                            "DOCX contains a suspicious compressed entry"
+                        )
                     lowered = info.filename.lower()
                     if lowered.endswith("vbaproject.bin") or "/embeddings/" in lowered:
-                        raise UnsafeContentError("DOCX contains executable or embedded content")
+                        raise UnsafeContentError(
+                            "DOCX contains executable or embedded content"
+                        )
         except zipfile.BadZipFile as exc:
             raise UnsupportedFileError("Could not read the DOCX container") from exc
 
@@ -71,4 +84,6 @@ class ResumeFileSafetyValidator:
             return
         control_count = len(re.findall(r"[\x01-\x08\x0b\x0c\x0e-\x1f]", sample))
         if control_count / len(sample) > 0.01:
-            raise UnsafeContentError("Text document contains too many control characters")
+            raise UnsafeContentError(
+                "Text document contains too many control characters"
+            )

@@ -70,7 +70,10 @@ def caused_by_llm_unavailability(exc: BaseException) -> bool:
     current: BaseException | None = exc
     while current is not None and id(current) not in seen:
         seen.add(id(current))
-        if isinstance(current, TimeoutError) or type(current).__name__ in _TIMEOUT_TYPES:
+        if (
+            isinstance(current, TimeoutError)
+            or type(current).__name__ in _TIMEOUT_TYPES
+        ):
             return True
         status, code = openai_status_and_code(current)
         normalized = (code or "").lower()

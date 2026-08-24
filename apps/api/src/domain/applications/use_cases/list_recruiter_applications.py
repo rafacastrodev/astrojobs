@@ -5,10 +5,12 @@ from typing import Any
 from domain.analysis.repository import AnalysisRepository
 from domain.applications.entities import RecruiterApplication
 from domain.applications.repository import ApplicationRepository
+from domain.documents.experience_grouping import grouped_resume_payload
 from domain.documents.repository import DocumentRepository
 from domain.users.repository import UserRepository
 
 _NAME_BLOCKLIST = {
+    "about",
     "summary",
     "experience",
     "education",
@@ -35,11 +37,17 @@ class ListRecruiterApplicationsUseCase:
         self._users = users
         self._analyses = analyses
 
-    def execute(self, recruiter_user_id: int) -> Sequence[RecruiterApplication]:
+    def execute(
+        self, recruiter_user_id: int, job_document_id: int | None = None
+    ) -> Sequence[RecruiterApplication]:
         applications = self._applications.list_by_recruiter(recruiter_user_id)
-        resume_ids = [
-            application.resume_document_id for application in applications
-        ]
+        if job_document_id is not None:
+            applications = [
+                application
+                for application in applications
+                if application.job_document_id == job_document_id
+            ]
+        resume_ids = [application.resume_document_id for application in applications]
         analyses = self._analyses.list_latest_general_by_resume_ids(resume_ids)
         results: list[RecruiterApplication] = []
         for application in applications:
@@ -49,7 +57,9 @@ class ListRecruiterApplicationsUseCase:
             if job is None or resume is None or applicant is None:
                 continue
             analysis = analyses.get(resume.id) if resume.id is not None else None
-            payload = resume.payload if isinstance(resume.payload, dict) else {}
+            payload = grouped_resume_payload(
+                resume.payload if isinstance(resume.payload, dict) else {}
+            )
             job_payload = job.payload if isinstance(job.payload, dict) else {}
             title = payload_title(job_payload, job.source_filename)
             technologies = _technologies(analysis, payload)
@@ -63,12 +73,16 @@ class ListRecruiterApplicationsUseCase:
                     applicant_email=applicant.email,
                     resume_document_id=application.resume_document_id,
                     resume_filename=resume.source_filename,
-                    resume_summary=analysis.summary if analysis else _payload_summary(payload),
+                    resume_summary=analysis.summary
+                    if analysis
+                    else _payload_summary(payload),
                     resume_technologies=technologies,
                     matched_technologies=_matched_technologies(
                         job_payload, payload, technologies
                     ),
                     resume_payload=_with_account_email(payload, applicant.email),
+                    status=application.status,
+                    updated_at=application.updated_at,
                 )
             )
         return results
@@ -167,7 +181,9 @@ def _contains_tech(text: str, tech: str) -> bool:
 def _job_technologies(payload: dict) -> list[str]:
     raw = payload.get("technologies") or []
     if isinstance(raw, str):
-        return [part.strip() for part in raw.replace(",", "\n").splitlines() if part.strip()]
+        return [
+            part.strip() for part in raw.replace(",", "\n").splitlines() if part.strip()
+        ]
     if not isinstance(raw, list):
         return []
     return [str(item) for item in raw if isinstance(item, str) and item.strip()]

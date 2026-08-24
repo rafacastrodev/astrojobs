@@ -1,0 +1,1 @@
+"""Liveblocks notification adapter."""

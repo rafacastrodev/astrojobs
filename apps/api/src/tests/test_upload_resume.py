@@ -207,7 +207,9 @@ def test_analysis_failure_preserves_upload_for_retry() -> None:
     assert storage.uploaded is True
     assert documents.document is document
     assert document.analysis_status == "failed"
-    assert document.analysis_error_message == "Resume analysis is temporarily unavailable"
+    assert (
+        document.analysis_error_message == "Resume analysis is temporarily unavailable"
+    )
 
 
 def test_duplicate_resume_is_rejected_before_storage() -> None:

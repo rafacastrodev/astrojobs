@@ -19,7 +19,9 @@ class ResumePiiRedactor:
         ),
         (
             "government_ids",
-            re.compile(r"\b(?:\d{3}[.-]?){3}\d{2}\b|\b\d{2}[.]?\d{3}[.]?\d{3}[/]?\d{4}-?\d{2}\b"),
+            re.compile(
+                r"\b(?:\d{3}[.-]?){3}\d{2}\b|\b\d{2}[.]?\d{3}[.]?\d{3}[/]?\d{4}-?\d{2}\b"
+            ),
         ),
         (
             "postal_codes",
@@ -45,7 +47,9 @@ class ResumePiiRedactor:
         redacted = text
         contact: dict[str, list[str]] = {}
         for label, pattern in self._PATTERNS:
-            values = list(dict.fromkeys(match.group(0) for match in pattern.finditer(redacted)))
+            values = list(
+                dict.fromkeys(match.group(0) for match in pattern.finditer(redacted))
+            )
             if values and label in {"emails", "phones", "links"}:
                 contact[label] = values
             redacted = pattern.sub(f"[{label.upper()}_REDACTED]", redacted)

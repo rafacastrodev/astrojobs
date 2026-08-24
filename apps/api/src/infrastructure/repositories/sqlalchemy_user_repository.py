@@ -18,9 +18,7 @@ class SqlAlchemyUserRepository:
 
     def get_by_name(self, name: str) -> UserEntity | None:
         model = (
-            self._session.query(UserModel)
-            .filter(UserModel.name == name)
-            .one_or_none()
+            self._session.query(UserModel).filter(UserModel.name == name).one_or_none()
         )
         return self._to_entity(model) if model else None
 
@@ -77,7 +75,9 @@ class SqlAlchemyUserRepository:
         self._session.refresh(model)
         return self._to_entity(model)
 
-    def ensure_recruiter(self, name: str, email: str, hashed_password: str) -> UserEntity:
+    def ensure_recruiter(
+        self, name: str, email: str, hashed_password: str
+    ) -> UserEntity:
         existing = self.get_by_email(email)
         if existing is not None:
             model = self._session.get(UserModel, existing.id)

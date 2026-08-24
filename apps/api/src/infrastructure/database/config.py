@@ -79,6 +79,7 @@ class Settings(BaseSettings):
     pinecone_namespace_jobs: str = "jobs"
     pinecone_embed_model: str = "multilingual-e5-large"
     embedding_dimensions: int = 1024
+    embedding_provider: str = "auto"
 
     openai_api_key: str = ""
     openai_model: str = "gpt-5.4-nano"
@@ -93,6 +94,7 @@ class Settings(BaseSettings):
 
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.6-flash"
+    gemini_embedding_model: str = "gemini-embedding-001"
 
     aws_bedrock_token: str = ""
     aws_bedrock_kb_name: str = ""
@@ -114,6 +116,7 @@ class Settings(BaseSettings):
     max_pdf_pages: int = 30
     max_extracted_chars: int = 200_000
     max_llm_input_chars: int = 50_000
+    liveblocks_private_key: str = ""
 
     @field_validator("postgres_host", "frontend_origin", mode="before")
     @classmethod
@@ -128,6 +131,14 @@ class Settings(BaseSettings):
         if value == "" or value is None:
             return None
         return value
+
+    @field_validator("embedding_provider")
+    @classmethod
+    def _validate_embedding_provider(cls, value: str) -> str:
+        provider = value.strip().lower()
+        if provider not in {"auto", "gemini", "openai", "local"}:
+            raise ValueError("EMBEDDING_PROVIDER must be auto, gemini, openai or local")
+        return provider
 
     @property
     def is_development(self) -> bool:
@@ -229,8 +240,10 @@ class Settings(BaseSettings):
 
         if self.frontend_origin is None:
             self.frontend_origin = (
-                "http://localhost" if in_docker else "http://localhost:3000"
-            ) if self.is_development else _PRODUCTION_FRONTEND_ORIGIN
+                ("http://localhost" if in_docker else "http://localhost:3000")
+                if self.is_development
+                else _PRODUCTION_FRONTEND_ORIGIN
+            )
 
         self._resolve_llm()
         self._resolve_bedrock()

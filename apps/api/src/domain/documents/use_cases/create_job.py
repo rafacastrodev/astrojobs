@@ -22,7 +22,9 @@ class CreateJobUseCase:
         try:
             self._sync.execute([document.id])  # type: ignore[list-item]
         except Exception as exc:  # noqa: BLE001
-            logger.warning("Initial job indexing failed for document %s: %s", document.id, exc)
+            logger.warning(
+                "Initial job indexing failed for document %s: %s", document.id, exc
+            )
         published = self._documents.get_by_id(document.id) or document  # type: ignore[arg-type]
         if published.status == "synced":
             return published

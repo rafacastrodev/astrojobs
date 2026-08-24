@@ -22,11 +22,7 @@ def test_gemini_parse_uses_native_generate_content(monkeypatch):
         captured["body"] = json.loads(request.content)
         return httpx.Response(
             200,
-            json={
-                "candidates": [
-                    {"content": {"parts": [{"text": '{"word":"ok"}'}]}}
-                ]
-            },
+            json={"candidates": [{"content": {"parts": [{"text": '{"word":"ok"}'}]}}]},
         )
 
     monkeypatch.setattr(
@@ -61,7 +57,9 @@ def test_gemini_parse_uses_native_generate_content(monkeypatch):
 
     assert parsed.word == "ok"
     assert captured["url"].endswith("models/gemini-3.6-flash:generateContent")
-    assert captured["body"]["generationConfig"]["responseMimeType"] == "application/json"
+    assert (
+        captured["body"]["generationConfig"]["responseMimeType"] == "application/json"
+    )
 
 
 def test_timeout_counts_as_llm_unavailability():

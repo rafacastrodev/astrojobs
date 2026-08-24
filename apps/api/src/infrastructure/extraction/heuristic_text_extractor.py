@@ -2,23 +2,60 @@ import re
 from typing import Any, ClassVar
 
 from domain.documents.entities import DocumentType
-from domain.documents.technology_catalog import flatten_tech_stack, normalize_tech_stack
+from domain.documents.experience_grouping import (
+    group_experiences,
+    split_experience_blocks,
+)
+from domain.documents.technology_catalog import (
+    flatten_tech_stack,
+    normalize_tech_stack,
+    technologies_in_text,
+)
 
 
 class HeuristicTextExtractor:
     RESUME_SECTION_ALIASES: ClassVar[dict[str, tuple[str, ...]]] = {
         "about": ("about", "summary", "profile", "objective", "overview"),
-        "experience": ("experience", "work experience", "employment", "work history", "professional experience"),
+        "experience": (
+            "experience",
+            "work experience",
+            "employment",
+            "work history",
+            "professional experience",
+        ),
         "education": ("education", "academic", "studies", "qualifications"),
-        "skills": ("skills", "technical skills", "technologies", "tech stack", "competencies"),
+        "skills": (
+            "skills",
+            "technical skills",
+            "technologies",
+            "tech stack",
+            "competencies",
+        ),
     }
 
     JOB_SECTION_ALIASES: ClassVar[dict[str, tuple[str, ...]]] = {
         "title": ("title", "position", "role", "job title"),
-        "requirements": ("requirements", "qualifications", "what you'll need", "must have", "skills"),
-        "responsibilities": ("responsibilities", "what you'll do", "duties", "role description", "about the role"),
+        "requirements": (
+            "requirements",
+            "qualifications",
+            "what you'll need",
+            "must have",
+            "skills",
+        ),
+        "responsibilities": (
+            "responsibilities",
+            "what you'll do",
+            "duties",
+            "role description",
+            "about the role",
+        ),
         "seniority": ("seniority", "level", "experience level"),
-        "employment_type": ("employment type", "job type", "contract type", "employment"),
+        "employment_type": (
+            "employment type",
+            "job type",
+            "contract type",
+            "employment",
+        ),
     }
 
     EMPLOYED_PATTERNS = (
@@ -40,7 +77,7 @@ class HeuristicTextExtractor:
     def _extract_resume(self, text: str) -> dict[str, Any]:
         sections = self._split_sections(text, self.RESUME_SECTION_ALIASES)
         about = sections.get("about") or self._first_paragraph(text)
-        experiences = self._split_entries(sections.get("experience", ""))
+        experiences = split_experience_blocks(sections.get("experience", ""))
         education = self._split_entries(sections.get("education", ""))
         skills = self._split_skill_list(sections.get("skills", ""))
         experience_block = sections.get("experience", "")
@@ -49,8 +86,10 @@ class HeuristicTextExtractor:
             for pattern in self.EMPLOYED_PATTERNS
         )
         first_line = self._first_line(text)
-        parsed_experiences = [self._parse_experience(entry) for entry in experiences]
-        stack = normalize_tech_stack(skills)
+        parsed_experiences = group_experiences(
+            [self._parse_experience(entry) for entry in experiences]
+        )
+        stack = normalize_tech_stack(skills, technologies_in_text(text))
         return {
             "full_name": first_line if self._looks_like_name(first_line) else "",
             "about": about,
@@ -79,14 +118,18 @@ class HeuristicTextExtractor:
             "title": self._first_line(title),
             "requirements": self._split_entries(sections.get("requirements", ""))
             or self._bullet_lines(text),
-            "responsibilities": self._split_entries(sections.get("responsibilities", "")),
+            "responsibilities": self._split_entries(
+                sections.get("responsibilities", "")
+            ),
             "seniority": self._guess_seniority(sections.get("seniority", "") or text),
             "employment_type": self._guess_employment_type(
                 sections.get("employment_type", "") or text
             ),
         }
 
-    def _split_sections(self, text: str, aliases: dict[str, tuple[str, ...]]) -> dict[str, str]:
+    def _split_sections(
+        self, text: str, aliases: dict[str, tuple[str, ...]]
+    ) -> dict[str, str]:
         lines = text.splitlines()
         headings: list[tuple[int, str]] = []
         for index, line in enumerate(lines):
@@ -102,7 +145,9 @@ class HeuristicTextExtractor:
                 sections[key] = body
         return sections
 
-    def _match_heading(self, line: str, aliases: dict[str, tuple[str, ...]]) -> str | None:
+    def _match_heading(
+        self, line: str, aliases: dict[str, tuple[str, ...]]
+    ) -> str | None:
         cleaned = re.sub(r"[:\-–—|]+$", "", line.strip(), flags=re.UNICODE)
         cleaned = cleaned.strip().lower()
         if not cleaned or len(cleaned) > 60:
@@ -125,9 +170,7 @@ class HeuristicTextExtractor:
         entries = self._split_entries(block)
         if len(entries) == 1:
             entries = [
-                part.strip()
-                for part in re.split(r"[,;/|]", entries[0])
-                if part.strip()
+                part.strip() for part in re.split(r"[,;/|]", entries[0]) if part.strip()
             ]
         return entries
 
@@ -148,7 +191,9 @@ class HeuristicTextExtractor:
     def _parse_experience(self, entry: str) -> dict[str, Any]:
         lines = [line.strip() for line in entry.splitlines() if line.strip()]
         heading = lines[0] if lines else entry.strip()
-        parts = [part.strip() for part in re.split(r"\s+[·|•]\s+", heading) if part.strip()]
+        parts = [
+            part.strip() for part in re.split(r"\s+[·|•]\s+", heading) if part.strip()
+        ]
         date_match = re.search(
             r"(\d{4}|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{4})"
             r"\s*(?:-|–|—|to)\s*"
@@ -169,7 +214,9 @@ class HeuristicTextExtractor:
             "location": location,
             "start_date": start_date,
             "end_date": end_date,
-            "current": bool(re.search(r"present|current|now", end_date, flags=re.IGNORECASE)),
+            "current": bool(
+                re.search(r"present|current|now", end_date, flags=re.IGNORECASE)
+            ),
             "description": "\n".join(lines[1:]),
             "highlights": [],
         }
@@ -213,14 +260,30 @@ class HeuristicTextExtractor:
 
     def _guess_seniority(self, text: str) -> str:
         lowered = text.lower()
-        for label in ("intern", "junior", "mid", "senior", "lead", "principal", "staff"):
+        for label in (
+            "intern",
+            "junior",
+            "mid",
+            "senior",
+            "lead",
+            "principal",
+            "staff",
+        ):
             if re.search(rf"\b{label}\b", lowered):
                 return label
         return "unspecified"
 
     def _guess_employment_type(self, text: str) -> str:
         lowered = text.lower()
-        for label in ("full-time", "full time", "part-time", "part time", "contract", "internship", "temporary"):
+        for label in (
+            "full-time",
+            "full time",
+            "part-time",
+            "part time",
+            "contract",
+            "internship",
+            "temporary",
+        ):
             if label in lowered:
                 return label.replace(" ", "-")
         return "unspecified"

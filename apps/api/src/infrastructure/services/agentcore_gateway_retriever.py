@@ -92,7 +92,9 @@ class AgentCoreGatewayRetriever:
             "Accept": "application/json, text/event-stream",
             "MCP-Protocol-Version": _PROTOCOL,
         }
-        aws_request = AWSRequest(method="POST", url=self._url, data=body, headers=headers)
+        aws_request = AWSRequest(
+            method="POST", url=self._url, data=body, headers=headers
+        )
         credentials = Session().get_credentials()
         if credentials is None:
             raise RuntimeError("AWS credentials are not configured")

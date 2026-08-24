@@ -4,8 +4,10 @@ from dataclasses import dataclass, field
 from domain.analysis.repository import AnalysisRepository
 from domain.documents.entities import DocumentEntity
 from domain.documents.repository import DocumentRepository
+from domain.documents.semantic_matcher import SemanticMatcher
 from domain.documents.use_cases.get_user_resume import GetUserResumeUseCase
 from domain.documents.use_cases.match_resumes_for_jobs import (
+    _combined_match_score,
     _job_technologies,
     _normalize,
     _passes_filters,
@@ -30,9 +32,11 @@ class MatchJobsForResumeUseCase:
         self,
         document_repository: DocumentRepository,
         analysis_repository: AnalysisRepository,
+        semantic_matcher: SemanticMatcher | None = None,
     ):
         self._documents = document_repository
         self._analyses = analysis_repository
+        self._semantic = semantic_matcher
         self._get_resume = GetUserResumeUseCase(document_repository)
 
     def execute(
@@ -41,15 +45,15 @@ class MatchJobsForResumeUseCase:
         resume = self._get_resume.execute(resume_document_id, user_id)
         analysis = self._analyses.get_latest_general(resume_document_id, user_id)
         matches = [
-            match
-            for match in self._score_jobs(resume, analysis)
-            if match.score > 0
+            match for match in self._score_jobs(resume, analysis) if match.score > 0
         ]
         limit = max(1, min(top_k, MAX_TOP_K))
         return matches[:limit]
 
     def execute_for_user(self, user_id: int) -> list[JobMatch]:
-        jobs = [job for job in self._documents.list(doc_type="job") if job.id is not None]
+        jobs = [
+            job for job in self._documents.list(doc_type="job") if _is_open_job(job)
+        ]
         resumes = [
             resume
             for resume in self._documents.list_by_user(user_id, doc_type="resume")
@@ -71,32 +75,47 @@ class MatchJobsForResumeUseCase:
                     best[match.document.id] = match  # type: ignore[index]
         ranked = list(best.values())
         ranked.sort(
-            key=lambda item: (item.score, len(item.matched_technologies)),
+            key=lambda item: (
+                item.score,
+                item.document.created_at,
+                len(item.matched_technologies),
+            ),
             reverse=True,
         )
         return ranked
 
-    def _score_jobs(
-        self, resume: DocumentEntity, analysis
-    ) -> list[JobMatch]:
+    def _score_jobs(self, resume: DocumentEntity, analysis) -> list[JobMatch]:
         resume_labels = {
             _normalize(tech): tech
             for tech in _resume_technologies(resume.payload, analysis)
             if _normalize(tech)
         }
+        jobs = [
+            job for job in self._documents.list(doc_type="job") if _is_open_job(job)
+        ]
+        semantic_scores = (
+            self._semantic.rank(resume.payload, "resume", jobs)
+            if self._semantic is not None
+            else {}
+        )
         matches: list[JobMatch] = []
-        for job in self._documents.list(doc_type="job"):
-            if job.id is None:
-                continue
+        for job in jobs:
             job_labels = {
                 _normalize(tech): tech
                 for tech in _job_technologies(job.payload)
                 if _normalize(tech)
             }
             overlap = set(job_labels) & set(resume_labels)
-            score = len(overlap) / len(job_labels) if job_labels else 0.0
-            if resume_labels and job_labels and not _passes_filters(
-                job.payload, resume.payload, analysis
+            technology_score = len(overlap) / len(job_labels) if job_labels else 0.0
+            score = _combined_match_score(
+                technology_score,
+                semantic_scores.get(job.id, 0.0),
+                has_required_technologies=bool(job_labels),
+            )
+            if (
+                resume_labels
+                and job_labels
+                and not _passes_filters(job.payload, resume.payload, analysis)
             ):
                 score *= 0.5
             matches.append(
@@ -107,7 +126,20 @@ class MatchJobsForResumeUseCase:
                 )
             )
         matches.sort(
-            key=lambda item: (item.score, len(item.matched_technologies)),
+            key=lambda item: (
+                item.score,
+                item.document.created_at,
+                len(item.matched_technologies),
+            ),
             reverse=True,
         )
         return matches
+
+
+def _is_open_job(job: DocumentEntity) -> bool:
+    return (
+        job.id is not None
+        and job.user_id is not None
+        and job.status == "synced"
+        and job.closed_at is None
+    )

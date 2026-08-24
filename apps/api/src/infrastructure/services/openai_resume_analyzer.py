@@ -62,8 +62,7 @@ class OpenAIResumeAnalyzer:
             )
         resume_text = json.dumps(_safe_resume_payload(resume), ensure_ascii=False)
         input_text = (
-            "Resume:\n<untrusted_document>\n"
-            f"{resume_text}\n</untrusted_document>"
+            f"Resume:\n<untrusted_document>\n{resume_text}\n</untrusted_document>"
         )
         if job is None:
             input_text += "\n\nPerform a general ATS review without a specific job."
@@ -73,7 +72,9 @@ class OpenAIResumeAnalyzer:
                 f"{json.dumps(job, ensure_ascii=False)}\n</untrusted_document>"
             )
         if retrieved_context:
-            joined = "\n\n".join(snippet.strip() for snippet in retrieved_context if snippet.strip())
+            joined = "\n\n".join(
+                snippet.strip() for snippet in retrieved_context if snippet.strip()
+            )
             if joined:
                 input_text += (
                     "\n\nSimilar catalog jobs for market context:"
@@ -105,15 +106,17 @@ class OpenAIResumeAnalyzer:
     def _service_error_message(exc: Exception) -> str:
         if is_openai_quota_error(exc):
             if settings.is_development:
-                return (
-                    "The language model has no remaining credits. Add credits in billing and try again."
-                )
-            return "Resume analysis is temporarily unavailable. Please try again shortly."
+                return "The language model has no remaining credits. Add credits in billing and try again."
+            return (
+                "Resume analysis is temporarily unavailable. Please try again shortly."
+            )
         if is_openai_forbidden(exc):
             if settings.is_development:
                 return (
                     f"This API key cannot use model {settings.llm_model}. "
                     "Allow the model or set LLM_MODEL to one the key can access."
                 )
-            return "Resume analysis is temporarily unavailable. Please try again shortly."
+            return (
+                "Resume analysis is temporarily unavailable. Please try again shortly."
+            )
         return "Resume analysis failed"

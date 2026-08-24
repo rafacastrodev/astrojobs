@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from infrastructure.database.config import settings
 from infrastructure.database.session import init_db
+from infrastructure.documents.index_repair import repair_missing_document_embeddings
 from infrastructure.security.rate_limit import RateLimitMiddleware
 from infrastructure.storage.s3_file_storage import ensure_s3_bucket
 from main.admin_router import router as recruiter_router
@@ -20,6 +21,7 @@ logging.basicConfig(level=logging.INFO)
 async def lifespan(_app: FastAPI):
     init_db()
     ensure_s3_bucket()
+    repair_missing_document_embeddings()
     yield
 
 

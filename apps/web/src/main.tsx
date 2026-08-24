@@ -4,6 +4,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { queryClient, router } from './router'
+import { LiveblocksProvider } from './components/LiveblocksProvider'
 import './styles.css'
 
 const root = document.getElementById('root')
@@ -15,7 +16,9 @@ if (!root) {
 createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <LiveblocksProvider>
+        <RouterProvider router={router} />
+      </LiveblocksProvider>
     </QueryClientProvider>
   </StrictMode>,
 )

@@ -9,6 +9,7 @@ from fastapi import (
 )
 from fastapi.responses import Response as BinaryResponse
 
+from domain.notifications.errors import NotificationError
 from domain.users.entities import UserEntity
 from domain.users.errors import (
     EmailAlreadyExistsError,
@@ -26,6 +27,7 @@ from domain.users.use_cases.reset_password import ResetPasswordUseCase
 from domain.users.use_cases.signup import SignupUseCase
 from domain.users.use_cases.upload_profile_photo import UploadProfilePhotoUseCase
 from infrastructure.database.config import settings
+from infrastructure.notifications.liveblocks_client import LiveblocksClient
 from infrastructure.schemas.user_schemas import (
     ForgotPasswordRequest,
     LoginRequest,
@@ -127,6 +129,21 @@ def logout(response: Response) -> dict[str, bool]:
 @router.get("/me", response_model=UserResponse)
 def me(user: UserEntity = Depends(get_current_user)) -> UserResponse:
     return _to_user_response(user)
+
+
+@router.post("/liveblocks")
+def liveblocks_auth(
+    response: Response,
+    user: UserEntity = Depends(get_current_user),
+) -> dict[str, str]:
+    try:
+        token = LiveblocksClient(settings.liveblocks_private_key).identify_user(user)
+    except NotificationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        )
+    response.headers["Cache-Control"] = "no-store"
+    return token
 
 
 @router.post("/me/photo", response_model=UserResponse)

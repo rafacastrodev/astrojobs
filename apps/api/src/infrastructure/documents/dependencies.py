@@ -6,6 +6,10 @@ from domain.applications.use_cases.apply_to_job import ApplyToJobUseCase
 from domain.applications.use_cases.list_recruiter_applications import (
     ListRecruiterApplicationsUseCase,
 )
+from domain.applications.use_cases.update_application_status import (
+    UpdateApplicationStatusUseCase,
+)
+from domain.documents.use_cases.close_job import CloseJobUseCase
 from domain.documents.use_cases.create_document_from_upload import (
     CreateDocumentFromUploadUseCase,
 )
@@ -23,14 +27,17 @@ from domain.documents.use_cases.rename_user_resume import RenameUserResumeUseCas
 from domain.documents.use_cases.retrieve_similar_jobs import RetrieveSimilarJobsUseCase
 from domain.documents.use_cases.sync_documents import SyncDocumentsUseCase
 from domain.documents.use_cases.upload_resume import UploadResumeUseCase
+from domain.offers.use_cases.create_offer import CreateOfferUseCase
 from infrastructure.database.config import settings
 from infrastructure.database.session import get_db
+from infrastructure.database.transaction import SqlAlchemyTransactionManager
 from infrastructure.extraction.file_text_loader import CompositeFileTextLoader
 from infrastructure.extraction.heuristic_text_extractor import HeuristicTextExtractor
 from infrastructure.extraction.openai_resume_extractor import OpenAIResumeExtractor
 from infrastructure.extraction.resilient_resume_extractor import (
     ResilientResumeExtractor,
 )
+from infrastructure.notifications.liveblocks_client import LiveblocksClient
 from infrastructure.repositories.sqlalchemy_analysis_repository import (
     SqlAlchemyAnalysisRepository,
 )
@@ -39,6 +46,9 @@ from infrastructure.repositories.sqlalchemy_application_repository import (
 )
 from infrastructure.repositories.sqlalchemy_document_repository import (
     SqlAlchemyDocumentRepository,
+)
+from infrastructure.repositories.sqlalchemy_offer_repository import (
+    SqlAlchemyOfferRepository,
 )
 from infrastructure.repositories.sqlalchemy_user_repository import (
     SqlAlchemyUserRepository,
@@ -55,6 +65,7 @@ from infrastructure.storage.s3_file_storage import S3FileStorage
 from infrastructure.vector.factory import (
     make_context_retriever,
     make_embedder,
+    make_semantic_matcher,
     make_vector_store,
 )
 
@@ -122,7 +133,15 @@ def get_document_use_case(db: Session = Depends(get_db)) -> GetDocumentUseCase:
     return GetDocumentUseCase(SqlAlchemyDocumentRepository(db))
 
 
-def get_delete_document_use_case(db: Session = Depends(get_db)) -> DeleteDocumentUseCase:
+def get_document_repository(
+    db: Session = Depends(get_db),
+) -> SqlAlchemyDocumentRepository:
+    return SqlAlchemyDocumentRepository(db)
+
+
+def get_delete_document_use_case(
+    db: Session = Depends(get_db),
+) -> DeleteDocumentUseCase:
     return DeleteDocumentUseCase(
         SqlAlchemyDocumentRepository(db),
         pinecone_client_factory=lambda: make_vector_store(db),
@@ -170,13 +189,17 @@ def get_process_resume_use_case(
     )
 
 
-def get_list_user_resumes_use_case(db: Session = Depends(get_db)) -> ListUserResumesUseCase:
+def get_list_user_resumes_use_case(
+    db: Session = Depends(get_db),
+) -> ListUserResumesUseCase:
     return ListUserResumesUseCase(
         SqlAlchemyDocumentRepository(db), SqlAlchemyAnalysisRepository(db)
     )
 
 
-def get_delete_user_resume_use_case(db: Session = Depends(get_db)) -> DeleteUserResumeUseCase:
+def get_delete_user_resume_use_case(
+    db: Session = Depends(get_db),
+) -> DeleteUserResumeUseCase:
     return DeleteUserResumeUseCase(
         SqlAlchemyDocumentRepository(db),
         S3FileStorage(),
@@ -185,7 +208,9 @@ def get_delete_user_resume_use_case(db: Session = Depends(get_db)) -> DeleteUser
     )
 
 
-def get_rename_user_resume_use_case(db: Session = Depends(get_db)) -> RenameUserResumeUseCase:
+def get_rename_user_resume_use_case(
+    db: Session = Depends(get_db),
+) -> RenameUserResumeUseCase:
     return RenameUserResumeUseCase(SqlAlchemyDocumentRepository(db))
 
 
@@ -193,6 +218,7 @@ def get_match_jobs_use_case(db: Session = Depends(get_db)) -> MatchJobsForResume
     return MatchJobsForResumeUseCase(
         SqlAlchemyDocumentRepository(db),
         SqlAlchemyAnalysisRepository(db),
+        make_semantic_matcher(),
     )
 
 
@@ -202,6 +228,7 @@ def get_match_resumes_use_case(
     return MatchResumesForJobsUseCase(
         SqlAlchemyDocumentRepository(db),
         SqlAlchemyAnalysisRepository(db),
+        make_semantic_matcher(),
     )
 
 
@@ -213,6 +240,33 @@ def get_apply_to_job_use_case(db: Session = Depends(get_db)) -> ApplyToJobUseCas
     return ApplyToJobUseCase(
         SqlAlchemyDocumentRepository(db),
         SqlAlchemyApplicationRepository(db),
+        LiveblocksClient(settings.liveblocks_private_key),
+        SqlAlchemyTransactionManager(db),
+    )
+
+
+def get_create_offer_use_case(db: Session = Depends(get_db)) -> CreateOfferUseCase:
+    documents = SqlAlchemyDocumentRepository(db)
+    analyses = SqlAlchemyAnalysisRepository(db)
+    return CreateOfferUseCase(
+        documents,
+        SqlAlchemyApplicationRepository(db),
+        SqlAlchemyOfferRepository(db),
+        MatchResumesForJobsUseCase(documents, analyses, make_semantic_matcher()),
+        SqlAlchemyUserRepository(db),
+        LiveblocksClient(settings.liveblocks_private_key),
+        SqlAlchemyTransactionManager(db),
+    )
+
+
+def get_close_job_use_case(db: Session = Depends(get_db)) -> CloseJobUseCase:
+    return CloseJobUseCase(
+        SqlAlchemyDocumentRepository(db),
+        SqlAlchemyApplicationRepository(db),
+        LiveblocksClient(settings.liveblocks_private_key),
+        SqlAlchemyTransactionManager(db),
+        vector_store_factory=lambda: make_vector_store(db),
+        namespace_jobs=settings.pinecone_namespace_jobs,
     )
 
 
@@ -227,10 +281,25 @@ def get_list_recruiter_applications_use_case(
     )
 
 
+def get_update_application_status_use_case(
+    db: Session = Depends(get_db),
+) -> UpdateApplicationStatusUseCase:
+    return UpdateApplicationStatusUseCase(
+        SqlAlchemyApplicationRepository(db),
+        SqlAlchemyDocumentRepository(db),
+        LiveblocksClient(settings.liveblocks_private_key),
+        SqlAlchemyTransactionManager(db),
+    )
+
+
 def get_application_repository(
     db: Session = Depends(get_db),
 ) -> SqlAlchemyApplicationRepository:
     return SqlAlchemyApplicationRepository(db)
+
+
+def get_offer_repository(db: Session = Depends(get_db)) -> SqlAlchemyOfferRepository:
+    return SqlAlchemyOfferRepository(db)
 
 
 def get_user_repository(db: Session = Depends(get_db)) -> SqlAlchemyUserRepository:

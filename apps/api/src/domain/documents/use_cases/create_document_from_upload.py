@@ -28,7 +28,7 @@ class CreateDocumentFromUploadUseCase:
         content: bytes,
         filename: str,
         doc_type: DocumentType,
-        user_id: int,
+        user_id: int | None = None,
     ) -> DocumentEntity:
         try:
             text = self._file_loader.load(content, filename)
@@ -45,9 +45,7 @@ class CreateDocumentFromUploadUseCase:
         if not payload:
             raise ExtractionError("Extractor returned an empty payload")
 
-        document = self._documents.create(
-            doc_type, payload, filename, user_id=user_id
-        )
+        document = self._documents.create(doc_type, payload, filename, user_id=user_id)
         try:
             self._sync.execute([document.id])  # type: ignore[list-item]
         except Exception as exc:  # noqa: BLE001

@@ -1,4 +1,5 @@
 import { ChevronIcon } from '@/components/icons'
+import { groupExperiences } from '@/utils/groupExperiences'
 
 import type { AnalysisResult } from '../types'
 import { TechStackView } from './TechStackView'
@@ -130,7 +131,7 @@ const otherItem = (item: unknown, index: number) => {
 
 export const ResumeProfileView = ({ payload, analysis }: Props) => {
   const summary = text(payload.summary) || text(payload.about)
-  const experiences = items(payload.experiences)
+  const experiences = groupExperiences(items(payload.experiences))
   const extraSections = items(payload.additional_sections).filter(
     (item) => !isTechSection(item),
   )

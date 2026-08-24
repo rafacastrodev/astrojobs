@@ -55,12 +55,16 @@ def _to_response(analysis: AnalysisEntity) -> AnalysisResponse:
         technologies=analysis.technologies,
         companies=analysis.companies,
         created_at=analysis.created_at,
-        feedback=_to_feedback_response(analysis.feedback) if analysis.feedback else None,
+        feedback=_to_feedback_response(analysis.feedback)
+        if analysis.feedback
+        else None,
     )
 
 
 @router.post(
-    "/resumes/{resume_id}", response_model=AnalysisResponse, status_code=status.HTTP_201_CREATED
+    "/resumes/{resume_id}",
+    response_model=AnalysisResponse,
+    status_code=status.HTTP_201_CREATED,
 )
 def analyze_resume(
     resume_id: int,
@@ -78,9 +82,13 @@ def analyze_resume(
     except DocumentNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except InvalidJobSourceError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        )
     except AnalyzerConfigurationError as exc:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        )
     except AnalyzerError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
     return _to_response(analysis)
@@ -104,7 +112,9 @@ def submit_analysis_feedback(
     analysis_id: int,
     body: AnalysisFeedbackRequest,
     user: UserEntity = Depends(get_current_user),
-    use_case: SubmitAnalysisFeedbackUseCase = Depends(get_submit_analysis_feedback_use_case),
+    use_case: SubmitAnalysisFeedbackUseCase = Depends(
+        get_submit_analysis_feedback_use_case
+    ),
 ) -> AnalysisFeedbackResponse:
     try:
         feedback = use_case.execute(
@@ -117,5 +127,7 @@ def submit_analysis_feedback(
     except AnalysisNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except InvalidFeedbackError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        )
     return _to_feedback_response(feedback)

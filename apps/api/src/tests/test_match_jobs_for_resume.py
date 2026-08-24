@@ -7,7 +7,9 @@ from domain.documents.use_cases.match_jobs_for_resume import MatchJobsForResumeU
 NOW = datetime(2026, 8, 24, tzinfo=UTC)
 
 
-def _doc(doc_id: int, doc_type: str, payload: dict, user_id: int | None) -> DocumentEntity:
+def _doc(
+    doc_id: int, doc_type: str, payload: dict, user_id: int | None
+) -> DocumentEntity:
     return DocumentEntity(
         id=doc_id,
         type=doc_type,  # type: ignore[arg-type]
@@ -31,7 +33,9 @@ class _Documents:
 
     def list(self, doc_type=None, status=None):
         del status
-        return [doc for doc in self._documents if doc_type is None or doc.type == doc_type]
+        return [
+            doc for doc in self._documents if doc_type is None or doc.type == doc_type
+        ]
 
     def list_by_user(self, user_id, doc_type=None):
         return [
@@ -56,13 +60,23 @@ class _Analyses:
         }
 
 
+class _Semantic:
+    def __init__(self, scores: dict[int, float]):
+        self._scores = scores
+
+    def rank(self, _payload, _doc_type, _candidates):
+        return self._scores
+
+
 def test_ranks_jobs_by_technology_overlap() -> None:
-    python_job = _doc(1, "job", {"title": "Backend", "technologies": ["Python", "FastAPI"]}, 10)
+    python_job = _doc(
+        1, "job", {"title": "Backend", "technologies": ["Python", "FastAPI"]}, 10
+    )
     java_job = _doc(2, "job", {"title": "Java", "technologies": ["Java"]}, 10)
     resume = _doc(3, "resume", {"skills": ["Python"]}, 20)
-    matches = MatchJobsForResumeUseCase(_Documents([python_job, java_job, resume]), _Analyses()).execute(
-        3, 20, top_k=10
-    )
+    matches = MatchJobsForResumeUseCase(
+        _Documents([python_job, java_job, resume]), _Analyses()
+    ).execute(3, 20, top_k=10)
     assert [item.document.id for item in matches] == [1]
     assert matches[0].score == 0.5
     assert matches[0].matched_technologies == ["Python"]
@@ -90,3 +104,92 @@ def test_uses_analysis_technologies() -> None:
         _Analyses({3: analysis}),
     ).execute(3, 20)
     assert matches[0].score == 1.0
+
+
+def test_uses_technologies_mentioned_in_resume_full_text() -> None:
+    job = _doc(
+        1,
+        "job",
+        {"title": "Full stack", "technologies": ["Python", "Django", "React"]},
+        10,
+    )
+    resume = _doc(
+        3,
+        "resume",
+        {
+            "skills": [],
+            "full_text": "Built Python APIs with Django and React applications.",
+        },
+        20,
+    )
+    matches = MatchJobsForResumeUseCase(
+        _Documents([job, resume]),
+        _Analyses(),
+    ).execute(3, 20)
+    assert matches[0].score == 1.0
+    assert matches[0].matched_technologies == ["Django", "Python", "React"]
+
+
+def test_normalizes_technology_aliases() -> None:
+    job = _doc(1, "job", {"title": "Data", "technologies": ["PostgreSQL"]}, 10)
+    resume = _doc(3, "resume", {"skills": ["postgres"]}, 20)
+    matches = MatchJobsForResumeUseCase(
+        _Documents([job, resume]),
+        _Analyses(),
+    ).execute(3, 20)
+    assert matches[0].score == 1.0
+    assert matches[0].matched_technologies == ["PostgreSQL"]
+
+
+def test_does_not_treat_past_work_conditions_as_candidate_preferences() -> None:
+    job = _doc(
+        1,
+        "job",
+        {
+            "title": "Backend",
+            "technologies": ["Python"],
+            "work_mode": "remote",
+            "employment_type": "full-time",
+        },
+        10,
+    )
+    resume = _doc(
+        3,
+        "resume",
+        {
+            "skills": [],
+            "full_text": "Python engineer. Previous on-site contract position.",
+        },
+        20,
+    )
+    matches = MatchJobsForResumeUseCase(
+        _Documents([job, resume]),
+        _Analyses(),
+    ).execute(3, 20)
+    assert matches[0].score == 1.0
+
+
+def test_semantic_relevance_surfaces_adjacent_experience_without_exact_keyword() -> (
+    None
+):
+    job = _doc(
+        1,
+        "job",
+        {"title": "ML Engineer", "technologies": ["TensorFlow"]},
+        10,
+    )
+    resume = _doc(
+        3,
+        "resume",
+        {"summary": "Built and deployed production machine learning models"},
+        20,
+    )
+    matches = MatchJobsForResumeUseCase(
+        _Documents([job, resume]),
+        _Analyses(),
+        _Semantic({1: 0.8}),
+    ).execute(3, 20)
+
+    assert [item.document.id for item in matches] == [1]
+    assert round(matches[0].score, 2) == 0.28
+    assert matches[0].matched_technologies == []

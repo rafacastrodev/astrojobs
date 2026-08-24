@@ -161,6 +161,163 @@
         }
       }
     },
+    "/auth/liveblocks": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Liveblocks Auth",
+        "operationId": "liveblocks_auth_auth_liveblocks_post",
+        "parameters": [
+          {
+            "name": "jwt",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Jwt"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Liveblocks Auth Auth Liveblocks Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/me/photo": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Upload Profile Photo",
+        "operationId": "upload_profile_photo_auth_me_photo_post",
+        "parameters": [
+          {
+            "name": "jwt",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Jwt"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_profile_photo_auth_me_photo_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get Profile Photo",
+        "operationId": "get_profile_photo_auth_me_photo_get",
+        "parameters": [
+          {
+            "name": "jwt",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Jwt"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/forgot-password": {
       "post": {
         "tags": [
@@ -497,6 +654,325 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recruiter/jobs/{job_id}/offers": {
+      "post": {
+        "tags": [
+          "recruiter"
+        ],
+        "summary": "Create Offer",
+        "operationId": "create_offer_recruiter_jobs__job_id__offers_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "jwt",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Jwt"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOfferRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recruiter/jobs/{job_id}/close": {
+      "post": {
+        "tags": [
+          "recruiter"
+        ],
+        "summary": "Close Job",
+        "operationId": "close_job_recruiter_jobs__job_id__close_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "jwt",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Jwt"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recruiter/applications": {
+      "get": {
+        "tags": [
+          "recruiter"
+        ],
+        "summary": "List Applications",
+        "operationId": "list_applications_recruiter_applications_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "jwt",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Jwt"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecruiterApplicationResponse"
+                  },
+                  "title": "Response List Applications Recruiter Applications Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recruiter/applications/{application_id}": {
+      "patch": {
+        "tags": [
+          "recruiter"
+        ],
+        "summary": "Update Application Status",
+        "operationId": "update_application_status_recruiter_applications__application_id__patch",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "jwt",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Jwt"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateApplicationStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecruiterApplicationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "recruiter"
+        ],
+        "summary": "Remove Candidate",
+        "operationId": "remove_candidate_recruiter_applications__application_id__delete",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "jwt",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Jwt"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecruiterApplicationResponse"
                 }
               }
             }
@@ -919,6 +1395,72 @@
       }
     },
     "/documents/resumes/{document_id}": {
+      "patch": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Rename Resume",
+        "operationId": "rename_resume_documents_resumes__document_id__patch",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "jwt",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Jwt"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameResumeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "tags": [
           "documents"
@@ -1133,6 +1675,81 @@
                     "$ref": "#/components/schemas/JobMatchResponse"
                   },
                   "title": "Response List Catalog Jobs Documents Jobs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents/jobs/{job_id}/apply": {
+      "post": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Apply To Job",
+        "operationId": "apply_to_job_documents_jobs__job_id__apply_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "jwt",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Jwt"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ApplyToJobRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationResponse"
                 }
               }
             }
@@ -1609,6 +2226,70 @@
         ],
         "title": "AnalyzeResumeRequest"
       },
+      "ApplicationResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "job_document_id": {
+            "type": "integer",
+            "title": "Job Document Id"
+          },
+          "resume_document_id": {
+            "type": "integer",
+            "title": "Resume Document Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "submitted",
+              "reviewing",
+              "accepted",
+              "rejected",
+              "removed"
+            ],
+            "title": "Status"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "job_document_id",
+          "resume_document_id",
+          "created_at",
+          "status",
+          "updated_at"
+        ],
+        "title": "ApplicationResponse"
+      },
+      "ApplyToJobRequest": {
+        "properties": {
+          "resume_document_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume Document Id"
+          }
+        },
+        "type": "object",
+        "title": "ApplyToJobRequest"
+      },
       "Body_upload_document_recruiter_documents_post": {
         "properties": {
           "file": {
@@ -1632,6 +2313,20 @@
         ],
         "title": "Body_upload_document_recruiter_documents_post"
       },
+      "Body_upload_profile_photo_auth_me_photo_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_profile_photo_auth_me_photo_post"
+      },
       "Body_upload_resume_documents_resumes_post": {
         "properties": {
           "file": {
@@ -1645,6 +2340,26 @@
           "file"
         ],
         "title": "Body_upload_resume_documents_resumes_post"
+      },
+      "CreateOfferRequest": {
+        "properties": {
+          "resume_document_id": {
+            "type": "integer",
+            "title": "Resume Document Id"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resume_document_id",
+          "message"
+        ],
+        "title": "CreateOfferRequest"
       },
       "DocumentResponse": {
         "properties": {
@@ -1699,6 +2414,18 @@
               }
             ],
             "title": "Error Message"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
           },
           "created_at": {
             "type": "string",
@@ -1838,6 +2565,11 @@
             "type": "string",
             "title": "Source Filename"
           },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
           "score": {
             "type": "number",
             "title": "Score"
@@ -1854,6 +2586,91 @@
             "type": "array",
             "title": "Matched Technologies",
             "default": []
+          },
+          "applied": {
+            "type": "boolean",
+            "title": "Applied",
+            "default": false
+          },
+          "offered": {
+            "type": "boolean",
+            "title": "Offered",
+            "default": false
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "recruiter_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recruiter Name"
+          },
+          "recruiter_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recruiter Email"
+          },
+          "application_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Application Id"
+          },
+          "application_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "submitted",
+                  "reviewing",
+                  "accepted",
+                  "rejected",
+                  "removed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Application Status"
+          },
+          "application_updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Application Updated At"
           }
         },
         "type": "object",
@@ -1861,6 +2678,7 @@
           "id",
           "title",
           "source_filename",
+          "created_at",
           "score",
           "payload"
         ],
@@ -1895,14 +2713,70 @@
           "title": {
             "type": "string",
             "title": "Title"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "title"
+          "title",
+          "score"
         ],
         "title": "MatchedJobSummary"
+      },
+      "OfferResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "job_document_id": {
+            "type": "integer",
+            "title": "Job Document Id"
+          },
+          "resume_document_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume Document Id"
+          },
+          "professional_user_id": {
+            "type": "integer",
+            "title": "Professional User Id"
+          },
+          "recruiter_user_id": {
+            "type": "integer",
+            "title": "Recruiter User Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "job_document_id",
+          "resume_document_id",
+          "professional_user_id",
+          "recruiter_user_id",
+          "message",
+          "created_at"
+        ],
+        "title": "OfferResponse"
       },
       "ProcessResumeRequest": {
         "properties": {
@@ -1914,6 +2788,121 @@
         },
         "type": "object",
         "title": "ProcessResumeRequest"
+      },
+      "RecruiterApplicationResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "job_document_id": {
+            "type": "integer",
+            "title": "Job Document Id"
+          },
+          "job_title": {
+            "type": "string",
+            "title": "Job Title"
+          },
+          "applicant_name": {
+            "type": "string",
+            "title": "Applicant Name"
+          },
+          "applicant_email": {
+            "type": "string",
+            "title": "Applicant Email"
+          },
+          "resume_document_id": {
+            "type": "integer",
+            "title": "Resume Document Id"
+          },
+          "resume_filename": {
+            "type": "string",
+            "title": "Resume Filename"
+          },
+          "resume_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume Summary"
+          },
+          "resume_technologies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Resume Technologies",
+            "default": []
+          },
+          "matched_technologies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Matched Technologies",
+            "default": []
+          },
+          "resume_payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Resume Payload"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "submitted",
+              "reviewing",
+              "accepted",
+              "rejected",
+              "removed"
+            ],
+            "title": "Status"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "job_document_id",
+          "job_title",
+          "applicant_name",
+          "applicant_email",
+          "resume_document_id",
+          "resume_filename",
+          "resume_payload",
+          "status",
+          "updated_at"
+        ],
+        "title": "RecruiterApplicationResponse"
+      },
+      "RenameResumeRequest": {
+        "properties": {
+          "source_filename": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Source Filename"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_filename"
+        ],
+        "title": "RenameResumeRequest"
       },
       "ResetPasswordRequest": {
         "properties": {
@@ -1940,6 +2929,19 @@
           "id": {
             "type": "integer",
             "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "professional_name": {
+            "type": "string",
+            "title": "Professional Name"
+          },
+          "professional_email": {
+            "type": "string",
+            "title": "Professional Email"
           },
           "source_filename": {
             "type": "string",
@@ -1978,11 +2980,30 @@
               }
             ],
             "title": "Summary"
+          },
+          "applied_job_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Applied Job Ids",
+            "default": []
+          },
+          "offered_job_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Offered Job Ids",
+            "default": []
           }
         },
         "type": "object",
         "required": [
           "id",
+          "created_at",
+          "professional_name",
+          "professional_email",
           "source_filename",
           "score",
           "matched_technologies",
@@ -2172,6 +3193,26 @@
         ],
         "title": "SyncDocumentsResponse"
       },
+      "UpdateApplicationStatusRequest": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "submitted",
+              "reviewing",
+              "accepted",
+              "rejected",
+              "removed"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "UpdateApplicationStatusRequest"
+      },
       "UserResponse": {
         "properties": {
           "id": {
@@ -2198,6 +3239,17 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
           }
         },
         "type": "object",

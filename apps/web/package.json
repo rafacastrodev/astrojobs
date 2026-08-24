@@ -17,6 +17,9 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
+    "@liveblocks/client": "^3.24.1",
+    "@liveblocks/react": "^3.24.1",
+    "@liveblocks/react-ui": "^3.24.1",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-query": "^5.101.4",
