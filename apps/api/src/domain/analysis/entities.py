@@ -4,6 +4,15 @@ from typing import Literal
 
 JobSource = Literal["none", "catalog", "pasted"]
 FeedbackRating = Literal["up", "down"]
+AtsCategory = Literal["low", "medium", "high"]
+
+
+def ats_category_for_score(score: int) -> AtsCategory:
+    if score < 50:
+        return "low"
+    if score < 75:
+        return "medium"
+    return "high"
 
 
 @dataclass
@@ -33,3 +42,4 @@ class AnalysisEntity:
     companies: list[str]
     created_at: datetime
     feedback: AnalysisFeedbackEntity | None = None
+    ats_category: AtsCategory = "low"

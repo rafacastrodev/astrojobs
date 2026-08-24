@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from urllib.parse import quote, urlsplit
 
@@ -9,7 +10,8 @@ ROOT_DIR = _HERE.parents[5] if len(_HERE.parents) > 5 else _HERE.parents[-1]
 ENV_FILE = ROOT_DIR / ".env"
 
 _DEV_ENVIRONMENTS = {"development", "dev", "local"}
-_DOCKER_POSTGRES_HOST = "db"
+_DOCKER_POSTGRES_HOST = "postgres"
+_DOCKER_POSTGRES_ALIASES = {"db", "postgres"}
 _LOCAL_POSTGRES_HOST = "localhost"
 _DOCKER_S3_HOST = "localstack"
 _DEV_S3_BUCKET = "astrojobs-resumes"
@@ -17,6 +19,15 @@ _LOCAL_S3_ENDPOINT = "http://localhost:4566"
 _POSTGRES_PORT = 5432
 _LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
 _DUMMY_AWS_ACCESS_KEYS = {"test", "localstack"}
+_GEMINI_OPENAI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+_LIBPQ_ENV_KEYS = ("PGSSLMODE", "PGSSLROOTCERT")
+
+
+def _drop_empty_libpq_env() -> None:
+    for key in _LIBPQ_ENV_KEYS:
+        value = os.environ.get(key)
+        if value is not None and not value.strip():
+            del os.environ[key]
 
 
 def _running_in_docker() -> bool:
@@ -46,6 +57,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
         env_ignore_empty=True,
+        populate_by_name=True,
     )
 
     postgres_host: str | None = None
@@ -68,10 +80,27 @@ class Settings(BaseSettings):
     embedding_dimensions: int = 1024
 
     openai_api_key: str = ""
-    openai_model: str = "gpt-5.4-mini-2026-03-17"
+    openai_model: str = "gpt-5.4-nano"
     openai_moderation_model: str = "omni-moderation-latest"
-    openai_timeout_seconds: float = 45.0
-    openai_max_retries: int = 2
+    openai_embedding_model: str = "text-embedding-3-small"
+    openai_timeout_seconds: float = 20.0
+    openai_max_retries: int = 0
+
+    llm_api_key: str = ""
+    llm_model: str = ""
+    llm_base_url: str = ""
+
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-3.6-flash"
+
+    aws_bedrock_token: str = ""
+    aws_bedrock_kb_name: str = ""
+    aws_bedrock_data_source: str = ""
+    aws_bedrock_gateway: str = ""
+    aws_bedrock_gateway_target: str = ""
+    agentcore_gateway_url: str = ""
+    agentcore_retrieve_tool: str = ""
+    bedrock_knowledge_base_id: str = ""
 
     aws_region: str = "us-east-1"
     aws_s3_bucket: str = ""
@@ -104,6 +133,33 @@ class Settings(BaseSettings):
         return self.environment.strip().lower() in _DEV_ENVIRONMENTS
 
     @property
+    def uses_pgvector(self) -> bool:
+        return self.is_development
+
+    @property
+    def uses_gemini(self) -> bool:
+        return self.llm_model.strip().lower().startswith("gemini")
+
+    @property
+    def llm_configured(self) -> bool:
+        return bool(self.llm_api_key.strip() and self.llm_model.strip())
+
+    @property
+    def uses_agentcore_gateway(self) -> bool:
+        return bool(self.agentcore_gateway_url.strip())
+
+    @property
+    def uses_bedrock_kb(self) -> bool:
+        return bool(self.bedrock_knowledge_base_id.strip())
+
+    @property
+    def llm_is_openai(self) -> bool:
+        if not self.llm_base_url.strip():
+            return True
+        host = (_hostname(self.llm_base_url) or "").lower()
+        return host == "api.openai.com" or host.endswith(".openai.com")
+
+    @property
     def database_url(self) -> str:
         return self._build_database_url()
 
@@ -111,9 +167,13 @@ class Settings(BaseSettings):
     def _apply_environment_defaults(self) -> "Settings":
         in_docker = _running_in_docker()
 
-        if in_docker and self.postgres_host in {None, _LOCAL_POSTGRES_HOST}:
+        if in_docker and self.postgres_host in {
+            None,
+            _LOCAL_POSTGRES_HOST,
+            *_DOCKER_POSTGRES_ALIASES,
+        }:
             self.postgres_host = _DOCKER_POSTGRES_HOST
-        elif (not in_docker and self.postgres_host == _DOCKER_POSTGRES_HOST) or (
+        elif (not in_docker and self.postgres_host in _DOCKER_POSTGRES_ALIASES) or (
             self.postgres_host is None and self.is_development
         ):
             self.postgres_host = _LOCAL_POSTGRES_HOST
@@ -126,10 +186,17 @@ class Settings(BaseSettings):
                 "http://localhost" if in_docker else "http://localhost:3000"
             )
 
+        endpoint = self.aws_s3_endpoint_url.strip()
+        if endpoint.startswith(("http://", "https://")):
+            self.aws_s3_endpoint_url = endpoint
+        else:
+            self.aws_s3_endpoint_url = ""
+
         if self.is_development:
+            local_s3 = not self.aws_s3_bucket.strip() and not self.aws_s3_endpoint_url
             if not self.aws_s3_bucket.strip():
                 self.aws_s3_bucket = _DEV_S3_BUCKET
-            if not self.aws_s3_endpoint_url.strip():
+            if local_s3:
                 self.aws_s3_endpoint_url = _LOCAL_S3_ENDPOINT
 
         if in_docker and _points_at_loopback(self.aws_s3_endpoint_url):
@@ -149,7 +216,36 @@ class Settings(BaseSettings):
         if self.frontend_origin is None:
             self.frontend_origin = "http://localhost"
 
+        self._resolve_llm()
+        self._resolve_bedrock()
         return self
+
+    def _resolve_llm(self) -> None:
+        model = self.llm_model.strip()
+        if not model:
+            if self.gemini_api_key.strip():
+                model = self.gemini_model.strip()
+            else:
+                model = self.openai_model.strip()
+        self.llm_model = model
+
+        key = self.llm_api_key.strip()
+        if not key:
+            if model.lower().startswith("gemini"):
+                key = self.gemini_api_key.strip() or self.openai_api_key.strip()
+            else:
+                key = self.openai_api_key.strip() or self.gemini_api_key.strip()
+        self.llm_api_key = key
+
+        base_url = self.llm_base_url.strip()
+        if not base_url and model.lower().startswith("gemini"):
+            base_url = _GEMINI_OPENAI_BASE_URL
+        self.llm_base_url = base_url.rstrip("/") + "/" if base_url else ""
+
+    def _resolve_bedrock(self) -> None:
+        target = self.aws_bedrock_gateway_target.strip() or "astrojobs-target"
+        if not self.agentcore_retrieve_tool.strip():
+            self.agentcore_retrieve_tool = f"{target}___Retrieve"
 
     def _build_database_url(self) -> str:
         """Assembles the URL from the POSTGRES_* parts.
@@ -178,4 +274,5 @@ class Settings(BaseSettings):
         }
 
 
+_drop_empty_libpq_env()
 settings = Settings()

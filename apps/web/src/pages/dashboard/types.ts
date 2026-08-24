@@ -4,6 +4,8 @@ export type Resume = {
   source_filename: string
   status: 'draft' | 'synced' | 'failed'
   error_message: string | null
+  analysis_status: 'pending' | 'completed' | 'failed'
+  analysis_error_message: string | null
   created_at: string
   updated_at: string
   latest_analysis: AnalysisResult | null
@@ -15,9 +17,13 @@ export type JobMatch = {
   source_filename: string
   score: number
   payload: {
+    technologies?: string[]
+    description?: string
     requirements?: string[]
     responsibilities?: string[]
     seniority?: string
+    work_mode?: string
+    region?: string
     employment_type?: string
   }
 }
@@ -40,6 +46,7 @@ export type AnalysisResult = {
   job_document_id: number | null
   job_title: string | null
   score: number
+  ats_category: 'low' | 'medium' | 'high'
   summary: string
   findings: string[]
   years_of_experience: number | null

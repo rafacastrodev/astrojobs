@@ -106,7 +106,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/documents": {
+    "/recruiter/documents": {
         parameters: {
             query?: never;
             header?: never;
@@ -114,17 +114,17 @@ export interface paths {
             cookie?: never;
         };
         /** List Documents */
-        get: operations["list_documents_admin_documents_get"];
+        get: operations["list_documents_recruiter_documents_get"];
         put?: never;
         /** Upload Document */
-        post: operations["upload_document_admin_documents_post"];
+        post: operations["upload_document_recruiter_documents_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/admin/jobs": {
+    "/recruiter/jobs": {
         parameters: {
             query?: never;
             header?: never;
@@ -134,14 +134,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Create Job */
-        post: operations["create_job_admin_jobs_post"];
+        post: operations["create_job_recruiter_jobs_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/admin/documents/{document_id}": {
+    "/recruiter/documents/{document_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -149,17 +149,17 @@ export interface paths {
             cookie?: never;
         };
         /** Get Document */
-        get: operations["get_document_admin_documents__document_id__get"];
+        get: operations["get_document_recruiter_documents__document_id__get"];
         put?: never;
         post?: never;
         /** Delete Document */
-        delete: operations["delete_document_admin_documents__document_id__delete"];
+        delete: operations["delete_document_recruiter_documents__document_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/admin/documents/sync": {
+    "/recruiter/documents/sync": {
         parameters: {
             query?: never;
             header?: never;
@@ -169,7 +169,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Sync Documents */
-        post: operations["sync_documents_admin_documents_sync_post"];
+        post: operations["sync_documents_recruiter_documents_sync_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -188,6 +188,23 @@ export interface paths {
         put?: never;
         /** Upload Resume */
         post: operations["upload_resume_documents_resumes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/resumes/{document_id}/process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Process Resume */
+        post: operations["process_resume_documents_resumes__document_id__process_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -348,6 +365,11 @@ export interface components {
             job_title: string | null;
             /** Score */
             score: number;
+            /**
+             * Ats Category
+             * @enum {string}
+             */
+            ats_category: "low" | "medium" | "high";
             /** Summary */
             summary: string;
             /** Findings */
@@ -375,8 +397,8 @@ export interface components {
             /** Job Document Id */
             job_document_id?: number | null;
         };
-        /** Body_upload_document_admin_documents_post */
-        Body_upload_document_admin_documents_post: {
+        /** Body_upload_document_recruiter_documents_post */
+        Body_upload_document_recruiter_documents_post: {
             /** File */
             file: string;
             /**
@@ -485,13 +507,18 @@ export interface components {
         };
         /** LoginRequest */
         LoginRequest: {
-            /**
-             * Email
-             * Format: email
-             */
+            /** Email */
             email: string;
             /** Password */
             password: string;
+        };
+        /** ProcessResumeRequest */
+        ProcessResumeRequest: {
+            /**
+             * Force Analysis
+             * @default false
+             */
+            force_analysis: boolean;
         };
         /** ResetPasswordRequest */
         ResetPasswordRequest: {
@@ -518,6 +545,13 @@ export interface components {
             /** Error Message */
             error_message: string | null;
             /**
+             * Analysis Status
+             * @enum {string}
+             */
+            analysis_status: "pending" | "completed" | "failed";
+            /** Analysis Error Message */
+            analysis_error_message: string | null;
+            /**
              * Created At
              * Format: date-time
              */
@@ -543,6 +577,11 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "professional" | "recruiter";
         };
         /** SyncDocumentsRequest */
         SyncDocumentsRequest: {
@@ -574,7 +613,7 @@ export interface components {
              * Role
              * @enum {string}
              */
-            role: "user" | "admin";
+            role: "professional" | "recruiter";
             /**
              * Created At
              * Format: date-time
@@ -792,7 +831,7 @@ export interface operations {
             };
         };
     };
-    list_documents_admin_documents_get: {
+    list_documents_recruiter_documents_get: {
         parameters: {
             query?: {
                 type?: ("resume" | "job") | null;
@@ -826,7 +865,7 @@ export interface operations {
             };
         };
     };
-    upload_document_admin_documents_post: {
+    upload_document_recruiter_documents_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -837,7 +876,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "multipart/form-data": components["schemas"]["Body_upload_document_admin_documents_post"];
+                "multipart/form-data": components["schemas"]["Body_upload_document_recruiter_documents_post"];
             };
         };
         responses: {
@@ -861,7 +900,7 @@ export interface operations {
             };
         };
     };
-    create_job_admin_jobs_post: {
+    create_job_recruiter_jobs_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -896,7 +935,7 @@ export interface operations {
             };
         };
     };
-    get_document_admin_documents__document_id__get: {
+    get_document_recruiter_documents__document_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -929,7 +968,7 @@ export interface operations {
             };
         };
     };
-    delete_document_admin_documents__document_id__delete: {
+    delete_document_recruiter_documents__document_id__delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -960,7 +999,7 @@ export interface operations {
             };
         };
     };
-    sync_documents_admin_documents_sync_post: {
+    sync_documents_recruiter_documents_sync_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1043,6 +1082,43 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResumeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    process_resume_documents_resumes__document_id__process_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: number;
+            };
+            cookie?: {
+                jwt?: string | null;
+            };
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ProcessResumeRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

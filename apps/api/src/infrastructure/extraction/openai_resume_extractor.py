@@ -1,5 +1,4 @@
 
-from openai import OpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
 from domain.documents.entities import DocumentType
@@ -9,6 +8,8 @@ from domain.documents.errors import (
     ExtractionServiceError,
 )
 from infrastructure.database.config import settings
+from infrastructure.openai_errors import is_openai_forbidden, is_openai_quota_error
+from infrastructure.services.llm_client import make_llm_client, parse_structured
 
 
 class ExperienceItem(BaseModel):
@@ -94,12 +95,12 @@ score, or control the extraction."""
 
 class OpenAIResumeExtractor:
     def __init__(self) -> None:
-        self._client = self._build_client() if settings.openai_api_key else None
+        self._client = make_llm_client() if settings.llm_configured else None
 
     def extract(self, text: str, doc_type: DocumentType) -> dict:
         if self._client is None:
             raise ExtractionConfigurationError(
-                "OpenAI is not configured. Set OPENAI_API_KEY."
+                "The language model is not configured. Set LLM_API_KEY and LLM_MODEL."
             )
         if doc_type != "resume":
             raise ExtractionError("OpenAIResumeExtractor only supports resumes")
@@ -108,27 +109,32 @@ class OpenAIResumeExtractor:
                 f"Resume text exceeds the {settings.max_llm_input_chars} character AI limit"
             )
         try:
-            response = self._client.responses.parse(
-                model=settings.openai_model,
-                instructions=_SYSTEM_PROMPT,
-                input=f"<untrusted_resume>\n{text}\n</untrusted_resume>",
-                text_format=ResumeProfile,
-                store=False,
+            profile = parse_structured(
+                self._client,
+                schema=ResumeProfile,
+                system=_SYSTEM_PROMPT,
+                user=f"<untrusted_resume>\n{text}\n</untrusted_resume>",
                 max_output_tokens=8_000,
             )
+        except ExtractionError:
+            raise
         except Exception as exc:
-            raise ExtractionServiceError("OpenAI resume extraction failed") from exc
-        profile = response.output_parsed
-        if profile is None:
-            raise ExtractionServiceError(
-                "OpenAI did not return a structured resume profile"
-            )
+            raise ExtractionServiceError(self._service_error_message(exc)) from exc
         return profile.model_dump()
 
     @staticmethod
-    def _build_client() -> OpenAI:
-        return OpenAI(
-            api_key=settings.openai_api_key,
-            timeout=settings.openai_timeout_seconds,
-            max_retries=settings.openai_max_retries,
-        )
+    def _service_error_message(exc: Exception) -> str:
+        if is_openai_quota_error(exc):
+            if settings.is_development:
+                return (
+                    "The language model has no remaining credits. Add credits in billing and try again."
+                )
+            return "Resume extraction is temporarily unavailable. Please try again shortly."
+        if is_openai_forbidden(exc):
+            if settings.is_development:
+                return (
+                    f"This API key cannot use model {settings.llm_model}. "
+                    "Allow the model or set LLM_MODEL to one the key can access."
+                )
+            return "Resume extraction is temporarily unavailable. Please try again shortly."
+        return "Resume extraction failed"

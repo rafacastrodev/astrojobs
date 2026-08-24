@@ -30,3 +30,38 @@ def test_job_embedding_uses_catalog_fields() -> None:
     assert "Python Engineer" in text
     assert "FastAPI" in text
     assert "internal_note" not in text
+
+
+def test_job_embedding_uses_technologies_and_description() -> None:
+    text = payload_to_embedding_text(
+        {
+            "title": "Python Engineer",
+            "technologies": ["Python", "FastAPI"],
+            "description": "Build internal APIs",
+            "internal_note": "do not embed",
+        },
+        "job",
+    )
+    assert "Python Engineer" in text
+    assert "FastAPI" in text
+    assert "Build internal APIs" in text
+    assert "internal_note" not in text
+
+
+def test_job_embedding_uses_filter_fields() -> None:
+    text = payload_to_embedding_text(
+        {
+            "title": "Python Engineer",
+            "seniority": "senior",
+            "work_mode": "hybrid",
+            "region": "São Paulo",
+            "employment_type": "full-time",
+            "internal_note": "do not embed",
+        },
+        "job",
+    )
+    assert "senior" in text
+    assert "hybrid" in text
+    assert "São Paulo" in text
+    assert "full-time" in text
+    assert "internal_note" not in text

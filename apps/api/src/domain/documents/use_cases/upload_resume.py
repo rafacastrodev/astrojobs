@@ -4,6 +4,7 @@ from pathlib import Path
 
 from domain.analysis.analyzer import ResumeAnalyzer
 from domain.analysis.entities import AnalysisEntity
+from domain.analysis.errors import AnalyzerError
 from domain.analysis.repository import AnalysisRepository
 from domain.documents.entities import DocumentEntity
 from domain.documents.errors import (
@@ -22,6 +23,7 @@ from domain.documents.safety import (
     PiiRedactor,
 )
 from domain.documents.text_extractor import TextExtractor
+from domain.documents.use_cases.retrieve_similar_jobs import RetrieveSimilarJobsUseCase
 from domain.documents.use_cases.sync_documents import SyncDocumentsUseCase
 
 logger = logging.getLogger(__name__)
@@ -54,6 +56,7 @@ class UploadResumeUseCase:
         analyzer: ResumeAnalyzer,
         analysis_repository: AnalysisRepository,
         sync_documents_use_case: SyncDocumentsUseCase | None = None,
+        similar_jobs: RetrieveSimilarJobsUseCase | None = None,
     ):
         self._documents = document_repository
         self._file_loader = file_loader
@@ -66,6 +69,7 @@ class UploadResumeUseCase:
         self._analyzer = analyzer
         self._analyses = analysis_repository
         self._sync = sync_documents_use_case
+        self._similar_jobs = similar_jobs
 
     def execute(
         self, content: bytes, filename: str, user_id: int
@@ -105,8 +109,6 @@ class UploadResumeUseCase:
             "full_text": text,
             "structure": self._structure(payload),
         }
-        analysis_result = self._analyzer.analyze(payload, None)
-
         extension = Path(filename).suffix.lower()
         storage_key = f"resumes/{user_id}/{uuid.uuid4().hex}{extension}"
         try:
@@ -130,27 +132,47 @@ class UploadResumeUseCase:
             self._discard(storage_key)
             raise
 
-        try:
-            analysis = self._analyses.create(
-                user_id=user_id,
-                resume_document_id=document.id,  # type: ignore[arg-type]
-                job_source="none",
-                job_document_id=None,
-                job_title=None,
-                score=analysis_result["score"],
-                summary=analysis_result["summary"],
-                findings=analysis_result["findings"],
-                years_of_experience=analysis_result["years_of_experience"],
-                technologies=analysis_result["technologies"],
-                companies=analysis_result["companies"],
-            )
-        except Exception:
-            self._documents.delete(document.id)  # type: ignore[arg-type]
-            self._discard(storage_key)
-            raise
+        analysis = self._analyze(document, user_id)
 
         document = self._index(document)
         return document, analysis
+
+    def _analyze(
+        self, document: DocumentEntity, user_id: int
+    ) -> AnalysisEntity | None:
+        if document.id is None:
+            return None
+        try:
+            retrieved = (
+                self._similar_jobs.execute(document.payload)
+                if self._similar_jobs
+                else []
+            )
+            result = self._analyzer.analyze(document.payload, None, retrieved)
+            analysis = self._analyses.create(
+                user_id=user_id,
+                resume_document_id=document.id,
+                job_source="none",
+                job_document_id=None,
+                job_title=None,
+                score=result["score"],
+                summary=result["summary"],
+                findings=result["findings"],
+                years_of_experience=result["years_of_experience"],
+                technologies=result["technologies"],
+                companies=result["companies"],
+            )
+            self._documents.mark_analysis_completed(document.id)
+            return analysis
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Initial analysis failed for document %s: %s", document.id, exc)
+            message = (
+                str(exc)
+                if isinstance(exc, AnalyzerError)
+                else "Resume analysis is temporarily unavailable"
+            )
+            self._documents.mark_analysis_failed(document.id, message)
+            return None
 
     def _index(self, document: DocumentEntity) -> DocumentEntity:
         if self._sync is None or document.id is None:

@@ -47,7 +47,7 @@ jobs:
           EMBEDDING_DIMENSIONS: ${{ secrets.EMBEDDING_DIMENSIONS }}
           AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPEN_API_MODEL: ${{ secrets.OPEN_API_MODEL }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
           OPENAI_MODERATION_MODEL: ${{ secrets.OPENAI_MODERATION_MODEL }}
         run: |
           umask 077
@@ -73,7 +73,7 @@ jobs:
             write_env AWS_S3_BUCKET "$AWS_S3_BUCKET"
             write_env AWS_S3_ENDPOINT_URL ""
             write_env OPENAI_API_KEY "$OPENAI_API_KEY"
-            write_env OPENAI_MODEL "$OPENAI_API_MODEL"
+            write_env OPENAI_MODEL "$OPENAI_MODEL"
             write_env OPENAI_MODERATION_MODEL "$OPENAI_MODERATION_MODEL"
             write_env VITE_API_URL "/api"
           } > "$GITHUB_WORKSPACE/.env"

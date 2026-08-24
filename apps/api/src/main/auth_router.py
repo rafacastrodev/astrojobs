@@ -62,7 +62,9 @@ def signup(
     use_case: SignupUseCase = Depends(get_signup_use_case),
 ) -> UserResponse:
     try:
-        user, token = use_case.execute(body.username, body.email, body.password)
+        user, token = use_case.execute(
+            body.username, body.email, body.password, body.role
+        )
     except EmailAlreadyExistsError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Email already in use"
@@ -85,7 +87,8 @@ def login(
         user, token = use_case.execute(body.email, body.password)
     except InvalidCredentialsError:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password",
         )
     _set_auth_cookie(response, token)
     return _to_user_response(user)

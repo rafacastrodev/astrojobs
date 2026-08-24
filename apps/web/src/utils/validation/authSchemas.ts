@@ -58,6 +58,9 @@ export const passwordSchema = z
 
 const confirmPasswordSchema = z.string().min(1, 'Confirm your password')
 
+export const userRoles = ['professional', 'recruiter'] as const
+export type UserRole = (typeof userRoles)[number]
+
 export const signupSchema = z
   .object({
     username: z
@@ -68,6 +71,7 @@ export const signupSchema = z
       .regex(/^[A-Za-z0-9]+$/, 'Use letters and numbers only')
       .transform((value) => value.toLowerCase()),
     email: emailSchema,
+    role: z.enum(userRoles, { error: 'Choose professional or recruiter' }),
     password: passwordSchema,
     confirmPassword: confirmPasswordSchema,
   })
@@ -78,8 +82,35 @@ export const signupSchema = z
 
 export type SignupFormValues = z.infer<typeof signupSchema>
 
+export const loginIdentifierSchema = z
+  .string()
+  .trim()
+  .min(1, 'Username or email is required')
+  .superRefine((value, ctx) => {
+    if (value.includes('@')) {
+      if (!z.email().safeParse(value).success) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Enter a valid email',
+        })
+      }
+      return
+    }
+    if (
+      value.length < 3 ||
+      value.length > 30 ||
+      !/^[A-Za-z0-9]+$/.test(value)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Enter a username or email',
+      })
+    }
+  })
+  .transform((value) => (value.includes('@') ? value : value.toLowerCase()))
+
 export const loginSchema = z.object({
-  email: emailSchema,
+  email: loginIdentifierSchema,
   password: z.string().min(1, 'Password is required'),
 })
 

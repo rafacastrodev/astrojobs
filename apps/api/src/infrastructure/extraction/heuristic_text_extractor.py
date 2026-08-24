@@ -9,6 +9,7 @@ class HeuristicTextExtractor:
         "about": ("about", "summary", "profile", "objective", "overview"),
         "experience": ("experience", "work experience", "employment", "work history", "professional experience"),
         "education": ("education", "academic", "studies", "qualifications"),
+        "skills": ("skills", "technical skills", "technologies", "tech stack", "competencies"),
     }
 
     JOB_SECTION_ALIASES: ClassVar[dict[str, tuple[str, ...]]] = {
@@ -40,6 +41,7 @@ class HeuristicTextExtractor:
         about = sections.get("about") or self._first_paragraph(text)
         experiences = self._split_entries(sections.get("experience", ""))
         education = self._split_entries(sections.get("education", ""))
+        skills = self._split_skill_list(sections.get("skills", ""))
         experience_block = sections.get("experience", "")
         currently_employed = any(
             re.search(pattern, experience_block, flags=re.IGNORECASE)
@@ -47,6 +49,8 @@ class HeuristicTextExtractor:
         )
         return {
             "about": about,
+            "summary": about,
+            "skills": skills,
             "experiences": experiences,
             "education": education,
             "structure": {
@@ -54,7 +58,9 @@ class HeuristicTextExtractor:
                 "has_experience": len(experiences) > 0,
                 "has_education": len(education) > 0,
                 "section_count": sum(
-                    1 for key in ("about", "experience", "education") if sections.get(key)
+                    1
+                    for key in ("about", "experience", "education", "skills")
+                    if sections.get(key)
                 ),
             },
             "currently_employed": currently_employed,
@@ -106,6 +112,18 @@ class HeuristicTextExtractor:
                 ):
                     return key
         return None
+
+    def _split_skill_list(self, block: str) -> list[str]:
+        if not block.strip():
+            return []
+        entries = self._split_entries(block)
+        if len(entries) == 1:
+            entries = [
+                part.strip()
+                for part in re.split(r"[,;/|]", entries[0])
+                if part.strip()
+            ]
+        return entries
 
     def _split_entries(self, block: str) -> list[str]:
         if not block.strip():

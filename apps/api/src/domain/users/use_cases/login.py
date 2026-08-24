@@ -15,8 +15,12 @@ class LoginUseCase:
         self._hasher = password_hasher
         self._tokens = token_service
 
-    def execute(self, email: str, password: str) -> tuple[UserEntity, str]:
-        user = self._users.get_by_email(email)
+    def execute(self, identifier: str, password: str) -> tuple[UserEntity, str]:
+        lookup = identifier.strip()
+        if "@" in lookup:
+            user = self._users.get_by_email(lookup)
+        else:
+            user = self._users.get_by_name(lookup.lower())
         # A social-only account has no password to check; reject it with the
         # same error so the response never reveals how the account signs in.
         if (

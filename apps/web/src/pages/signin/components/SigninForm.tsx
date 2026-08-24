@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { Button } from '@/components/Button'
 import { Input } from '@/components/Input'
 import { PasswordInput } from '@/components/PasswordInput'
-import { MailIcon } from '@/components/icons'
+import { UserIcon } from '@/components/icons'
 
 import { useSignin } from '../hooks/useSignin'
 
@@ -31,15 +31,15 @@ export const SigninForm = ({ onSwitchToSignup }: SigninFormProps) => {
           htmlFor="signin-email"
           className="mb-1.5 block text-sm text-muted-foreground"
         >
-          Email
+          Username or email
         </label>
         <Input
           id="signin-email"
-          placeholder="you@example.com"
-          type="email"
-          autoComplete="email"
+          placeholder="janedoe or you@example.com"
+          type="text"
+          autoComplete="username"
           aria-invalid={Boolean(errors.email)}
-          icon={<MailIcon />}
+          icon={<UserIcon />}
           {...register('email')}
         />
         {errors.email ? (

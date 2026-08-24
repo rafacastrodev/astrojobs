@@ -13,6 +13,7 @@ dependencies = [
     "numpy>=2",
     "openai>=2.0.0",
     "openapi-generator-cli>=7.24.0",
+    "pgvector>=0.4.1",
     "pinecone>=9.1.0",
     "psycopg[binary]>=3.3.4",
     "pydantic-settings>=2.15.0",
@@ -36,7 +37,8 @@ dev = [
     "pytest>=8.0.0",
 ]
 [tool.pytest.ini_options]
-testpaths = ["src"]
+pythonpath = ["src"]
+testpaths = ["src/tests"]
 norecursedirs = [".venv", "node_modules", "__pycache__", "*.egg-info"]
 
 [tool.ruff.lint.flake8-bugbear]

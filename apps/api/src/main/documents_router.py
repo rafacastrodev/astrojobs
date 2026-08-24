@@ -24,6 +24,7 @@ from domain.documents.use_cases.match_jobs_for_resume import (
     DEFAULT_TOP_K,
     MatchJobsForResumeUseCase,
 )
+from domain.documents.use_cases.process_resume import ProcessResumeUseCase
 from domain.documents.use_cases.upload_resume import UploadResumeUseCase
 from domain.users.entities import UserEntity
 from infrastructure.documents.dependencies import (
@@ -31,12 +32,14 @@ from infrastructure.documents.dependencies import (
     get_list_documents_use_case,
     get_list_user_resumes_use_case,
     get_match_jobs_use_case,
+    get_process_resume_use_case,
     get_upload_resume_use_case,
     get_user_resume_detail_use_case,
 )
 from infrastructure.schemas.document_schemas import (
     JobMatchResponse,
     JobSummaryResponse,
+    ProcessResumeRequest,
     ResumeResponse,
 )
 from infrastructure.users.dependencies import get_current_user
@@ -54,6 +57,8 @@ def _to_resume_response(
         source_filename=document.source_filename,
         status=document.status,
         error_message=document.error_message,
+        analysis_status=document.analysis_status,
+        analysis_error_message=document.analysis_error_message,
         created_at=document.created_at,
         updated_at=document.updated_at,
         latest_analysis=_to_analysis_response(latest_analysis) if latest_analysis else None,
@@ -82,6 +87,24 @@ async def upload_resume(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     except StorageError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
+    return _to_resume_response(document, analysis)
+
+
+@router.post("/resumes/{document_id}/process", response_model=ResumeResponse)
+def process_resume(
+    document_id: int,
+    body: ProcessResumeRequest | None = None,
+    user: UserEntity = Depends(get_current_user),
+    use_case: ProcessResumeUseCase = Depends(get_process_resume_use_case),
+) -> ResumeResponse:
+    try:
+        document, analysis = use_case.execute(
+            document_id,
+            user.id,
+            force_analysis=body.force_analysis if body else False,
+        )
+    except DocumentNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     return _to_resume_response(document, analysis)
 
 

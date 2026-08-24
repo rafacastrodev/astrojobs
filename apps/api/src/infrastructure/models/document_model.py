@@ -17,6 +17,10 @@ class DocumentModel(Base):
     status: Mapped[str] = mapped_column(String(20), default="draft", index=True)
     pinecone_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    analysis_status: Mapped[str] = mapped_column(
+        String(20), default="pending", nullable=False, index=True
+    )
+    analysis_error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Null for documents uploaded through the admin flow (job postings).
     user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id"), nullable=True, index=True

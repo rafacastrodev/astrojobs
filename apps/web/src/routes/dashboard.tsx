@@ -10,6 +10,9 @@ export const Route = createFileRoute('/dashboard')({
     if (!user) {
       throw redirect({ to: '/login' })
     }
+    if (user.role === 'recruiter') {
+      throw redirect({ to: '/recruiter' })
+    }
     return { user }
   },
   pendingComponent: LoadingScreen,
@@ -22,9 +25,6 @@ function DashboardPage() {
   return (
     <Dashboard
       name={user.name}
-      email={user.email}
-      role={user.role}
-      createdAt={user.created_at}
     />
   )
 }

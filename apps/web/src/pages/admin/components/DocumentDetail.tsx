@@ -21,7 +21,10 @@ export const DocumentDetail = ({
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-semibold text-card-foreground">Extracted payload</h2>
-            <StatusBadge status={status} />
+            <StatusBadge
+              status={status}
+              label={status !== 'failed' ? 'Posted' : undefined}
+            />
           </div>
           <p className="text-sm text-muted-foreground">{filename}</p>
           {errorMessage ? <p className="text-sm text-destructive">{errorMessage}</p> : null}

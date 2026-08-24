@@ -1,8 +1,7 @@
 services:
-  db:
-    image: postgres:17.11-alpine
+  postgres:
+    image: pgvector/pgvector:pg17
     restart: unless-stopped
-    profiles: ["dev"]
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -22,7 +21,7 @@ services:
       context: .
       dockerfile: ./apps/web/Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL}
+        VITE_API_URL: /api
     ports:
       - "80:80"
       - "443:443"
@@ -36,13 +35,15 @@ services:
   api:
     build: ./apps/api
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_HOST: ${POSTGRES_HOST:-}
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
-      PGSSLMODE: ${PGSSLMODE:-}
+      PGSSLMODE: ${PGSSLMODE:-disable}
       PGSSLROOTCERT: ${PGSSLROOTCERT:-}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_MINUTES: ${JWT_EXPIRES_MINUTES:-10080}
@@ -54,18 +55,36 @@ services:
       PINECONE_NAMESPACE_RESUMES: ${PINECONE_NAMESPACE_RESUMES:-resumes}
       PINECONE_NAMESPACE_JOBS: ${PINECONE_NAMESPACE_JOBS:-jobs}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1024}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.4-mini-2026-03-17}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.4-nano}
       OPENAI_MODERATION_MODEL: ${OPENAI_MODERATION_MODEL:-omni-moderation-latest}
-      OPENAI_TIMEOUT_SECONDS: ${OPENAI_TIMEOUT_SECONDS:-45}
-      OPENAI_MAX_RETRIES: ${OPENAI_MAX_RETRIES:-2}
-      AWS_REGION: ${AWS_REGION}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      OPENAI_TIMEOUT_SECONDS: ${OPENAI_TIMEOUT_SECONDS:-20}
+      OPENAI_MAX_RETRIES: ${OPENAI_MAX_RETRIES:-0}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.6-flash}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+      AWS_BEARER_TOKEN_BEDROCK: ""
+      AWS_BEDROCK_TOKEN: ""
       AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL:-}
+      AGENTCORE_GATEWAY_URL: ${AGENTCORE_GATEWAY_URL:-}
+      AGENTCORE_RETRIEVE_TOOL: ${AGENTCORE_RETRIEVE_TOOL:-}
+      AWS_BEDROCK_KB_NAME: ${AWS_BEDROCK_KB_NAME:-}
+      AWS_BEDROCK_DATA_SOURCE: ${AWS_BEDROCK_DATA_SOURCE:-}
+      AWS_BEDROCK_GATEWAY: ${AWS_BEDROCK_GATEWAY:-}
+      AWS_BEDROCK_GATEWAY_TARGET: ${AWS_BEDROCK_GATEWAY_TARGET:-astrojobs-target}
+      BEDROCK_KNOWLEDGE_BASE_ID: ${BEDROCK_KNOWLEDGE_BASE_ID:-}
       MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-5242880}
       MAX_LLM_INPUT_CHARS: ${MAX_LLM_INPUT_CHARS:-50000}
     ports:
       - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test:
         - CMD

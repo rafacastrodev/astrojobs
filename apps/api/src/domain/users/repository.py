@@ -15,7 +15,7 @@ class UserRepository(Protocol):
         name: str,
         email: str,
         hashed_password: str,
-        role: str = "user",
+        role: str = "professional",
     ) -> UserEntity: ...
 
     def create_social(
@@ -26,6 +26,6 @@ class UserRepository(Protocol):
 
     def update_password(self, user_id: int, hashed_password: str) -> None: ...
 
-    def ensure_admin(
+    def ensure_recruiter(
         self, name: str, email: str, hashed_password: str
     ) -> UserEntity: ...

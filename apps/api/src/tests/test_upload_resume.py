@@ -2,7 +2,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from domain.analysis.entities import AnalysisEntity
+from domain.analysis.entities import AnalysisEntity, ats_category_for_score
+from domain.analysis.errors import AnalyzerError
 from domain.documents.entities import DocumentEntity
 from domain.documents.errors import UnsafeContentError
 from domain.documents.safety import PiiRedactionResult
@@ -38,6 +39,16 @@ class _Documents:
         self.document.error_message = message
         return self.document
 
+    def mark_analysis_completed(self, _document_id):
+        self.document.analysis_status = "completed"
+        self.document.analysis_error_message = None
+        return self.document
+
+    def mark_analysis_failed(self, _document_id, message):
+        self.document.analysis_status = "failed"
+        self.document.analysis_error_message = message
+        return self.document
+
     def delete(self, _document_id):
         self.document = None
         return True
@@ -45,7 +56,12 @@ class _Documents:
 
 class _Analyses:
     def create(self, **values):
-        return AnalysisEntity(id=1, created_at=datetime.now(UTC), **values)
+        return AnalysisEntity(
+            id=1,
+            created_at=datetime.now(UTC),
+            ats_category=ats_category_for_score(values["score"]),
+            **values,
+        )
 
 
 class _Storage:
@@ -69,7 +85,7 @@ class _Extractor:
 
 
 class _Analyzer:
-    def analyze(self, resume, _job):
+    def analyze(self, resume, _job, retrieved_context=None):
         assert resume["summary"] == "Engineer"
         return {
             "score": 80,
@@ -138,6 +154,7 @@ def test_import_keeps_full_text_locally_and_redacts_ai_input() -> None:
     document, analysis = use_case.execute(b"resume", "resume.txt", user_id=7)
     assert storage.uploaded is True
     assert analysis.score == 80
+    assert analysis.ats_category == "high"
     assert extractor.text.startswith("[EMAILS_REDACTED]")
     assert document.payload["full_text"].startswith("private@example.com")
     assert document.payload["contact"]["emails"] == ["private@example.com"]
@@ -150,3 +167,20 @@ def test_unsafe_content_is_rejected_before_storage() -> None:
         use_case.execute(b"resume", "resume.txt", user_id=7)
     assert storage.uploaded is False
     assert documents.document is None
+
+
+def test_analysis_failure_preserves_upload_for_retry() -> None:
+    class _FailingAnalyzer:
+        def analyze(self, *_args, **_kwargs):
+            raise AnalyzerError("Resume analysis is temporarily unavailable")
+
+    use_case, documents, storage, _extractor = _use_case()
+    use_case._analyzer = _FailingAnalyzer()
+
+    document, analysis = use_case.execute(b"resume", "resume.txt", user_id=7)
+
+    assert analysis is None
+    assert storage.uploaded is True
+    assert documents.document is document
+    assert document.analysis_status == "failed"
+    assert document.analysis_error_message == "Resume analysis is temporarily unavailable"

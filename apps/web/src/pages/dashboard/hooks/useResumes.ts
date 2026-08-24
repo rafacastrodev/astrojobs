@@ -43,6 +43,11 @@ export const useResumes = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: resumesKey }),
   })
 
+  const process = useMutation({
+    mutationFn: (id: number) => resumeServices.process(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: resumesKey }),
+  })
+
   const handleUpload = (file: File) => {
     const error = validateFile(file)
     setValidationError(error)
@@ -62,5 +67,8 @@ export const useResumes = () => {
     handleDelete: (id: number) => remove.mutate(id),
     deletingId: remove.isPending ? remove.variables : null,
     deleteError: remove.isError ? getApiErrorMessage(remove.error) : null,
+    handleProcess: (id: number) => process.mutate(id),
+    processingId: process.isPending ? process.variables : null,
+    processError: process.isError ? getApiErrorMessage(process.error) : null,
   }
 }

@@ -33,7 +33,7 @@ class SqlAlchemyUserRepository:
         name: str,
         email: str,
         hashed_password: str,
-        role: str = "user",
+        role: str = "professional",
     ) -> UserEntity:
         model = UserModel(
             name=name, email=email, hashed_password=hashed_password, role=role
@@ -52,7 +52,7 @@ class SqlAlchemyUserRepository:
             name=name,
             email=email,
             hashed_password=None,
-            role="user",
+            role="professional",
         )
         self._session.add(model)
         self._session.commit()
@@ -66,27 +66,32 @@ class SqlAlchemyUserRepository:
         model.hashed_password = hashed_password
         self._session.commit()
 
-    def ensure_admin(self, name: str, email: str, hashed_password: str) -> UserEntity:
+    def ensure_recruiter(self, name: str, email: str, hashed_password: str) -> UserEntity:
         existing = self.get_by_email(email)
         if existing is not None:
             model = self._session.get(UserModel, existing.id)
             if model is None:
                 return existing
-            model.role = "admin"
+            model.role = "recruiter"
             model.name = name
             model.hashed_password = hashed_password
             self._session.commit()
             self._session.refresh(model)
             return self._to_entity(model)
-        return self.create(name, email, hashed_password, role="admin")
+        return self.create(name, email, hashed_password, role="recruiter")
 
     @staticmethod
     def _to_entity(model: UserModel) -> UserEntity:
+        role = {"user": "professional", "admin": "recruiter"}.get(
+            model.role, model.role
+        )
+        if role not in ("professional", "recruiter"):
+            role = "professional"
         return UserEntity(
             id=model.id,
             name=model.name,
             email=model.email,
             hashed_password=model.hashed_password,
-            role=model.role if model.role in ("user", "admin") else "user",
+            role=role,
             created_at=model.created_at,
         )

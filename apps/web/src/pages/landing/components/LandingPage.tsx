@@ -8,7 +8,7 @@ import { LandingFooter } from './LandingFooter'
 
 export const LandingPage = () => {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="flex-1 bg-background text-foreground">
       <Header />
       <Hero />
       <HowItWorks />

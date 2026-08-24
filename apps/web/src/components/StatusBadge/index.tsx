@@ -1,5 +1,6 @@
 type StatusBadgeProps = {
   status: 'draft' | 'synced' | 'failed'
+  label?: string
 }
 
 const styles: Record<StatusBadgeProps['status'], string> = {
@@ -8,10 +9,10 @@ const styles: Record<StatusBadgeProps['status'], string> = {
   failed: 'border-destructive/40 bg-destructive/10 text-destructive',
 }
 
-export const StatusBadge = ({ status }: StatusBadgeProps) => {
+export const StatusBadge = ({ status, label }: StatusBadgeProps) => {
   return (
     <span className={`inline-flex rounded-md border px-2 py-0.5 text-xs capitalize ${styles[status]}`}>
-      {status}
+      {label ?? status}
     </span>
   )
 }

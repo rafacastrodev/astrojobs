@@ -17,10 +17,14 @@ RESUME_EMBEDDING_KEYS = (
 )
 JOB_EMBEDDING_KEYS = (
     "title",
+    "technologies",
+    "description",
+    "seniority",
+    "work_mode",
+    "region",
+    "employment_type",
     "requirements",
     "responsibilities",
-    "seniority",
-    "employment_type",
 )
 
 

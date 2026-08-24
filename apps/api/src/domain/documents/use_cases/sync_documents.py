@@ -44,6 +44,7 @@ class SyncDocumentsUseCase:
 
         synced = 0
         failed = 0
+        skipped = 0
         results: list[dict[str, Any]] = []
 
         for document in documents:
@@ -60,6 +61,7 @@ class SyncDocumentsUseCase:
                                 "document_id": document.id,
                                 "type": document.type,
                                 "source_filename": document.source_filename,
+                                "text": text[:2_000],
                             },
                         }
                     ],
@@ -70,11 +72,20 @@ class SyncDocumentsUseCase:
                 results.append({"id": document.id, "status": "synced", "pinecone_id": vector_id})
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Failed to sync document %s: %s", document.id, exc)
-                self._documents.mark_failed(document.id, str(exc))
+                public_error = "Could not index document"
+                if document.type == "job":
+                    skipped += 1
+                    results.append(
+                        {"id": document.id, "status": "skipped", "error": public_error}
+                    )
+                    continue
+                self._documents.mark_failed(document.id, public_error)
                 failed += 1
-                results.append({"id": document.id, "status": "failed", "error": str(exc)})
+                results.append(
+                    {"id": document.id, "status": "failed", "error": public_error}
+                )
 
-        return {"synced": synced, "failed": failed, "skipped": 0, "results": results}
+        return {"synced": synced, "failed": failed, "skipped": skipped, "results": results}
 
     def _namespace_for(self, doc_type: DocumentType) -> str:
         if doc_type == "resume":

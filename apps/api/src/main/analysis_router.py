@@ -48,6 +48,7 @@ def _to_response(analysis: AnalysisEntity) -> AnalysisResponse:
         job_document_id=analysis.job_document_id,
         job_title=analysis.job_title,
         score=analysis.score,
+        ats_category=analysis.ats_category,
         summary=analysis.summary,
         findings=analysis.findings,
         years_of_experience=analysis.years_of_experience,

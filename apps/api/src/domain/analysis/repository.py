@@ -37,6 +37,10 @@ class AnalysisRepository(Protocol):
 
     def list_with_feedback(self) -> Sequence[AnalysisEntity]: ...
 
+    def list_latest_general_by_resume_ids(
+        self, resume_ids: Sequence[int]
+    ) -> dict[int, AnalysisEntity]: ...
+
 
 class AnalysisFeedbackRepository(Protocol):
     def upsert(

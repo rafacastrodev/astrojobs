@@ -1,7 +1,7 @@
 from collections.abc import Generator
 from pathlib import Path
 
-from sqlalchemy import MetaData, create_engine
+from sqlalchemy import MetaData, create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from infrastructure.database.config import settings
@@ -22,6 +22,15 @@ class Base(DeclarativeBase):
 _connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
 engine = create_engine(settings.database_url, connect_args=_connect_args)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+
+if settings.database_url.startswith("postgresql"):
+
+    @event.listens_for(engine, "connect")
+    def _register_pgvector(dbapi_connection, _connection_record) -> None:
+        from pgvector.psycopg import register_vector
+
+        register_vector(dbapi_connection)
 
 
 def get_db() -> Generator[Session, None, None]:

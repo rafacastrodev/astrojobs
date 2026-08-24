@@ -13,36 +13,40 @@ export type AdminDocument = {
   updated_at: string
 }
 
-export type SyncDocumentsResponse = {
-  synced: number
-  failed: number
-  skipped: number
-  results: Array<{
-    id: number
-    status: string
-    error?: string
-    pinecone_id?: string
-  }>
-}
+export type JobSeniority =
+  | 'intern'
+  | 'junior'
+  | 'mid'
+  | 'senior'
+  | 'lead'
+  | 'principal'
+  | 'staff'
+
+export type JobWorkMode = 'remote' | 'hybrid' | 'on-site'
+
+export type JobEmploymentType =
+  | 'full-time'
+  | 'part-time'
+  | 'contract'
+  | 'internship'
+  | 'temporary'
 
 export type JobCreatePayload = {
   title: string
-  requirements: string[]
-  responsibilities: string[]
-  seniority:
-    | 'intern'
-    | 'junior'
-    | 'mid'
-    | 'senior'
-    | 'lead'
-    | 'principal'
-    | 'staff'
-    | 'unspecified'
-  employment_type:
-    | 'full-time'
-    | 'part-time'
-    | 'contract'
-    | 'internship'
-    | 'temporary'
-    | 'unspecified'
+  technologies: string[]
+  description: string
+  seniority: JobSeniority
+  work_mode: JobWorkMode
+  region: string
+  employment_type: JobEmploymentType
+}
+
+export type ResumeMatch = {
+  id: number
+  source_filename: string
+  score: number
+  matched_technologies: string[]
+  matched_jobs: { id: number; title: string }[]
+  payload: Record<string, unknown>
+  summary: string | null
 }

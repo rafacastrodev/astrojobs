@@ -5,10 +5,7 @@ import type { AdminDocument } from '../types'
 
 type DocumentListProps = {
   documents: AdminDocument[]
-  selectedIds: number[]
-  onToggle: (id: number) => void
-  onSelectAll: () => void
-  onClearSelection: () => void
+  emptyLabel: string
   onSelect: (document: AdminDocument) => void
   onDelete: (id: number) => void
   isDeleting: boolean
@@ -16,89 +13,82 @@ type DocumentListProps = {
 
 export const DocumentList = ({
   documents,
-  selectedIds,
-  onToggle,
-  onSelectAll,
-  onClearSelection,
+  emptyLabel,
   onSelect,
   onDelete,
   isDeleting,
 }: DocumentListProps) => {
   if (documents.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        No documents yet. Upload one to get started.
-      </p>
-    )
+    return <p className="text-sm text-muted-foreground">{emptyLabel}</p>
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
-        <div className="w-28">
-          <Button type="button" onClick={onSelectAll} className="!py-2 text-sm">
-            Select all
-          </Button>
-        </div>
-        <div className="w-28">
-          <Button
-            type="button"
-            onClick={onClearSelection}
-            className="!bg-muted !text-muted-foreground !py-2 text-sm"
+    <ul className="divide-y divide-border rounded-2xl border border-border bg-card">
+      {documents.map((document) => {
+        const label =
+          document.type === 'job' &&
+          typeof document.payload.title === 'string'
+            ? document.payload.title
+            : document.source_filename
+        return (
+          <li
+            key={document.id}
+            className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
           >
-            Clear
-          </Button>
-        </div>
-      </div>
-      <ul className="divide-y divide-border rounded-2xl border border-border bg-card">
-        {documents.map((document) => {
-          const checked = selectedIds.includes(document.id)
-          const label =
-            document.type === 'job' &&
-            typeof document.payload.title === 'string'
-              ? document.payload.title
-              : document.source_filename
-          return (
-            <li
-              key={document.id}
-              className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+            <button
+              type="button"
+              onClick={() => onSelect(document)}
+              className="text-left"
             >
-              <div className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => onToggle(document.id)}
-                  className="mt-1"
-                  aria-label={`Select ${label}`}
-                />
-                <button
+              <p className="font-medium text-card-foreground">{label}</p>
+              {document.type === 'job' &&
+              Array.isArray(document.payload.technologies) &&
+              document.payload.technologies.length > 0 ? (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {document.payload.technologies
+                    .filter((item): item is string => typeof item === 'string')
+                    .join(' · ')}
+                </p>
+              ) : null}
+              {document.type === 'job' ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {[
+                    document.payload.seniority,
+                    document.payload.work_mode,
+                    document.payload.region,
+                    document.payload.employment_type,
+                  ]
+                    .filter((item): item is string => typeof item === 'string')
+                    .join(' · ')}
+                </p>
+              ) : null}
+              <p className="mt-1 text-xs text-muted-foreground">
+                {new Date(document.created_at).toLocaleString()}
+              </p>
+            </button>
+            <div className="flex items-center gap-3">
+              <StatusBadge
+                status={document.status}
+                label={
+                  document.type === 'job' && document.status !== 'failed'
+                    ? 'Posted'
+                    : undefined
+                }
+              />
+              <div className="w-24">
+                <Button
                   type="button"
-                  onClick={() => onSelect(document)}
-                  className="text-left"
+                  onClick={() => onDelete(document.id)}
+                  isLoading={isDeleting}
+                  className="!bg-muted !py-2 !text-sm !text-muted-foreground"
                 >
-                  <p className="font-medium text-card-foreground">{label}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {new Date(document.created_at).toLocaleString()}
-                  </p>
-                </button>
+                  Delete
+                </Button>
               </div>
-              <div className="flex items-center gap-3">
-                <StatusBadge status={document.status} />
-                <div className="w-24">
-                  <Button
-                    type="button"
-                    onClick={() => onDelete(document.id)}
-                    isLoading={isDeleting}
-                    className="!bg-muted !py-2 !text-sm !text-muted-foreground"
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            </li>
-          )
-        })}
-      </ul>
-    </div>
+            </div>
+          </li>
+        )
+      })}
+    </ul>
   )
 }

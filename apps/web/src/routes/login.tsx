@@ -12,7 +12,9 @@ export const Route = createFileRoute('/login')({
   beforeLoad: async () => {
     const user = await userServices.getCurrentUser()
     if (user) {
-      throw redirect({ to: '/dashboard' })
+      throw redirect({
+        to: user.role === 'recruiter' ? '/recruiter' : '/dashboard',
+      })
     }
   },
   component: LoginRoute,

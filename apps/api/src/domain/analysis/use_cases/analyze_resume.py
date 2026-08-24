@@ -8,6 +8,7 @@ from domain.documents.errors import DocumentNotFoundError
 from domain.documents.repository import DocumentRepository
 from domain.documents.text_extractor import TextExtractor
 from domain.documents.use_cases.get_user_resume import GetUserResumeUseCase
+from domain.documents.use_cases.retrieve_similar_jobs import RetrieveSimilarJobsUseCase
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +22,13 @@ class AnalyzeResumeUseCase:
         document_repository: DocumentRepository,
         analyzer: ResumeAnalyzer,
         extractor: TextExtractor,
+        similar_jobs: RetrieveSimilarJobsUseCase | None = None,
     ):
         self._analyses = analysis_repository
         self._documents = document_repository
         self._analyzer = analyzer
         self._extractor = extractor
+        self._similar_jobs = similar_jobs
         self._get_resume = GetUserResumeUseCase(document_repository)
 
     def execute(
@@ -41,18 +44,31 @@ class AnalyzeResumeUseCase:
         job_payload, resolved_job_document_id, job_title = self._resolve_job(
             job_source, job_document_id, job_text
         )
+        retrieved_context = (
+            self._similar_jobs.execute(resume.payload) if self._similar_jobs else []
+        )
 
         try:
-            result = self._analyzer.analyze(resume.payload, job_payload)
+            result = self._analyzer.analyze(
+                resume.payload, job_payload, retrieved_context
+            )
         except AnalyzerError:
+            if job_source == "none":
+                self._documents.mark_analysis_failed(
+                    resume_document_id, "Resume analysis is temporarily unavailable"
+                )
             raise
         except Exception as exc:
             logger.warning(
                 "Resume analysis failed for document %s: %s", resume_document_id, exc
             )
+            if job_source == "none":
+                self._documents.mark_analysis_failed(
+                    resume_document_id, "Resume analysis is temporarily unavailable"
+                )
             raise AnalyzerError(str(exc)) from exc
 
-        return self._analyses.create(
+        analysis = self._analyses.create(
             user_id=user_id,
             resume_document_id=resume_document_id,
             job_source=job_source,
@@ -65,6 +81,9 @@ class AnalyzeResumeUseCase:
             technologies=result["technologies"],
             companies=result["companies"],
         )
+        if job_source == "none":
+            self._documents.mark_analysis_completed(resume_document_id)
+        return analysis
 
     def _resolve_job(
         self,

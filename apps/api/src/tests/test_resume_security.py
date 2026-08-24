@@ -116,9 +116,45 @@ def test_moderates_large_resume_one_chunk_per_request() -> None:
     assert all(isinstance(value, str) for value in moderations.inputs)
 
 
+def test_skips_forbidden_moderation() -> None:
+    class _Forbidden:
+        def create(self, **_kwargs):
+            error = RuntimeError("Forbidden")
+            error.status_code = 403
+            error.body = {
+                "error": {
+                    "message": "Forbidden",
+                    "type": "invalid_request_error",
+                }
+            }
+            raise error
+
+    checker = OpenAIContentSafetyChecker.__new__(OpenAIContentSafetyChecker)
+    checker._client = SimpleNamespace(moderations=_Forbidden())
+    checker.check("ordinary resume content")
+
+
 def test_wraps_moderation_service_failure() -> None:
     checker = OpenAIContentSafetyChecker.__new__(OpenAIContentSafetyChecker)
     checker._client = SimpleNamespace(moderations=_FailingModerations())
 
     with pytest.raises(SafetyServiceError, match="Could not verify"):
+        checker.check("ordinary resume content")
+
+
+class _RateLimitedModerations:
+    def create(self, **_kwargs):
+        error = RuntimeError("Too Many Requests")
+        error.status_code = 429
+        error.body = {
+            "error": {"message": "Too Many Requests", "type": "invalid_request_error"}
+        }
+        raise error
+
+
+def test_maps_moderation_rate_limit_to_unavailable_message() -> None:
+    checker = OpenAIContentSafetyChecker.__new__(OpenAIContentSafetyChecker)
+    checker._client = SimpleNamespace(moderations=_RateLimitedModerations())
+
+    with pytest.raises(SafetyServiceError, match="credits|unavailable"):
         checker.check("ordinary resume content")

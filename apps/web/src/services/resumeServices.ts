@@ -29,10 +29,18 @@ async function matches(id: number) {
   return response.data
 }
 
+async function process(id: number, forceAnalysis = false) {
+  const response = await api.post<Resume>(`/documents/resumes/${id}/process`, {
+    force_analysis: forceAnalysis,
+  })
+  return response.data
+}
+
 export const resumeServices = {
   list,
   get,
   matches,
   upload,
   remove,
+  process,
 }

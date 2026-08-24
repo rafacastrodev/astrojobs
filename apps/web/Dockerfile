@@ -21,11 +21,15 @@ RUN pnpm run build
 FROM nginx:alpine AS runtime
 
 COPY --from=build /app/apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/apps/web/nginx.https.conf /etc/nginx/https.conf
+COPY --from=build /app/apps/web/nginx-app.conf /etc/nginx/snippets/app.conf
 COPY --from=build /app/apps/web/nginx-proxy-api.conf /etc/nginx/snippets/proxy-api.conf
+COPY --from=build /app/apps/web/40-select-tls.sh /docker-entrypoint.d/40-select-tls.sh
+RUN chmod +x /docker-entrypoint.d/40-select-tls.sh
 RUN rm -rf /usr/share/nginx/html/*
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 
-EXPOSE 80
+EXPOSE 80 443
 
 HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=12 \
   CMD wget -qO- http://127.0.0.1/healthz >/dev/null || exit 1

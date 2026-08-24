@@ -81,6 +81,14 @@ class SqlAlchemyDocumentRepository:
         self._session.refresh(model)
         return self._to_entity(model)
 
+    def mark_published(self, document_id: int) -> DocumentEntity:
+        model = self._require(document_id)
+        model.status = "synced"
+        model.error_message = None
+        self._session.commit()
+        self._session.refresh(model)
+        return self._to_entity(model)
+
     def mark_failed(self, document_id: int, error_message: str) -> DocumentEntity:
         model = self._session.get(DocumentModel, document_id)
         if model is None:
@@ -90,6 +98,30 @@ class SqlAlchemyDocumentRepository:
         self._session.commit()
         self._session.refresh(model)
         return self._to_entity(model)
+
+    def mark_analysis_completed(self, document_id: int) -> DocumentEntity:
+        model = self._require(document_id)
+        model.analysis_status = "completed"
+        model.analysis_error_message = None
+        self._session.commit()
+        self._session.refresh(model)
+        return self._to_entity(model)
+
+    def mark_analysis_failed(
+        self, document_id: int, error_message: str
+    ) -> DocumentEntity:
+        model = self._require(document_id)
+        model.analysis_status = "failed"
+        model.analysis_error_message = error_message
+        self._session.commit()
+        self._session.refresh(model)
+        return self._to_entity(model)
+
+    def _require(self, document_id: int) -> DocumentModel:
+        model = self._session.get(DocumentModel, document_id)
+        if model is None:
+            raise ValueError(f"Document {document_id} not found")
+        return model
 
     def delete(self, document_id: int) -> bool:
         model = self._session.get(DocumentModel, document_id)
@@ -113,4 +145,6 @@ class SqlAlchemyDocumentRepository:
             updated_at=model.updated_at,
             user_id=model.user_id,
             storage_key=model.storage_key,
+            analysis_status=model.analysis_status,  # type: ignore[arg-type]
+            analysis_error_message=model.analysis_error_message,
         )

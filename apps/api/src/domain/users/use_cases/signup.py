@@ -1,4 +1,4 @@
-from domain.users.entities import UserEntity
+from domain.users.entities import UserEntity, UserRole
 from domain.users.errors import EmailAlreadyExistsError, UsernameAlreadyExistsError
 from domain.users.repository import UserRepository
 from domain.users.security import PasswordHasher, TokenService
@@ -16,13 +16,15 @@ class SignupUseCase:
         self._tokens = token_service
 
     def execute(
-        self, username: str, email: str, password: str
+        self, username: str, email: str, password: str, role: UserRole
     ) -> tuple[UserEntity, str]:
         username = username.lower()
         if self._users.get_by_name(username) is not None:
             raise UsernameAlreadyExistsError(username)
         if self._users.get_by_email(email) is not None:
             raise EmailAlreadyExistsError(email)
-        user = self._users.create(username, email, self._hasher.hash(password))
+        user = self._users.create(
+            username, email, self._hasher.hash(password), role
+        )
         token = self._tokens.create_access_token(user.id)
         return user, token

@@ -72,9 +72,9 @@ def get_current_user(
     return user
 
 
-def require_admin(user: UserEntity = Depends(get_current_user)) -> UserEntity:
-    if user.role != "admin":
+def require_recruiter(user: UserEntity = Depends(get_current_user)) -> UserEntity:
+    if user.role != "recruiter":
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Recruiter access required"
         )
     return user

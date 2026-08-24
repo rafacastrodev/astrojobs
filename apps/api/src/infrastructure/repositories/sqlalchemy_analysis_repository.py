@@ -7,6 +7,7 @@ from domain.analysis.entities import (
     AnalysisFeedbackEntity,
     FeedbackRating,
     JobSource,
+    ats_category_for_score,
 )
 from infrastructure.models.analysis_feedback_model import AnalysisFeedbackModel
 from infrastructure.models.analysis_model import AnalysisModel
@@ -49,6 +50,7 @@ class SqlAlchemyAnalysisRepository:
             job_document_id=job_document_id,
             job_title=job_title,
             score=score,
+            ats_category=ats_category_for_score(score),
             summary=summary,
             findings=findings,
             years_of_experience=years_of_experience,
@@ -93,6 +95,26 @@ class SqlAlchemyAnalysisRepository:
         )
         return self._to_entity(model) if model else None
 
+    def list_latest_general_by_resume_ids(
+        self, resume_ids: Sequence[int]
+    ) -> dict[int, AnalysisEntity]:
+        if not resume_ids:
+            return {}
+        models = (
+            self._session.query(AnalysisModel)
+            .filter(
+                AnalysisModel.resume_document_id.in_(list(resume_ids)),
+                AnalysisModel.job_source == "none",
+            )
+            .order_by(AnalysisModel.created_at.desc())
+            .all()
+        )
+        latest: dict[int, AnalysisEntity] = {}
+        for model in models:
+            if model.resume_document_id not in latest:
+                latest[model.resume_document_id] = self._to_entity(model)
+        return latest
+
     def list_with_feedback(self) -> Sequence[AnalysisEntity]:
         models = (
             self._session.query(AnalysisModel)
@@ -119,6 +141,7 @@ class SqlAlchemyAnalysisRepository:
             companies=model.companies,
             created_at=model.created_at,
             feedback=_to_feedback_entity(model.feedback) if model.feedback else None,
+            ats_category=model.ats_category,  # type: ignore[arg-type]
         )
 
 

@@ -11,4 +11,9 @@ class AnalysisResult(TypedDict):
 
 
 class ResumeAnalyzer(Protocol):
-    def analyze(self, resume: dict, job: dict | None) -> AnalysisResult: ...
+    def analyze(
+        self,
+        resume: dict,
+        job: dict | None,
+        retrieved_context: list[str] | None = None,
+    ) -> AnalysisResult: ...

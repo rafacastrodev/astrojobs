@@ -25,8 +25,10 @@ export const useSignin = () => {
 
   const mutation = useMutation({
     mutationFn: userServices.signIn,
-    onSuccess: () => {
-      router.navigate({ to: '/dashboard' })
+    onSuccess: (user) => {
+      router.navigate({
+        to: user.role === 'recruiter' ? '/recruiter' : '/dashboard',
+      })
     },
     onError: (error) => {
       applyApiFieldErrors(error, form.setError)

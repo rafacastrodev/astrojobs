@@ -7,6 +7,7 @@ import {
   signIn,
   signUp,
   uniqueEmail,
+  uniqueUsername,
 } from './support/account'
 
 test.describe('authentication', () => {
@@ -20,6 +21,19 @@ test.describe('authentication', () => {
 
     await signIn(page, email)
     await expectSignedIn(page)
+  })
+
+  test('signs in with username', async ({ page }) => {
+    const email = uniqueEmail('userlogin')
+    const username = uniqueUsername('userlogin')
+
+    await signUp(page, email, username)
+    await expectSignedIn(page, username)
+
+    await logOut(page)
+
+    await signIn(page, username)
+    await expectSignedIn(page, username)
   })
 
   test('drops the session on logout', async ({ page }) => {
@@ -71,7 +85,7 @@ test.describe('authentication', () => {
     await logOut(page)
 
     await signIn(page, email, `${PASSWORD}-nope`)
-    await expect(page.getByRole('alert')).toContainText('Invalid email or password')
+    await expect(page.getByRole('alert')).toContainText('Invalid username or password')
     await expect(page).not.toHaveURL(/\/dashboard/)
   })
 

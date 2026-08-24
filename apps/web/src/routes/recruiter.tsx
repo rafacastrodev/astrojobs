@@ -4,23 +4,23 @@ import { LoadingScreen } from '@/components/LoadingScreen'
 import { AdminDashboard } from '@/pages/admin/components/AdminDashboard'
 import { userServices } from '@/services/userServices'
 
-export const Route = createFileRoute('/admin')({
+export const Route = createFileRoute('/recruiter')({
   beforeLoad: async () => {
     const user = await userServices.getCurrentUser()
     if (!user) {
       throw redirect({ to: '/login' })
     }
-    if (user.role !== 'admin') {
+    if (user.role !== 'recruiter') {
       throw redirect({ to: '/dashboard' })
     }
     return { user }
   },
   pendingComponent: LoadingScreen,
   pendingMs: 0,
-  component: AdminPage,
+  component: RecruiterPage,
 })
 
-function AdminPage() {
+function RecruiterPage() {
   const { user } = Route.useRouteContext()
   return <AdminDashboard name={user.name} />
 }

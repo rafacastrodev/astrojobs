@@ -1,10 +1,15 @@
 import { useRef, useState } from 'react'
 
 import { Button } from '@/components/Button'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { CloseIcon, TrashIcon } from '@/components/icons'
 
 import { ResumeWorkspace } from './ResumeWorkspace'
 import { ACCEPTED_EXTENSIONS, useResumes } from '../hooks/useResumes'
 import type { Resume } from '../types'
+
+const iconButtonClassName =
+  'inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-card-foreground disabled:cursor-not-allowed disabled:opacity-60'
 
 const STATUS_LABELS: Record<Resume['status'], string> = {
   draft: 'Awaiting indexing',
@@ -12,10 +17,25 @@ const STATUS_LABELS: Record<Resume['status'], string> = {
   failed: 'Indexing failed',
 }
 
+const ANALYSIS_STATUS_LABELS: Record<Resume['analysis_status'], string> = {
+  pending: 'ATS analysis pending',
+  completed: 'ATS analysis complete',
+  failed: 'ATS analysis failed',
+}
+
+const ATS_CATEGORY_LABELS = {
+  low: 'Low ATS fit',
+  medium: 'Medium ATS fit',
+  high: 'High ATS fit',
+} as const
+
 export const ResumeSection = () => {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDraggingOver, setIsDraggingOver] = useState(false)
   const [expandedResumeId, setExpandedResumeId] = useState<number | null>(null)
+  const [resumePendingDelete, setResumePendingDelete] = useState<Resume | null>(
+    null,
+  )
   const {
     resumes,
     isLoading,
@@ -26,6 +46,9 @@ export const ResumeSection = () => {
     handleDelete,
     deletingId,
     deleteError,
+    handleProcess,
+    processingId,
+    processError,
   } = useResumes()
 
   const submitFile = (file: File | undefined) => {
@@ -90,6 +113,11 @@ export const ResumeSection = () => {
           {deleteError}
         </p>
       ) : null}
+      {processError ? (
+        <p role="alert" className="mt-4 text-sm text-destructive">
+          {processError}
+        </p>
+      ) : null}
 
       <div className="mt-8">
         {isLoading ? (
@@ -109,13 +137,23 @@ export const ResumeSection = () => {
                 key={resume.id}
                 className="rounded-xl border border-border p-4"
               >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
+                <div className="flex items-start gap-2">
+                  <button
+                    type="button"
+                    aria-label={`Delete ${resume.source_filename}`}
+                    onClick={() => setResumePendingDelete(resume)}
+                    disabled={deletingId === resume.id}
+                    className={`${iconButtonClassName} hover:text-destructive`}
+                  >
+                    <TrashIcon />
+                  </button>
+                  <div className="min-w-0 flex-1 pt-1.5">
                     <p className="truncate font-medium text-card-foreground">
                       {resume.source_filename}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {STATUS_LABELS[resume.status]} ·{' '}
+                      {ANALYSIS_STATUS_LABELS[resume.analysis_status]} ·{' '}
                       {new Date(resume.created_at).toLocaleDateString()}
                       {resume.latest_analysis ? (
                         <>
@@ -124,6 +162,7 @@ export const ResumeSection = () => {
                           <span className="font-medium text-card-foreground">
                             {resume.latest_analysis.score}/100
                           </span>
+                          {` · ${ATS_CATEGORY_LABELS[resume.latest_analysis.ats_category]}`}
                           {resume.latest_analysis.years_of_experience !== null
                             ? ` · ${resume.latest_analysis.years_of_experience} anos`
                             : ''}
@@ -133,29 +172,43 @@ export const ResumeSection = () => {
                         </>
                       ) : null}
                     </p>
+                    {resume.status === 'failed' ||
+                    resume.analysis_status === 'failed' ? (
+                      <button
+                        type="button"
+                        onClick={() => handleProcess(resume.id)}
+                        disabled={processingId === resume.id}
+                        className="mt-2 cursor-pointer text-sm font-medium text-primary transition hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {processingId === resume.id
+                          ? 'Trying again…'
+                          : 'Try again'}
+                      </button>
+                    ) : null}
                   </div>
-                  <div className="flex shrink-0 gap-4">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedResumeId(
-                          expandedResumeId === resume.id ? null : resume.id,
-                        )
-                      }
-                      className="cursor-pointer text-sm text-muted-foreground transition hover:text-card-foreground"
-                    >
-                      {expandedResumeId === resume.id ? 'Close' : 'Open'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(resume.id)}
-                      disabled={deletingId === resume.id}
-                      className="cursor-pointer text-sm text-muted-foreground transition hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {deletingId === resume.id ? 'Removing…' : 'Remove'}
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    aria-expanded={expandedResumeId === resume.id}
+                    aria-label={
+                      expandedResumeId === resume.id
+                        ? `Close ${resume.source_filename}`
+                        : `Open ${resume.source_filename}`
+                    }
+                    onClick={() =>
+                      setExpandedResumeId(
+                        expandedResumeId === resume.id ? null : resume.id,
+                      )
+                    }
+                    className={iconButtonClassName}
+                  >
+                    <CloseIcon />
+                  </button>
                 </div>
+                {resume.analysis_error_message || resume.error_message ? (
+                  <p role="alert" className="mt-3 text-sm text-destructive">
+                    {resume.analysis_error_message ?? resume.error_message}
+                  </p>
+                ) : null}
                 {expandedResumeId === resume.id ? (
                   <ResumeWorkspace resume={resume} />
                 ) : null}
@@ -164,6 +217,22 @@ export const ResumeSection = () => {
           </ul>
         )}
       </div>
+
+      {resumePendingDelete ? (
+        <ConfirmDialog
+          title="Remove this resume?"
+          description={`${resumePendingDelete.source_filename} will be permanently deleted.`}
+          confirmLabel="Remove"
+          isConfirming={deletingId === resumePendingDelete.id}
+          onCancel={() => setResumePendingDelete(null)}
+          onConfirm={() => {
+            const id = resumePendingDelete.id
+            if (expandedResumeId === id) setExpandedResumeId(null)
+            handleDelete(id)
+            setResumePendingDelete(null)
+          }}
+        />
+      ) : null}
     </section>
   )
 }

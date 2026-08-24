@@ -1,8 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 
+import { currentUserKey } from '@/hooks/useCurrentUser'
 import { userServices } from '@/services/userServices'
 import {
   applyApiFieldErrors,
@@ -14,12 +15,14 @@ import { signupSchema } from '@/utils/validation/authSchemas'
 
 export const useSignup = () => {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     mode: 'onChange',
     defaultValues: {
       username: '',
       email: '',
+      role: 'professional',
       password: '',
       confirmPassword: '',
     },
@@ -27,8 +30,12 @@ export const useSignup = () => {
 
   const mutation = useMutation({
     mutationFn: userServices.signUp,
-    onSuccess: () => {
-      router.navigate({ to: '/dashboard' })
+    onSuccess: (user) => {
+      queryClient.setQueryData(currentUserKey, user)
+      router.navigate({
+        to: user.role === 'recruiter' ? '/recruiter' : '/dashboard',
+        replace: true,
+      })
     },
     onError: (error) => {
       applyApiFieldErrors(error, form.setError)
@@ -47,6 +54,8 @@ export const useSignup = () => {
 
   return {
     register: form.register,
+    setValue: form.setValue,
+    role: form.watch('role'),
     password: form.watch('password'),
     confirmPassword: form.watch('confirmPassword'),
     errors,

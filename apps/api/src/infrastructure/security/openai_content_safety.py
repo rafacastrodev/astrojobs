@@ -5,11 +5,11 @@ from typing import ClassVar
 from openai import OpenAI
 
 from domain.documents.errors import (
-    SafetyConfigurationError,
     SafetyServiceError,
     UnsafeContentError,
 )
 from infrastructure.database.config import settings
+from infrastructure.openai_errors import is_openai_forbidden, is_openai_quota_error
 
 logger = logging.getLogger(__name__)
 
@@ -25,15 +25,18 @@ class OpenAIContentSafetyChecker:
     )
 
     def __init__(self) -> None:
-        self._client = self._build_client() if settings.openai_api_key else None
+        if settings.llm_is_openai and settings.llm_api_key:
+            self._client = self._build_client()
+        else:
+            self._client = None
 
     def check(self, text: str) -> None:
-        if self._client is None:
-            raise SafetyConfigurationError(
-                "OpenAI is not configured. Set OPENAI_API_KEY."
-            )
         if any(pattern.search(text) for pattern in self._INJECTION_PATTERNS):
-            raise UnsafeContentError("Resume contains instructions that cannot be processed safely")
+            raise UnsafeContentError(
+                "Resume contains instructions that cannot be processed safely"
+            )
+        if self._client is None:
+            return
 
         chunks = [
             text[start : start + self.CHUNK_CHARS]
@@ -46,25 +49,36 @@ class OpenAIContentSafetyChecker:
                     input=chunk,
                 )
             except Exception as exc:
-                # Keep resume contents out of logs, but retain the upstream error
-                # type/message so production failures are diagnosable.
+                if is_openai_forbidden(exc):
+                    logger.warning(
+                        "OpenAI moderation is not available for this project; using local checks only"
+                    )
+                    return
                 logger.exception(
                     "OpenAI moderation request failed (model=%s, chunk_chars=%d)",
                     settings.openai_moderation_model,
                     len(chunk),
                 )
-                raise SafetyServiceError(
-                    "Could not verify resume content safety"
-                ) from exc
+                raise SafetyServiceError(self._service_error_message(exc)) from exc
             if any(result.flagged for result in response.results):
                 raise UnsafeContentError(
                     "Resume content did not pass the safety check"
                 )
 
     @staticmethod
+    def _service_error_message(exc: Exception) -> str:
+        if is_openai_quota_error(exc):
+            if settings.is_development:
+                return (
+                    "OpenAI has no remaining credits. Add credits in billing and try again."
+                )
+            return "The safety check is temporarily unavailable. Please try again shortly."
+        return "Could not verify resume content safety"
+
+    @staticmethod
     def _build_client() -> OpenAI:
         return OpenAI(
-            api_key=settings.openai_api_key,
+            api_key=settings.llm_api_key,
             timeout=settings.openai_timeout_seconds,
             max_retries=settings.openai_max_retries,
         )

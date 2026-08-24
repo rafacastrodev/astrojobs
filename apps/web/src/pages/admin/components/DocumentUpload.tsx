@@ -27,7 +27,7 @@ export const DocumentUpload = ({ accept, isLoading, onUpload, error }: DocumentU
         onChange={handleChange}
         disabled={isLoading}
       />
-      {isLoading ? <p className="mt-3 text-sm text-muted-foreground">Uploading…</p> : null}
+      {isLoading ? <p className="mt-3 text-sm text-muted-foreground">Processing…</p> : null}
       {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
     </div>
   )

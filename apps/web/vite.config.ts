@@ -14,7 +14,7 @@ const config = defineConfig({
     proxy: {
       '/health': 'http://localhost:8000',
       '/auth': 'http://localhost:8000',
-      '/admin/documents': 'http://localhost:8000',
+      '/recruiter': 'http://localhost:8000',
       '/documents': 'http://localhost:8000',
       '/analysis': 'http://localhost:8000',
     },

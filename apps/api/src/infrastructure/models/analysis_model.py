@@ -26,6 +26,7 @@ class AnalysisModel(Base):
     )
     job_title: Mapped[str | None] = mapped_column(String(512), nullable=True)
     score: Mapped[int] = mapped_column(Integer, nullable=False)
+    ats_category: Mapped[str] = mapped_column(String(20), nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     findings: Mapped[list[Any]] = mapped_column(JSON, nullable=False)
     years_of_experience: Mapped[int | None] = mapped_column(Integer, nullable=True)

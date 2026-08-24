@@ -23,24 +23,33 @@ from domain.documents.use_cases.create_job import CreateJobUseCase
 from domain.documents.use_cases.delete_document import DeleteDocumentUseCase
 from domain.documents.use_cases.get_document import GetDocumentUseCase
 from domain.documents.use_cases.list_documents import ListDocumentsUseCase
+from domain.documents.use_cases.match_resumes_for_jobs import MatchResumesForJobsUseCase
 from domain.documents.use_cases.sync_documents import SyncDocumentsUseCase
+from domain.users.entities import UserEntity
 from infrastructure.documents.dependencies import (
     get_create_document_use_case,
     get_create_job_use_case,
     get_delete_document_use_case,
     get_document_use_case,
     get_list_documents_use_case,
+    get_match_resumes_use_case,
     get_sync_documents_use_case,
 )
 from infrastructure.schemas.document_schemas import (
     DocumentResponse,
     JobCreateRequest,
+    ResumeMatchResponse,
+    MatchedJobSummary,
     SyncDocumentsRequest,
     SyncDocumentsResponse,
 )
-from infrastructure.users.dependencies import require_admin
+from infrastructure.users.dependencies import require_recruiter
 
-router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
+router = APIRouter(
+    prefix="/recruiter",
+    tags=["recruiter"],
+    dependencies=[Depends(require_recruiter)],
+)
 
 
 def _to_document_response(document: DocumentEntity) -> DocumentResponse:
@@ -75,18 +84,51 @@ async def upload_document(
 @router.post("/jobs", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 def create_job(
     body: JobCreateRequest,
+    user: UserEntity = Depends(require_recruiter),
     use_case: CreateJobUseCase = Depends(get_create_job_use_case),
 ) -> DocumentResponse:
-    return _to_document_response(use_case.execute(body.model_dump()))
+    return _to_document_response(use_case.execute(body.model_dump(), user.id))
+
+
+@router.get("/matches", response_model=list[ResumeMatchResponse])
+def list_matching_resumes(
+    user: UserEntity = Depends(require_recruiter),
+    use_case: MatchResumesForJobsUseCase = Depends(get_match_resumes_use_case),
+) -> list[ResumeMatchResponse]:
+    matches = use_case.execute(user.id)  # type: ignore[arg-type]
+    return [
+        ResumeMatchResponse(
+            id=match.document.id,  # type: ignore[arg-type]
+            source_filename=match.document.source_filename,
+            score=match.score,
+            matched_technologies=match.matched_technologies,
+            matched_jobs=[
+                MatchedJobSummary(
+                    id=job.id,  # type: ignore[arg-type]
+                    title=str(job.payload.get("title") or job.source_filename),
+                )
+                for job in match.matched_jobs
+                if job.id is not None
+            ],
+            payload=match.document.payload,
+            summary=match.summary,
+        )
+        for match in matches
+    ]
 
 
 @router.get("/documents", response_model=list[DocumentResponse])
 def list_documents(
     type: DocumentType | None = None,
     doc_status: DocumentStatus | None = Query(default=None, alias="status"),
+    user: UserEntity = Depends(require_recruiter),
     use_case: ListDocumentsUseCase = Depends(get_list_documents_use_case),
 ) -> list[DocumentResponse]:
-    documents = use_case.execute(doc_type=type, status=doc_status)
+    documents = [
+        document
+        for document in use_case.execute(doc_type=type, status=doc_status)
+        if type != "job" or document.user_id in (None, user.id)
+    ]
     return [_to_document_response(document) for document in documents]
 
 

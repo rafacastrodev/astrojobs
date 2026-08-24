@@ -13,6 +13,7 @@ class SignupRequest(BaseModel):
     )
     email: EmailStr
     password: str = Field(min_length=8, max_length=72)
+    role: Literal["professional", "recruiter"]
 
     @field_validator("username")
     @classmethod
@@ -21,8 +22,16 @@ class SignupRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: str = Field(min_length=1, max_length=255)
     password: str
+
+    @field_validator("email")
+    @classmethod
+    def normalize_login_identifier(cls, value: str) -> str:
+        identifier = value.strip()
+        if "@" not in identifier:
+            return identifier.lower()
+        return identifier
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -38,5 +47,5 @@ class UserResponse(BaseModel):
     id: int
     name: str
     email: str
-    role: Literal["user", "admin"]
+    role: Literal["professional", "recruiter"]
     created_at: datetime

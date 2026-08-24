@@ -1,10 +1,12 @@
 import { MailIcon, UserIcon } from '@/components/icons'
+import { UserAvatar } from '@/components/UserAvatar'
 
 type ProfileSectionProps = {
   name: string
   email: string
-  role: 'user' | 'admin'
+  role: 'professional' | 'recruiter'
   createdAt: string
+  photoUrl?: string | null
 }
 
 const formatMemberSince = (createdAt: string) =>
@@ -18,12 +20,11 @@ export const ProfileSection = ({
   email,
   role,
   createdAt,
+  photoUrl,
 }: ProfileSectionProps) => (
   <aside className="h-fit rounded-2xl border border-border bg-card p-6">
     <div className="flex items-center gap-4">
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border bg-input text-card-foreground">
-        <UserIcon className="h-5 w-5" aria-hidden="true" />
-      </div>
+      <UserAvatar name={name} photoUrl={photoUrl} size="md" />
       <div className="min-w-0">
         <p className="text-sm text-muted-foreground">Your profile</p>
         <h2 className="truncate text-lg font-semibold text-card-foreground">

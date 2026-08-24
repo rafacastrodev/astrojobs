@@ -10,40 +10,54 @@ from infrastructure.services.openai_resume_analyzer import (
 )
 
 
-class _Responses:
-    def __init__(self, output):
-        self.output = output
-        self.kwargs = None
+def test_extractor_sends_resume_text(monkeypatch) -> None:
+    captured: dict = {}
 
-    def parse(self, **kwargs):
-        self.kwargs = kwargs
-        return SimpleNamespace(output_parsed=self.output)
+    def fake_parse(client, *, schema, system, user, max_output_tokens):
+        captured.update(
+            {
+                "schema": schema,
+                "system": system,
+                "user": user,
+                "max_output_tokens": max_output_tokens,
+            }
+        )
+        return ResumeProfile(summary="Engineer", skills=["Python"])
 
-
-def test_extractor_uses_structured_response_without_storage() -> None:
-    responses = _Responses(ResumeProfile(summary="Engineer", skills=["Python"]))
+    monkeypatch.setattr(
+        "infrastructure.extraction.openai_resume_extractor.parse_structured",
+        fake_parse,
+    )
     extractor = OpenAIResumeExtractor.__new__(OpenAIResumeExtractor)
-    extractor._client = SimpleNamespace(responses=responses)
+    extractor._client = SimpleNamespace()
 
     result = extractor.extract("Engineer with Python", "resume")
 
     assert result["summary"] == "Engineer"
-    assert responses.kwargs["text_format"] is ResumeProfile
-    assert responses.kwargs["store"] is False
+    assert captured["schema"] is ResumeProfile
+    assert "Engineer with Python" in captured["user"]
 
 
-def test_analyzer_excludes_contact_and_full_text() -> None:
-    responses = _Responses(
-        StructuredAnalysis(
+def test_analyzer_excludes_contact_and_full_text(monkeypatch) -> None:
+    captured: dict = {}
+
+    def fake_parse(client, *, schema, system, user, max_output_tokens):
+        captured["schema"] = schema
+        captured["user"] = user
+        return StructuredAnalysis(
             score=82,
             summary="Bom currículo.",
             findings=["Inclua resultados mensuráveis."],
             technologies=["Python"],
             companies=["Astro"],
         )
+
+    monkeypatch.setattr(
+        "infrastructure.services.openai_resume_analyzer.parse_structured",
+        fake_parse,
     )
     analyzer = OpenAIResumeAnalyzer.__new__(OpenAIResumeAnalyzer)
-    analyzer._client = SimpleNamespace(responses=responses)
+    analyzer._client = SimpleNamespace()
 
     result = analyzer.analyze(
         {
@@ -52,8 +66,10 @@ def test_analyzer_excludes_contact_and_full_text() -> None:
             "full_text": "private@example.com",
         },
         None,
+        ["Python engineer, 5 years, remote"],
     )
 
     assert result["score"] == 82
-    assert "private@example.com" not in responses.kwargs["input"]
-    assert responses.kwargs["store"] is False
+    assert "private@example.com" not in captured["user"]
+    assert "Python engineer, 5 years, remote" in captured["user"]
+    assert captured["schema"] is StructuredAnalysis

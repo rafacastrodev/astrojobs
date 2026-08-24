@@ -17,7 +17,7 @@ export const LegalLayout = ({
   children,
 }: LegalLayoutProps) => {
   return (
-    <div className="min-h-screen bg-background px-4 py-12 text-foreground">
+    <div className="flex-1 bg-background px-4 py-12 text-foreground">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
         <header className="flex flex-col gap-6">
           <Link to="/" className="flex w-fit items-center gap-3">
@@ -36,18 +36,6 @@ export const LegalLayout = ({
         </header>
 
         <main className="flex flex-col gap-8">{children}</main>
-
-        <footer className="flex flex-wrap gap-4 border-t border-border pt-6 text-sm text-muted-foreground">
-          <Link to="/privacy" className="hover:text-foreground">
-            Privacy Policy
-          </Link>
-          <Link to="/data-deletion" className="hover:text-foreground">
-            Delete your data
-          </Link>
-          <Link to="/login" className="hover:text-foreground">
-            Sign in
-          </Link>
-        </footer>
       </div>
     </div>
   )

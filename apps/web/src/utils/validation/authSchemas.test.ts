@@ -35,12 +35,25 @@ describe('authentication schemas', () => {
     ).toBe(true)
   })
 
+  it('accepts a username for login', () => {
+    expect(
+      loginSchema.safeParse({ email: 'rafael', password: 'secret' }).success,
+    ).toBe(true)
+  })
+
+  it('normalizes a login username to lowercase', () => {
+    expect(
+      loginSchema.parse({ email: 'Rafael', password: 'secret' }).email,
+    ).toBe('rafael')
+  })
+
   it.each([signupSchema, resetPasswordSchema])(
     'rejects different password confirmations',
     (schema) => {
       const result = schema.safeParse({
         username: 'person',
         email: 'person@example.com',
+        role: 'professional',
         password: 'password1',
         confirmPassword: 'different123',
       })
@@ -62,6 +75,7 @@ describe('authentication schemas', () => {
       const result = signupSchema.safeParse({
         username,
         email: 'person@example.com',
+        role: 'professional',
         password: 'password1',
         confirmPassword: 'password1',
       })

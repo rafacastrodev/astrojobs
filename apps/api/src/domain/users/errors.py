@@ -10,7 +10,7 @@ class UsernameAlreadyExistsError(Exception):
 
 class InvalidCredentialsError(Exception):
     def __init__(self):
-        super().__init__("Invalid email or password")
+        super().__init__("Invalid username or password")
 
 
 class InvalidResetTokenError(Exception):

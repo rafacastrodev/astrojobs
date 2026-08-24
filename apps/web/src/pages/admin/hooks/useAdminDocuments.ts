@@ -29,19 +29,6 @@ export const useUploadDocument = (type: DocumentType) => {
   })
 }
 
-export const useSyncDocuments = (type: DocumentType) => {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: adminDocumentServices.sync,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ['admin-documents', type],
-      })
-    },
-  })
-}
-
 export const useDeleteDocument = (type: DocumentType) => {
   const queryClient = useQueryClient()
 
@@ -55,6 +42,14 @@ export const useDeleteDocument = (type: DocumentType) => {
   })
 }
 
+export const useMatchingResumes = (enabled: boolean) => {
+  return useQuery({
+    queryKey: ['recruiter-matches'] as const,
+    queryFn: adminDocumentServices.listMatches,
+    enabled,
+  })
+}
+
 export const useCreateJob = () => {
   const queryClient = useQueryClient()
   return useMutation({
@@ -64,6 +59,7 @@ export const useCreateJob = () => {
         queryKey: ['admin-documents', 'job'],
       })
       void queryClient.invalidateQueries({ queryKey: ['catalog-jobs'] })
+      void queryClient.invalidateQueries({ queryKey: ['recruiter-matches'] })
     },
   })
 }

@@ -44,7 +44,12 @@ export const JobMatches = ({ resumeId, onAnalyze }: Props) => {
                 {match.title}
               </p>
               <p className="text-xs text-muted-foreground">
-                {[match.payload.seniority, match.payload.employment_type]
+                {[
+                  match.payload.seniority,
+                  match.payload.work_mode,
+                  match.payload.region,
+                  match.payload.employment_type,
+                ]
                   .filter(Boolean)
                   .join(' · ')}
               </p>
@@ -53,7 +58,11 @@ export const JobMatches = ({ resumeId, onAnalyze }: Props) => {
               {Math.round(Math.max(0, Math.min(1, match.score)) * 100)}% similar
             </span>
           </div>
-          {match.payload.requirements?.length ? (
+          {match.payload.technologies?.length ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {match.payload.technologies.slice(0, 6).join(' · ')}
+            </p>
+          ) : match.payload.requirements?.length ? (
             <p className="mt-3 text-sm text-muted-foreground">
               {match.payload.requirements.slice(0, 3).join(' · ')}
             </p>

@@ -18,4 +18,4 @@ class UserModel(Base):
         DateTime,
         default=datetime.utcnow,
     )
-    role: Mapped[UserRole] = mapped_column(String(10))
+    role: Mapped[UserRole] = mapped_column(String(20))

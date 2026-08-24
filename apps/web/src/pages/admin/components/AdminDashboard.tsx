@@ -1,84 +1,64 @@
-import { Link } from '@tanstack/react-router'
-
+import { AppHeader } from '@/components/AppHeader'
 import { Button } from '@/components/Button'
-import { Logo } from '@/components/Logo'
+import { useDashboard } from '@/pages/dashboard/hooks/useDashboard'
 
 import { useAdminDashboard } from '../hooks/useAdminDashboard'
+import { CandidateDetail } from './CandidateDetail'
+import { CandidateList } from './CandidateList'
 import { DocumentDetail } from './DocumentDetail'
 import { DocumentList } from './DocumentList'
-import { DocumentUpload } from './DocumentUpload'
 import { JobForm } from './JobForm'
 
 type AdminDashboardProps = {
   name: string
 }
 
-const ACCEPT = '.pdf,.docx,.txt,.md,application/pdf,text/plain,text/markdown'
-
 export const AdminDashboard = ({ name }: AdminDashboardProps) => {
+  const { handleLogout, isLoggingOut } = useDashboard()
   const {
     tab,
     setTab,
-    selectedIds,
-    setSelectedIds,
     selectedDocument,
     setSelectedDocument,
-    uploadError,
-    setUploadError,
-    syncMessage,
-    setSyncMessage,
+    selectedMatch,
+    setSelectedMatch,
+    actionError,
     documents,
-    draftCount,
-    handleUpload,
-    handleSync,
-    toggle,
-    isUploading,
-    isSyncing,
-    isLoadingDocuments,
-    errorMessageDocuments,
+    matches,
     handleDelete,
     isRemoving,
+    isLoadingDocuments,
+    errorMessageDocuments,
+    isLoadingMatches,
+    errorMessageMatches,
   } = useAdminDashboard()
 
   return (
-    <div className="min-h-screen bg-background px-4 py-10 text-foreground [animation:auth-fade-in_280ms_ease-out]">
+    <div className="flex-1 bg-background px-4 py-10 text-foreground [animation:auth-fade-in_280ms_ease-out]">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <Logo />
-            <div>
-              <p className="text-sm text-muted-foreground">AstroJobs</p>
-              <h1 className="text-2xl font-semibold">Admin</h1>
-              <p className="text-sm text-muted-foreground">
-                Signed in as {name}
-              </p>
-            </div>
+        <AppHeader title="Recruiter" name={name}>
+          <div className="w-28">
+            <Button
+              onClick={handleLogout}
+              isLoading={isLoggingOut}
+              className="!py-2 text-sm"
+            >
+              Log out
+            </Button>
           </div>
-          <Link
-            to="/dashboard"
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            Back to dashboard
-          </Link>
-        </header>
+        </AppHeader>
 
         <div className="flex gap-2">
           {(
             [
-              ['resume', 'Resumes'],
               ['job', 'Jobs'],
+              ['resume', 'Resumes'],
             ] as const
           ).map(([value, label]) => (
             <button
               key={value}
               type="button"
-              onClick={() => {
-                setTab(value)
-                setSelectedIds([])
-                setSelectedDocument(null)
-                setUploadError(null)
-                setSyncMessage(null)
-              }}
+              onClick={() => setTab(value)}
               className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
                 tab === value
                   ? 'bg-primary text-primary-foreground'
@@ -90,69 +70,72 @@ export const AdminDashboard = ({ name }: AdminDashboardProps) => {
           ))}
         </div>
 
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">
-            {tab === 'resume' ? 'Upload resume' : 'Create job'}
-          </h2>
-          {tab === 'resume' ? (
-            <DocumentUpload
-              accept={ACCEPT}
-              isLoading={isUploading}
-              onUpload={handleUpload}
-              error={uploadError}
-            />
-          ) : (
+        {tab === 'job' ? (
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold">Create job</h2>
             <JobForm />
-          )}
-        </section>
+          </section>
+        ) : null}
 
-        <section className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {actionError ? (
+          <p role="alert" className="text-sm text-destructive">
+            {actionError}
+          </p>
+        ) : null}
+
+        {tab === 'job' ? (
+          <section className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold">Documents</h2>
+              <h2 className="text-lg font-semibold">Jobs</h2>
               <p className="text-sm text-muted-foreground">
-                {documents.length} total · {draftCount} pending sync
+                {documents.length} total
               </p>
             </div>
-            <div className="w-full sm:w-56">
-              <Button
-                onClick={handleSync}
-                isLoading={isSyncing}
-                disabled={documents.length === 0}
-              >
-                {selectedIds.length > 0
-                  ? `Push selected (${selectedIds.length})`
-                  : 'Push drafts to Pinecone'}
-              </Button>
+            {isLoadingDocuments ? (
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            ) : errorMessageDocuments ? (
+              <p className="text-sm text-destructive">{errorMessageDocuments}</p>
+            ) : (
+              <DocumentList
+                documents={documents}
+                emptyLabel="No jobs yet. Create one to get started."
+                onSelect={setSelectedDocument}
+                onDelete={handleDelete}
+                isDeleting={isRemoving}
+              />
+            )}
+          </section>
+        ) : (
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Matching resumes</h2>
+              <p className="text-sm text-muted-foreground">
+                Candidates whose technologies overlap with your posted jobs.
+              </p>
             </div>
-          </div>
-          {syncMessage ? (
-            <p className="text-sm text-muted-foreground">{syncMessage}</p>
-          ) : null}
-          {isLoadingDocuments ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
-          ) : errorMessageDocuments ? (
-            <p className="text-sm text-destructive">{errorMessageDocuments}</p>
-          ) : (
-            <DocumentList
-              documents={documents}
-              selectedIds={selectedIds}
-              onToggle={toggle}
-              onSelectAll={() =>
-                setSelectedIds(documents.map((document) => document.id))
-              }
-              onClearSelection={() => setSelectedIds([])}
-              onSelect={setSelectedDocument}
-              onDelete={handleDelete}
-              isDeleting={isRemoving}
-            />
-          )}
-        </section>
+            {isLoadingMatches ? (
+              <p className="text-sm text-muted-foreground">
+                Finding matching resumes…
+              </p>
+            ) : errorMessageMatches ? (
+              <p className="text-sm text-destructive">{errorMessageMatches}</p>
+            ) : (
+              <CandidateList
+                matches={matches}
+                emptyLabel={
+                  documents.length === 0
+                    ? 'Post a job with technologies to see matching resumes.'
+                    : 'No matching resumes yet.'
+                }
+                onSelect={setSelectedMatch}
+              />
+            )}
+          </section>
+        )}
 
-        {selectedDocument ? (
+        {tab === 'job' && selectedDocument ? (
           <DocumentDetail
             filename={
-              tab === 'job' &&
               typeof selectedDocument.payload.title === 'string'
                 ? selectedDocument.payload.title
                 : selectedDocument.source_filename
@@ -161,6 +144,13 @@ export const AdminDashboard = ({ name }: AdminDashboardProps) => {
             errorMessage={selectedDocument.error_message}
             status={selectedDocument.status}
             onClose={() => setSelectedDocument(null)}
+          />
+        ) : null}
+
+        {tab === 'resume' && selectedMatch ? (
+          <CandidateDetail
+            match={selectedMatch}
+            onClose={() => setSelectedMatch(null)}
           />
         ) : null}
       </div>

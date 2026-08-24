@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
-UserRole = Literal["user", "admin"]
+UserRole = Literal["professional", "recruiter"]
 
 
 @dataclass

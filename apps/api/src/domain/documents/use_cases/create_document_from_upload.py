@@ -1,8 +1,13 @@
+import logging
+
 from domain.documents.entities import DocumentEntity, DocumentType
 from domain.documents.errors import ExtractionError, UnsupportedFileError
 from domain.documents.file_text_loader import FileTextLoader
 from domain.documents.repository import DocumentRepository
 from domain.documents.text_extractor import TextExtractor
+from domain.documents.use_cases.sync_documents import SyncDocumentsUseCase
+
+logger = logging.getLogger(__name__)
 
 
 class CreateDocumentFromUploadUseCase:
@@ -11,12 +16,16 @@ class CreateDocumentFromUploadUseCase:
         document_repository: DocumentRepository,
         file_loader: FileTextLoader,
         extractor: TextExtractor,
+        sync_documents_use_case: SyncDocumentsUseCase,
     ):
         self._documents = document_repository
         self._file_loader = file_loader
         self._extractor = extractor
+        self._sync = sync_documents_use_case
 
-    def execute(self, content: bytes, filename: str, doc_type: DocumentType) -> DocumentEntity:
+    def execute(
+        self, content: bytes, filename: str, doc_type: DocumentType
+    ) -> DocumentEntity:
         try:
             text = self._file_loader.load(content, filename)
         except UnsupportedFileError:
@@ -32,4 +41,14 @@ class CreateDocumentFromUploadUseCase:
         if not payload:
             raise ExtractionError("Extractor returned an empty payload")
 
-        return self._documents.create(doc_type, payload, filename)
+        document = self._documents.create(doc_type, payload, filename)
+        try:
+            self._sync.execute([document.id])  # type: ignore[list-item]
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Initial indexing failed for document %s: %s", document.id, exc
+            )
+            self._documents.mark_failed(
+                document.id, "Could not index document"  # type: ignore[arg-type]
+            )
+        return self._documents.get_by_id(document.id) or document  # type: ignore[arg-type]

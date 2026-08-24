@@ -29,6 +29,7 @@ class AnalysisResponse(BaseModel):
     job_document_id: int | None
     job_title: str | None
     score: int
+    ats_category: Literal["low", "medium", "high"]
     summary: str
     findings: list[str]
     years_of_experience: int | None

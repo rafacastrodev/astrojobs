@@ -6,6 +6,19 @@ import { MailIcon, UserIcon } from '@/components/icons'
 
 import { useSignup } from '../hooks/useSignup'
 
+const ACCOUNT_TYPES = [
+  {
+    value: 'professional' as const,
+    label: 'Professional',
+    hint: 'Upload a resume and find jobs',
+  },
+  {
+    value: 'recruiter' as const,
+    label: 'Recruiter',
+    hint: 'Post jobs and review talent',
+  },
+]
+
 type SignupFormProps = {
   onSwitchToSignin: () => void
 }
@@ -13,6 +26,8 @@ type SignupFormProps = {
 export const SignupForm = ({ onSwitchToSignin }: SignupFormProps) => {
   const {
     register,
+    setValue,
+    role,
     password,
     confirmPassword,
     errors,
@@ -32,6 +47,47 @@ export const SignupForm = ({ onSwitchToSignin }: SignupFormProps) => {
           {errorMessage}
         </p>
       ) : null}
+
+      <fieldset>
+        <legend className="mb-1.5 block text-sm text-muted-foreground">
+          I am a
+        </legend>
+        <div className="grid grid-cols-2 gap-2">
+          {ACCOUNT_TYPES.map((account) => {
+            const selected = role === account.value
+            return (
+              <button
+                key={account.value}
+                type="button"
+                onClick={() =>
+                  setValue('role', account.value, {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                  })
+                }
+                aria-pressed={selected}
+                className={`rounded-xl border px-3 py-3 text-left transition ${
+                  selected
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-input text-card-foreground hover:border-ring'
+                }`}
+              >
+                <span className="block text-sm font-medium">{account.label}</span>
+                <span
+                  className={`mt-1 block text-xs ${
+                    selected ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                  }`}
+                >
+                  {account.hint}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+        {errors.role ? (
+          <p className="mt-1 text-sm text-destructive">{errors.role.message}</p>
+        ) : null}
+      </fieldset>
 
       <div>
         <label
