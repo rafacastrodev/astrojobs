@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 
-import { userServices } from '@/services/userServices'
+import { postAuthPath, userServices } from '@/services/userServices'
 import {
   applyApiFieldErrors,
   getApiErrorMessage,
@@ -27,7 +27,7 @@ export const useSignin = () => {
     mutationFn: userServices.signIn,
     onSuccess: (user) => {
       router.navigate({
-        to: user.role === 'recruiter' ? '/recruiter' : '/dashboard',
+        to: postAuthPath(user),
       })
     },
     onError: (error) => {

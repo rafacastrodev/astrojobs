@@ -36,6 +36,9 @@ export type JobMatch = {
     work_mode?: string
     region?: string
     employment_type?: string
+    salary_min_usd?: number | null
+    salary_max_usd?: number | null
+    hide_salary?: boolean
   }
 }
 

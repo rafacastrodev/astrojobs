@@ -6,6 +6,7 @@ import type {
   RecruiterApplication,
 } from '../types'
 import { ApplicantProfileView } from './ApplicantProfileView'
+import { formatUsdSalary } from '@/utils/formatSalary'
 
 const PAGE_SIZE = 5
 
@@ -135,11 +136,18 @@ export const JobList = ({
                       job.payload.work_mode,
                       job.payload.region,
                       job.payload.employment_type,
+                      formatUsdSalary(
+                        job.payload.salary_min_usd,
+                        job.payload.salary_max_usd,
+                      ),
                     ]
                       .filter(
                         (item): item is string => typeof item === 'string',
                       )
                       .join(' · ')}
+                    {job.payload.hide_salary === true
+                      ? ' · Hidden from candidates'
+                      : ''}
                     {activeApplicants.length > 0
                       ? ` · ${activeApplicants.length} application${activeApplicants.length === 1 ? '' : 's'}`
                       : ''}

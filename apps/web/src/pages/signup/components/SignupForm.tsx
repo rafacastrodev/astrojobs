@@ -72,10 +72,14 @@ export const SignupForm = ({ onSwitchToSignin }: SignupFormProps) => {
                     : 'border-border bg-input text-card-foreground hover:border-ring'
                 }`}
               >
-                <span className="block text-sm font-medium">{account.label}</span>
+                <span className="block text-sm font-medium">
+                  {account.label}
+                </span>
                 <span
                   className={`mt-1 block text-xs ${
-                    selected ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                    selected
+                      ? 'text-primary-foreground/80'
+                      : 'text-muted-foreground'
                   }`}
                 >
                   {account.hint}

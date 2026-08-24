@@ -1,5 +1,5 @@
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from domain.analysis.repository import AnalysisRepository
 from domain.documents.entities import DocumentEntity
@@ -12,7 +12,10 @@ from domain.documents.use_cases.match_resumes_for_jobs import (
     _normalize,
     _passes_filters,
     _resume_technologies,
+    apply_title_score,
+    overlay_user_profile,
 )
+from domain.users.repository import UserRepository
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +36,12 @@ class MatchJobsForResumeUseCase:
         document_repository: DocumentRepository,
         analysis_repository: AnalysisRepository,
         semantic_matcher: SemanticMatcher | None = None,
+        user_repository: UserRepository | None = None,
     ):
         self._documents = document_repository
         self._analyses = analysis_repository
         self._semantic = semantic_matcher
+        self._users = user_repository
         self._get_resume = GetUserResumeUseCase(document_repository)
 
     def execute(
@@ -85,6 +90,12 @@ class MatchJobsForResumeUseCase:
         return ranked
 
     def _score_jobs(self, resume: DocumentEntity, analysis) -> list[JobMatch]:
+        user = (
+            self._users.get_by_id(resume.user_id)
+            if self._users is not None and resume.user_id is not None
+            else None
+        )
+        resume = replace(resume, payload=overlay_user_profile(resume.payload, user))
         resume_labels = {
             _normalize(tech): tech
             for tech in _resume_technologies(resume.payload, analysis)
@@ -118,6 +129,7 @@ class MatchJobsForResumeUseCase:
                 and not _passes_filters(job.payload, resume.payload, analysis)
             ):
                 score *= 0.5
+            score = apply_title_score(score, job.payload, resume.payload)
             matches.append(
                 JobMatch(
                     document=job,

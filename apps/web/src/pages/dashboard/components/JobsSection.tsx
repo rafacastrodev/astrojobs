@@ -6,6 +6,7 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { ChevronIcon } from '@/components/icons'
 import { analysisServices } from '@/services/analysisServices'
 import { resumeServices } from '@/services/resumeServices'
+import { formatUsdSalary } from '@/utils/formatSalary'
 import { getApiErrorMessage } from '@/utils'
 
 import type { JobMatch, Resume } from '../types'
@@ -111,6 +112,10 @@ const JobCard = ({
               job.payload.work_mode,
               job.payload.region,
               job.payload.employment_type,
+              formatUsdSalary(
+                job.payload.salary_min_usd,
+                job.payload.salary_max_usd,
+              ),
             ]
               .filter((item): item is string => typeof item === 'string')
               .join(' · ')}

@@ -155,3 +155,37 @@ def test_development_defaults_to_localstack_only_without_real_s3(monkeypatch):
     )
     assert settings.aws_s3_bucket == "astrojobs-resumes"
     assert settings.aws_s3_endpoint_url == "http://localhost:4566"
+
+
+def test_strips_quoted_aws_region_and_bucket():
+    settings = _settings(
+        environment="development",
+        aws_region='"us-east-1"',
+        aws_s3_bucket='"astrojobs-s3"',
+        aws_s3_endpoint_url="",
+        aws_access_key_id="AKIATESTKEY000000001",
+        aws_secret_access_key="testsecret",
+    )
+    assert settings.aws_region == "us-east-1"
+    assert settings.aws_s3_bucket == "astrojobs-s3"
+
+
+def test_keeps_dotenv_key_pair_when_shell_only_has_a_secret(tmp_path, monkeypatch):
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "AWS_ACCESS_KEY_ID=AKIADOENVFILEKEY0001\n"
+        "AWS_SECRET_ACCESS_KEY=dotenvsecretvalue00000000000000000001\n"
+    )
+    monkeypatch.setattr("infrastructure.database.config.ENV_FILE", env_file)
+    monkeypatch.delenv("AWS_ACCESS_KEY_ID", raising=False)
+    monkeypatch.setenv(
+        "AWS_SECRET_ACCESS_KEY", "shellsecretvalue00000000000000000002"
+    )
+    settings = Settings(
+        _env_file=env_file,
+        jwt_secret="test-secret",
+        environment="development",
+        aws_s3_bucket="astrojobs-s3",
+    )
+    assert settings.aws_access_key_id == "AKIADOENVFILEKEY0001"
+    assert settings.aws_secret_access_key == "dotenvsecretvalue00000000000000000001"

@@ -8,6 +8,7 @@ from domain.users.use_cases.login import LoginUseCase
 from domain.users.use_cases.request_password_reset import RequestPasswordResetUseCase
 from domain.users.use_cases.reset_password import ResetPasswordUseCase
 from domain.users.use_cases.signup import SignupUseCase
+from domain.users.use_cases.update_profile import UpdateProfileUseCase
 from domain.users.use_cases.upload_profile_photo import UploadProfilePhotoUseCase
 from infrastructure.database.config import settings
 from infrastructure.database.session import get_db
@@ -57,6 +58,10 @@ def get_reset_password_use_case(db: Session = Depends(get_db)) -> ResetPasswordU
         SqlAlchemyPasswordResetTokenRepository(db),
         BcryptPasswordHasher(),
     )
+
+
+def get_update_profile_use_case(db: Session = Depends(get_db)) -> UpdateProfileUseCase:
+    return UpdateProfileUseCase(SqlAlchemyUserRepository(db))
 
 
 def get_upload_profile_photo_use_case(

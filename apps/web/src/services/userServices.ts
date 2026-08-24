@@ -11,6 +11,18 @@ import type {
 
 type User = components['schemas']['UserResponse']
 
+export function needsOnboarding(
+  user: Pick<User, 'role' | 'onboarding_status'>,
+) {
+  return user.role === 'professional' && user.onboarding_status === 'pending'
+}
+
+export function postAuthPath(user: Pick<User, 'role' | 'onboarding_status'>) {
+  if (user.role === 'recruiter') return '/recruiter' as const
+  if (needsOnboarding(user)) return '/onboarding' as const
+  return '/dashboard' as const
+}
+
 export function userPhotoUrl(user: Pick<User, 'photo_url'> | null | undefined) {
   if (!user?.photo_url) return null
   const base = env.API_URL.replace(/\/$/, '')
@@ -31,7 +43,9 @@ async function signUp({
   ...body
 }: SignupFormValues) {
   const response = await api.post<User>('/auth/signup', {
-    ...body,
+    username: body.username,
+    email: body.email,
+    role: body.role,
     password: await hashPassword(password),
   })
   return response.data
@@ -74,6 +88,17 @@ async function uploadPhoto(file: File) {
   return response.data
 }
 
+async function updateProfile(body: {
+  job_title?: string | null
+  region?: string | null
+  salary_min_usd?: number | null
+  salary_max_usd?: number | null
+  onboarding_status?: 'skipped' | 'completed'
+}) {
+  const response = await api.patch<User>('/auth/me', body)
+  return response.data
+}
+
 export const userServices = {
   signIn,
   signUp,
@@ -82,4 +107,5 @@ export const userServices = {
   forgotPassword,
   resetPassword,
   uploadPhoto,
+  updateProfile,
 }

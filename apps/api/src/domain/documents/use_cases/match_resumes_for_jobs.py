@@ -1,15 +1,18 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from domain.analysis.entities import AnalysisEntity
 from domain.analysis.repository import AnalysisRepository
 from domain.documents.entities import DocumentEntity
 from domain.documents.repository import DocumentRepository
+from domain.documents.region_catalog import canonical_region, regions_compatible
 from domain.documents.semantic_matcher import SemanticMatcher
 from domain.documents.technology_catalog import (
     canonical_technology,
     technologies_in_text,
 )
+from domain.users.entities import UserEntity
+from domain.users.repository import UserRepository
 
 SENIORITY_RANK = {
     "intern": 0,
@@ -177,16 +180,102 @@ def _passes_work_mode(job: dict[str, Any], resume: dict[str, Any]) -> bool:
     return wanted == normalized or _mentions(normalized, WORK_MODE_ALIASES[wanted])
 
 
+def overlay_user_profile(
+    payload: dict[str, Any], user: UserEntity | None
+) -> dict[str, Any]:
+    if user is None:
+        return payload
+    merged = dict(payload)
+    if user.region:
+        merged["region"] = user.region
+    if user.job_title:
+        merged["job_title"] = user.job_title
+    if user.company:
+        merged["company"] = user.company
+    if user.salary_min_usd is not None:
+        merged["salary_min_usd"] = user.salary_min_usd
+    if user.salary_max_usd is not None:
+        merged["salary_max_usd"] = user.salary_max_usd
+    return merged
+
+
+def _salary_bounds(payload: dict[str, Any]) -> tuple[int, int] | None:
+    raw_min = payload.get("salary_min_usd")
+    raw_max = payload.get("salary_max_usd")
+    low = raw_min if isinstance(raw_min, int) else None
+    high = raw_max if isinstance(raw_max, int) else None
+    if low is None and high is None:
+        return None
+    if low is None:
+        low = high
+    if high is None:
+        high = low
+    if low is None or high is None:
+        return None
+    return (min(low, high), max(low, high))
+
+
+def _passes_salary(job: dict[str, Any], resume: dict[str, Any]) -> bool:
+    job_range = _salary_bounds(job)
+    resume_range = _salary_bounds(resume)
+    if job_range is None or resume_range is None:
+        return True
+    return job_range[0] <= resume_range[1] and resume_range[0] <= job_range[1]
+
+
+def _candidate_titles(payload: dict[str, Any]) -> list[str]:
+    titles: list[str] = []
+    for key in ("job_title", "title", "headline"):
+        titles.extend(_as_techs(payload.get(key)))
+    experiences = payload.get("experiences")
+    if isinstance(experiences, list):
+        for item in experiences:
+            if isinstance(item, dict):
+                titles.extend(_as_techs(item.get("job_title") or item.get("title")))
+    return [title for title in titles if title]
+
+
+def _title_similarity(job: dict[str, Any], resume: dict[str, Any]) -> float:
+    job_title = job.get("title")
+    if not isinstance(job_title, str) or not job_title.strip():
+        return 0.0
+    job_tokens = set(_normalize(job_title).split())
+    if not job_tokens:
+        return 0.0
+    best = 0.0
+    for title in _candidate_titles(resume):
+        tokens = set(_normalize(title).split())
+        if not tokens:
+            continue
+        best = max(best, len(job_tokens & tokens) / len(job_tokens | tokens))
+    return best
+
+
+def apply_title_score(
+    score: float, job: dict[str, Any], resume: dict[str, Any]
+) -> float:
+    similarity = _title_similarity(job, resume)
+    if similarity > 0:
+        return min(1.0, score + 0.15 * similarity)
+    if _candidate_titles(resume):
+        return score * 0.85
+    return score
+
+
 def _passes_region(job: dict[str, Any], resume: dict[str, Any]) -> bool:
     wanted = job.get("region")
     if not isinstance(wanted, str) or not wanted.strip():
         return True
     if job.get("work_mode") == "remote":
         return True
-    needle = _normalize(wanted)
+    if canonical_region(wanted) == "Remote / Worldwide":
+        return True
     locations = _resume_locations(resume)
     if not locations:
         return True
+    if any(regions_compatible(wanted, location) for location in locations):
+        return True
+    needle = _normalize(wanted)
     return any(needle in location or location in needle for location in locations)
 
 
@@ -213,6 +302,7 @@ def _passes_filters(
         and _passes_work_mode(job, resume)
         and _passes_region(job, resume)
         and _passes_employment(job, resume)
+        and _passes_salary(job, resume)
     )
 
 
@@ -236,10 +326,12 @@ class MatchResumesForJobsUseCase:
         document_repository: DocumentRepository,
         analysis_repository: AnalysisRepository,
         semantic_matcher: SemanticMatcher | None = None,
+        user_repository: UserRepository | None = None,
     ):
         self._documents = document_repository
         self._analyses = analysis_repository
         self._semantic = semantic_matcher
+        self._users = user_repository
 
     def execute(self, recruiter_id: int) -> list[ResumeMatch]:
         jobs = [
@@ -265,7 +357,15 @@ class MatchResumesForJobsUseCase:
             if labels and job.id is not None:
                 job_techs[job.id] = labels
         resumes = [
-            resume
+            replace(
+                resume,
+                payload=overlay_user_profile(
+                    resume.payload,
+                    self._users.get_by_id(resume.user_id)
+                    if self._users is not None and resume.user_id is not None
+                    else None,
+                ),
+            )
             for resume in self._documents.list(doc_type="resume")
             if resume.id is not None and resume.user_id is not None
         ]
@@ -307,6 +407,7 @@ class MatchResumesForJobsUseCase:
                     continue
                 if not _passes_filters(job.payload, resume.payload, analysis):
                     continue
+                score = apply_title_score(score, job.payload, resume.payload)
                 matched_jobs.append(job)
                 matched_job_scores[job.id] = score
                 for key in overlap:

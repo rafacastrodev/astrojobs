@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 from domain.documents.entities import DocumentEntity
 from domain.documents.use_cases.match_jobs_for_resume import MatchJobsForResumeUseCase
+from domain.users.entities import UserEntity
 
 NOW = datetime(2026, 8, 24, tzinfo=UTC)
 
@@ -193,3 +194,122 @@ def test_semantic_relevance_surfaces_adjacent_experience_without_exact_keyword()
     assert [item.document.id for item in matches] == [1]
     assert round(matches[0].score, 2) == 0.28
     assert matches[0].matched_technologies == []
+
+
+def test_on_site_job_matches_city_inside_the_job_country() -> None:
+    job = _doc(
+        1,
+        "job",
+        {
+            "title": "Backend",
+            "technologies": ["Python"],
+            "work_mode": "on-site",
+            "region": "Brazil",
+        },
+        10,
+    )
+    local = _doc(3, "resume", {"skills": ["Python"], "region": "Sao Paulo"}, 20)
+    abroad = _doc(4, "resume", {"skills": ["Python"], "region": "Lisbon"}, 21)
+    matches = MatchJobsForResumeUseCase(
+        _Documents([job, local, abroad]),
+        _Analyses(),
+    ).execute(3, 20)
+    assert matches[0].score == 1.0
+
+    abroad_matches = MatchJobsForResumeUseCase(
+        _Documents([job, local, abroad]),
+        _Analyses(),
+    ).execute(4, 21)
+    assert abroad_matches[0].score == 0.5
+
+
+def test_salary_overlap_keeps_match_and_gap_penalizes() -> None:
+    job = _doc(
+        1,
+        "job",
+        {
+            "title": "Backend",
+            "technologies": ["Python"],
+            "salary_min_usd": 80000,
+            "salary_max_usd": 120000,
+        },
+        10,
+    )
+    overlap = _doc(
+        3,
+        "resume",
+        {"skills": ["Python"], "salary_min_usd": 100000, "salary_max_usd": 140000},
+        20,
+    )
+    gap = _doc(
+        4,
+        "resume",
+        {"skills": ["Python"], "salary_min_usd": 180000, "salary_max_usd": 220000},
+        21,
+    )
+    assert (
+        MatchJobsForResumeUseCase(_Documents([job, overlap]), _Analyses()).execute(
+            3, 20
+        )[0].score
+        == 1.0
+    )
+    assert (
+        MatchJobsForResumeUseCase(_Documents([job, gap]), _Analyses()).execute(4, 21)[
+            0
+        ].score
+        == 0.5
+    )
+
+
+def test_matching_job_title_ranks_higher_than_unrelated_title() -> None:
+    backend = _doc(
+        1, "job", {"title": "Backend Engineer", "technologies": ["Python"]}, 10
+    )
+    chef = _doc(2, "job", {"title": "Chef", "technologies": ["Python"]}, 10)
+    resume = _doc(
+        3,
+        "resume",
+        {"skills": ["Python"], "job_title": "Backend Engineer"},
+        20,
+    )
+    matches = MatchJobsForResumeUseCase(
+        _Documents([backend, chef, resume]),
+        _Analyses(),
+    ).execute(3, 20)
+    assert [item.document.id for item in matches] == [1, 2]
+    assert matches[0].score > matches[1].score
+
+
+def test_overlays_user_profile_onto_resume_for_region_filter() -> None:
+    job = _doc(
+        1,
+        "job",
+        {
+            "title": "Backend",
+            "technologies": ["Python"],
+            "work_mode": "on-site",
+            "region": "Brazil",
+        },
+        10,
+    )
+    resume = _doc(3, "resume", {"skills": ["Python"]}, 20)
+    user = UserEntity(
+        id=20,
+        name="ana",
+        email="ana@example.com",
+        hashed_password="x",
+        role="professional",
+        created_at=NOW,
+        region="Lisbon",
+    )
+
+    class _Users:
+        def get_by_id(self, user_id: int) -> UserEntity | None:
+            return user if user_id == 20 else None
+
+    matches = MatchJobsForResumeUseCase(
+        _Documents([job, resume]),
+        _Analyses(),
+        user_repository=_Users(),
+    ).execute(3, 20)
+    assert matches[0].score == 0.5

@@ -30,6 +30,9 @@ export type JobCreatePayload = {
   work_mode: JobWorkMode
   region: string
   employment_type: JobEmploymentType
+  salary_min_usd?: number | null
+  salary_max_usd?: number | null
+  hide_salary?: boolean
 }
 
 export type RecruiterApplication = {

@@ -4,7 +4,7 @@ import { useRouter } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 
 import { currentUserKey } from '@/hooks/useCurrentUser'
-import { userServices } from '@/services/userServices'
+import { postAuthPath, userServices } from '@/services/userServices'
 import {
   applyApiFieldErrors,
   getApiErrorMessage,
@@ -33,7 +33,7 @@ export const useSignup = () => {
     onSuccess: (user) => {
       queryClient.setQueryData(currentUserKey, user)
       router.navigate({
-        to: user.role === 'recruiter' ? '/recruiter' : '/dashboard',
+        to: postAuthPath(user),
         replace: true,
       })
     },

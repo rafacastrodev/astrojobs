@@ -338,7 +338,7 @@ def _to_job_match_response(
         source_filename=match.document.source_filename,
         created_at=match.document.created_at,
         score=match.score,
-        payload=match.document.payload,
+        payload=_payload_for_professional(match.document.payload),
         matched_technologies=match.matched_technologies,
         applied=applied,
         offered=offered,
@@ -351,6 +351,17 @@ def _to_job_match_response(
             application.updated_at or application.created_at if application else None
         ),
     )
+
+
+def _payload_for_professional(payload: object) -> dict:
+    if not isinstance(payload, dict):
+        return {}
+    if not payload.get("hide_salary"):
+        return payload
+    redacted = dict(payload)
+    redacted.pop("salary_min_usd", None)
+    redacted.pop("salary_max_usd", None)
+    return redacted
 
 
 def _recruiter_cache(users: SqlAlchemyUserRepository):

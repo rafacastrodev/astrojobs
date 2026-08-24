@@ -88,6 +88,9 @@ describe('audit UI contracts', () => {
       'job-work-mode',
       'job-region',
       'job-employment-type',
+      'job-salary-min',
+      'job-salary-max',
+      'job-hide-salary',
       'job-description',
     ]) {
       expect(form).toContain(`htmlFor="${id}"`)

@@ -83,4 +83,26 @@ describe('authentication schemas', () => {
       expect(result.success).toBe(false)
     },
   )
+
+  it('accepts a professional signup without a profile', () => {
+    const result = signupSchema.safeParse({
+      username: 'person',
+      email: 'person@example.com',
+      role: 'professional',
+      password: 'password1',
+      confirmPassword: 'password1',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('does not require a professional profile for recruiters', () => {
+    const result = signupSchema.safeParse({
+      username: 'hire',
+      email: 'hire@example.com',
+      role: 'recruiter',
+      password: 'password1',
+      confirmPassword: 'password1',
+    })
+    expect(result.success).toBe(true)
+  })
 })

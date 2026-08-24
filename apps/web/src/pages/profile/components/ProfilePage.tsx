@@ -9,12 +9,18 @@ import { useDashboard } from '@/pages/dashboard/hooks/useDashboard'
 import { userServices } from '@/services/userServices'
 import { getApiErrorMessage } from '@/utils'
 
+import { ProfessionalProfileForm } from './ProfessionalProfileForm'
+
 type ProfilePageProps = {
   name: string
   email: string
   role: 'professional' | 'recruiter'
   createdAt: string
   photoUrl?: string | null
+  jobTitle?: string | null
+  region?: string | null
+  salaryMinUsd?: number | null
+  salaryMaxUsd?: number | null
 }
 
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024
@@ -25,6 +31,10 @@ export const ProfilePage = ({
   role,
   createdAt,
   photoUrl,
+  jobTitle,
+  region,
+  salaryMinUsd,
+  salaryMaxUsd,
 }: ProfilePageProps) => {
   const { handleLogout, isLoggingOut } = useDashboard()
   const router = useRouter()
@@ -88,6 +98,14 @@ export const ProfilePage = ({
             (upload.isError ? getApiErrorMessage(upload.error) : null)
           }
         />
+        {role === 'professional' ? (
+          <ProfessionalProfileForm
+            jobTitle={jobTitle}
+            region={region}
+            salaryMinUsd={salaryMinUsd}
+            salaryMaxUsd={salaryMaxUsd}
+          />
+        ) : null}
       </div>
     </div>
   )

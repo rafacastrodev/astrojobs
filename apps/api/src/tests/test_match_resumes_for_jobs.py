@@ -228,3 +228,24 @@ def test_semantic_relevance_surfaces_candidate_without_exact_keyword() -> None:
     assert [item.document.id for item in matches] == [2]
     assert round(matches[0].score, 2) == 0.28
     assert matches[0].matched_technologies == []
+
+
+def test_on_site_job_keeps_candidates_in_the_same_region_tree() -> None:
+    job = _doc(
+        1,
+        "job",
+        {
+            "title": "Backend",
+            "technologies": ["Python"],
+            "work_mode": "on-site",
+            "region": "Brazil",
+        },
+        user_id=10,
+    )
+    local = _doc(2, "resume", {"skills": ["Python"], "region": "Sao Paulo"}, user_id=20)
+    abroad = _doc(3, "resume", {"skills": ["Python"], "region": "Lisbon"}, user_id=21)
+    matches = MatchResumesForJobsUseCase(
+        _Documents([job, local, abroad]),
+        _Analyses({}),
+    ).execute(recruiter_id=10)
+    assert [item.document.id for item in matches] == [2]

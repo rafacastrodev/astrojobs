@@ -25,6 +25,7 @@ from domain.users.use_cases.login import LoginUseCase
 from domain.users.use_cases.request_password_reset import RequestPasswordResetUseCase
 from domain.users.use_cases.reset_password import ResetPasswordUseCase
 from domain.users.use_cases.signup import SignupUseCase
+from domain.users.use_cases.update_profile import UpdateProfileUseCase
 from domain.users.use_cases.upload_profile_photo import UploadProfilePhotoUseCase
 from infrastructure.database.config import settings
 from infrastructure.notifications.liveblocks_client import LiveblocksClient
@@ -33,6 +34,7 @@ from infrastructure.schemas.user_schemas import (
     LoginRequest,
     ResetPasswordRequest,
     SignupRequest,
+    UpdateProfileRequest,
     UserResponse,
 )
 from infrastructure.users.dependencies import (
@@ -43,6 +45,7 @@ from infrastructure.users.dependencies import (
     get_request_password_reset_use_case,
     get_reset_password_use_case,
     get_signup_use_case,
+    get_update_profile_use_case,
     get_upload_profile_photo_use_case,
 )
 
@@ -78,6 +81,12 @@ def _to_user_response(user: UserEntity) -> UserResponse:
         role=user.role,
         created_at=user.created_at,
         photo_url=_photo_url(user),
+        company=user.company,
+        job_title=user.job_title,
+        region=user.region,
+        salary_min_usd=user.salary_min_usd,
+        salary_max_usd=user.salary_max_usd,
+        onboarding_status=user.onboarding_status,
     )
 
 
@@ -89,7 +98,15 @@ def signup(
 ) -> UserResponse:
     try:
         user, token = use_case.execute(
-            body.username, body.email, body.password, body.role
+            body.username,
+            body.email,
+            body.password,
+            body.role,
+            company=body.company,
+            job_title=body.job_title,
+            region=body.region,
+            salary_min_usd=body.salary_min_usd,
+            salary_max_usd=body.salary_max_usd,
         )
     except (EmailAlreadyExistsError, UsernameAlreadyExistsError):
         raise HTTPException(
@@ -126,6 +143,21 @@ def logout(response: Response) -> dict[str, bool]:
 @router.get("/me", response_model=UserResponse)
 def me(user: UserEntity = Depends(get_current_user)) -> UserResponse:
     return _to_user_response(user)
+
+
+@router.patch("/me", response_model=UserResponse)
+def update_me(
+    body: UpdateProfileRequest,
+    user: UserEntity = Depends(get_current_user),
+    use_case: UpdateProfileUseCase = Depends(get_update_profile_use_case),
+) -> UserResponse:
+    try:
+        updated = use_case.execute(user, body.model_dump(exclude_unset=True))
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        )
+    return _to_user_response(updated)
 
 
 @router.post("/liveblocks")

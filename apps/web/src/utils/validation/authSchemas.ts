@@ -61,6 +61,63 @@ const confirmPasswordSchema = z.string().min(1, 'Confirm your password')
 export const userRoles = ['professional', 'recruiter'] as const
 export type UserRole = (typeof userRoles)[number]
 
+const optionalSalary = z
+  .string()
+  .trim()
+  .refine((value) => value === '' || /^\d+$/.test(value), {
+    message: 'Enter a whole number',
+  })
+
+export const parseSalaryUsd = (value: string | undefined) => {
+  const text = value?.trim() ?? ''
+  if (text === '' || !/^\d+$/.test(text)) return null
+  return Number(text)
+}
+
+const requireSalaryRange = (
+  data: {
+    salary_min_usd?: string
+    salary_max_usd?: string
+  },
+  ctx: z.RefinementCtx,
+) => {
+  const min = parseSalaryUsd(data.salary_min_usd)
+  const max = parseSalaryUsd(data.salary_max_usd)
+  if (min != null && max != null && min > max) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Maximum salary must be at least the minimum',
+      path: ['salary_max_usd'],
+    })
+  }
+}
+
+const requireProfessionalProfile = (
+  data: {
+    job_title?: string
+    region?: string
+    salary_min_usd?: string
+    salary_max_usd?: string
+  },
+  ctx: z.RefinementCtx,
+) => {
+  if (!data.job_title) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Job title is required',
+      path: ['job_title'],
+    })
+  }
+  if (!data.region) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Region is required',
+      path: ['region'],
+    })
+  }
+  requireSalaryRange(data, ctx)
+}
+
 export const signupSchema = z
   .object({
     username: z
@@ -79,6 +136,28 @@ export const signupSchema = z
     message: 'Passwords do not match',
     path: ['confirmPassword'],
   })
+
+export const onboardingSchema = z
+  .object({
+    job_title: z.string().trim().max(120).optional(),
+    region: z.string().trim().max(120).optional(),
+    salary_min_usd: optionalSalary,
+    salary_max_usd: optionalSalary,
+  })
+  .superRefine(requireSalaryRange)
+
+export type OnboardingFormValues = z.infer<typeof onboardingSchema>
+
+export const profileSchema = z
+  .object({
+    job_title: z.string().trim().max(120).optional(),
+    region: z.string().trim().max(120).optional(),
+    salary_min_usd: optionalSalary,
+    salary_max_usd: optionalSalary,
+  })
+  .superRefine(requireProfessionalProfile)
+
+export type ProfileFormValues = z.infer<typeof profileSchema>
 
 export type SignupFormValues = z.infer<typeof signupSchema>
 

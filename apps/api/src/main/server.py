@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from domain.documents.region_catalog import list_regions
 from infrastructure.database.config import settings
 from infrastructure.database.session import init_db
 from infrastructure.documents.index_repair import repair_missing_document_embeddings
@@ -50,3 +51,8 @@ app.include_router(analysis_router)
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/regions")
+def regions() -> list[str]:
+    return [region["name"] for region in list_regions() if region.get("name")]

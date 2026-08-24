@@ -65,3 +65,35 @@ def test_job_embedding_uses_filter_fields() -> None:
     assert "São Paulo" in text
     assert "full-time" in text
     assert "internal_note" not in text
+
+
+def test_resume_embedding_includes_profile_fields() -> None:
+    text = payload_to_embedding_text(
+        {
+            "summary": "Backend engineer",
+            "job_title": "Backend Engineer",
+            "company": "Nubank",
+            "region": "Sao Paulo",
+            "salary_min_usd": 80000,
+        },
+        "resume",
+    )
+    assert "Backend Engineer" in text
+    assert "Nubank" in text
+    assert "Sao Paulo" in text
+    assert "80000" in text
+
+
+def test_job_embedding_includes_salary() -> None:
+    text = payload_to_embedding_text(
+        {
+            "title": "Python Engineer",
+            "salary_min_usd": 90000,
+            "salary_max_usd": 120000,
+            "internal_note": "do not embed",
+        },
+        "job",
+    )
+    assert "90000" in text
+    assert "120000" in text
+    assert "internal_note" not in text

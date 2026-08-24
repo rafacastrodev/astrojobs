@@ -81,7 +81,7 @@ class _DeleteDocument:
 
 
 class _Signup:
-    def execute(self, username: str, email: str, password: str, role: str):
+    def execute(self, username: str, email: str, password: str, role: str, **_kwargs):
         del password, role
         if email == "taken@example.com":
             raise EmailAlreadyExistsError(email)
@@ -192,6 +192,7 @@ def test_sec06_signup_does_not_reveal_which_field_is_taken() -> None:
             "email": "taken@example.com",
             "password": "Password123",
             "role": "professional",
+            "company": "Astro",
         },
     )
     username_conflict = client.post(
@@ -201,6 +202,7 @@ def test_sec06_signup_does_not_reveal_which_field_is_taken() -> None:
             "email": "fresh@example.com",
             "password": "Password123",
             "role": "professional",
+            "company": "Astro",
         },
     )
 

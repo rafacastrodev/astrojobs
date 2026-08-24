@@ -52,6 +52,26 @@ def _rewrite_url_host(url: str, host: str) -> str:
     return f"{endpoint.scheme}://{host}{port}"
 
 
+def _unquote(value: str) -> str:
+    stripped = value.strip()
+    if len(stripped) >= 2 and stripped[0] == stripped[-1] and stripped[0] in {'"', "'"}:
+        return stripped[1:-1]
+    return stripped
+
+
+def _dotenv_map(path: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
+    if not path.exists():
+        return values
+    for line in path.read_text().splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, raw = stripped.split("=", 1)
+        values[key.strip()] = _unquote(raw)
+    return values
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,
@@ -132,6 +152,21 @@ class Settings(BaseSettings):
             return None
         return value
 
+    @field_validator(
+        "aws_region",
+        "aws_s3_bucket",
+        "aws_s3_endpoint_url",
+        "aws_access_key_id",
+        "aws_secret_access_key",
+        "aws_session_token",
+        mode="before",
+    )
+    @classmethod
+    def _strip_aws_quotes(cls, value: object) -> object:
+        if isinstance(value, str):
+            return _unquote(value)
+        return value
+
     @field_validator("embedding_provider")
     @classmethod
     def _validate_embedding_provider(cls, value: str) -> str:
@@ -191,6 +226,7 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _apply_environment_defaults(self) -> "Settings":
+        self._align_aws_credentials()
         in_docker = _running_in_docker()
 
         if in_docker and self.postgres_host in {
@@ -257,6 +293,19 @@ class Settings(BaseSettings):
         self._resolve_llm()
         self._resolve_bedrock()
         return self
+
+    def _align_aws_credentials(self) -> None:
+        file_vals = _dotenv_map(ENV_FILE)
+        file_key = file_vals.get("AWS_ACCESS_KEY_ID", "")
+        file_secret = file_vals.get("AWS_SECRET_ACCESS_KEY", "")
+        env_key = (os.environ.get("AWS_ACCESS_KEY_ID") or "").strip()
+        env_secret = (os.environ.get("AWS_SECRET_ACCESS_KEY") or "").strip()
+        if not (file_key and file_secret and bool(env_key) != bool(env_secret)):
+            return
+        if self.aws_access_key_id != file_key:
+            return
+        self.aws_secret_access_key = file_secret
+        self.aws_session_token = file_vals.get("AWS_SESSION_TOKEN", "")
 
     def _resolve_llm(self) -> None:
         model = self.llm_model.strip()

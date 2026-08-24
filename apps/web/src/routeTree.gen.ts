@@ -14,6 +14,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DataDeletionRouteImport } from './routes/data-deletion'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as RecruiterRouteImport } from './routes/recruiter'
@@ -44,6 +45,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/data-deletion': typeof DataDeletionRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/recruiter': typeof RecruiterRoute
@@ -82,6 +89,7 @@ export interface FileRoutesByTo {
   '/data-deletion': typeof DataDeletionRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/recruiter': typeof RecruiterRoute
@@ -94,6 +102,7 @@ export interface FileRoutesById {
   '/data-deletion': typeof DataDeletionRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/recruiter': typeof RecruiterRoute
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/data-deletion'
     | '/forgot-password'
     | '/login'
+    | '/onboarding'
     | '/privacy'
     | '/profile'
     | '/recruiter'
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/data-deletion'
     | '/forgot-password'
     | '/login'
+    | '/onboarding'
     | '/privacy'
     | '/profile'
     | '/recruiter'
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/data-deletion'
     | '/forgot-password'
     | '/login'
+    | '/onboarding'
     | '/privacy'
     | '/profile'
     | '/recruiter'
@@ -141,6 +153,7 @@ export interface RootRouteChildren {
   DataDeletionRoute: typeof DataDeletionRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
+  OnboardingRoute: typeof OnboardingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   RecruiterRoute: typeof RecruiterRoute
@@ -184,6 +197,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
@@ -221,6 +241,7 @@ const rootRouteChildren: RootRouteChildren = {
   DataDeletionRoute: DataDeletionRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
+  OnboardingRoute: OnboardingRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   RecruiterRoute: RecruiterRoute,

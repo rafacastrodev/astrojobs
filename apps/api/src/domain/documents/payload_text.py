@@ -13,6 +13,11 @@ RESUME_EMBEDDING_KEYS = (
     "certifications",
     "languages",
     "additional_sections",
+    "job_title",
+    "company",
+    "region",
+    "salary_min_usd",
+    "salary_max_usd",
     # Legacy payload key.
     "about",
 )
@@ -26,6 +31,8 @@ JOB_EMBEDDING_KEYS = (
     "employment_type",
     "requirements",
     "responsibilities",
+    "salary_min_usd",
+    "salary_max_usd",
 )
 
 

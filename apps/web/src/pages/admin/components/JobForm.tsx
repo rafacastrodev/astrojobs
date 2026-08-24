@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import { Button } from '@/components/Button'
 import { CloseIcon } from '@/components/icons'
+import { RegionSelect } from '@/components/RegionSelect'
 import { getApiErrorMessage } from '@/utils'
 
 import { useCreateJob, useTechnologyCatalog } from '../hooks/useAdminDocuments'
@@ -40,6 +41,22 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
   const [region, setRegion] = useState('')
   const [employmentType, setEmploymentType] =
     useState<JobEmploymentType>('full-time')
+  const [salaryMin, setSalaryMin] = useState('')
+  const [salaryMax, setSalaryMax] = useState('')
+  const [hideSalary, setHideSalary] = useState(false)
+
+  const parseUsd = (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed) return null
+    return /^\d+$/.test(trimmed) ? Number(trimmed) : null
+  }
+
+  const salaryMinUsd = parseUsd(salaryMin)
+  const salaryMaxUsd = parseUsd(salaryMax)
+  const salaryInvalid =
+    (salaryMin.trim() !== '' && salaryMinUsd == null) ||
+    (salaryMax.trim() !== '' && salaryMaxUsd == null) ||
+    (salaryMinUsd != null && salaryMaxUsd != null && salaryMinUsd > salaryMaxUsd)
 
   const commitDraft = () => {
     const next = addTechnology(technologies, draftTech, catalog)
@@ -66,6 +83,7 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
         if (!title.trim() || nextTechnologies.length === 0 || !region.trim()) {
           return
         }
+        if (salaryInvalid) return
         create.mutate(
           {
             title: title.trim(),
@@ -75,6 +93,9 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
             work_mode: workMode,
             region: region.trim(),
             employment_type: employmentType,
+            salary_min_usd: salaryMinUsd,
+            salary_max_usd: salaryMaxUsd,
+            hide_salary: hideSalary,
           },
           {
             onSuccess: () => {
@@ -87,6 +108,9 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
               setWorkMode('remote')
               setRegion('')
               setEmploymentType('full-time')
+              setSalaryMin('')
+              setSalaryMax('')
+              setHideSalary(false)
               onCreated?.()
             },
           },
@@ -214,13 +238,13 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
         </label>
         <label className="grid gap-1 text-sm" htmlFor="job-region">
           <span className="font-medium">Region</span>
-          <input
+          <RegionSelect
             id="job-region"
             name="region"
             value={region}
             onChange={(event) => setRegion(event.target.value)}
             maxLength={120}
-            placeholder="São Paulo, Brazil"
+            placeholder="Sao Paulo"
             className="rounded-lg border border-border bg-input p-3"
           />
         </label>
@@ -243,6 +267,49 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
           </select>
         </label>
       </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="grid gap-1 text-sm" htmlFor="job-salary-min">
+          <span className="font-medium">Salary min (USD)</span>
+          <input
+            id="job-salary-min"
+            name="salary_min_usd"
+            type="text"
+            inputMode="numeric"
+            value={salaryMin}
+            onChange={(event) => setSalaryMin(event.target.value)}
+            placeholder="Optional"
+            className="rounded-lg border border-border bg-input p-3"
+          />
+        </label>
+        <label className="grid gap-1 text-sm" htmlFor="job-salary-max">
+          <span className="font-medium">Salary max (USD)</span>
+          <input
+            id="job-salary-max"
+            name="salary_max_usd"
+            type="text"
+            inputMode="numeric"
+            value={salaryMax}
+            onChange={(event) => setSalaryMax(event.target.value)}
+            placeholder="Optional"
+            className="rounded-lg border border-border bg-input p-3"
+          />
+        </label>
+      </div>
+      <label className="flex items-center gap-2 text-sm" htmlFor="job-hide-salary">
+        <input
+          id="job-hide-salary"
+          name="hide_salary"
+          type="checkbox"
+          checked={hideSalary}
+          onChange={(event) => setHideSalary(event.target.checked)}
+        />
+        <span>Hide salary from candidates</span>
+      </label>
+      {salaryInvalid ? (
+        <p role="alert" className="text-sm text-destructive">
+          Enter a valid USD range. Maximum must be at least the minimum.
+        </p>
+      ) : null}
       <label className="grid gap-1 text-sm" htmlFor="job-description">
         <span className="font-medium">Description</span>
         <textarea
@@ -261,6 +328,7 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
           disabled={
             !title.trim() ||
             !region.trim() ||
+            salaryInvalid ||
             (technologies.length === 0 && !draftTech.trim()) ||
             technologyCatalog.isLoading
           }

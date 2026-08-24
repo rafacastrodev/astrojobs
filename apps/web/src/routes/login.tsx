@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 
 import { LoginPage } from '@/pages/login/components/LoginPage'
-import { userServices } from '@/services/userServices'
+import { postAuthPath, userServices } from '@/services/userServices'
 
 type LoginSearch = { mode?: 'signin' | 'signup' }
 
@@ -13,7 +13,7 @@ export const Route = createFileRoute('/login')({
     const user = await userServices.getCurrentUser()
     if (user) {
       throw redirect({
-        to: user.role === 'recruiter' ? '/recruiter' : '/dashboard',
+        to: postAuthPath(user),
       })
     }
   },

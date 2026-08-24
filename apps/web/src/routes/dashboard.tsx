@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { Dashboard } from '@/pages/dashboard/components/Dashboard'
-import { userPhotoUrl, userServices } from '@/services/userServices'
+import { userPhotoUrl, needsOnboarding, userServices } from '@/services/userServices'
 
 export const Route = createFileRoute('/dashboard')({
   validateSearch: z.object({
@@ -16,6 +16,9 @@ export const Route = createFileRoute('/dashboard')({
     }
     if (user.role === 'recruiter') {
       throw redirect({ to: '/recruiter' })
+    }
+    if (needsOnboarding(user)) {
+      throw redirect({ to: '/onboarding' })
     }
     return { user }
   },

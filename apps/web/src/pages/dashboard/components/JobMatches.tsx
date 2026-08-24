@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { Button } from '@/components/Button'
 import { resumeServices } from '@/services/resumeServices'
+import { formatUsdSalary } from '@/utils/formatSalary'
 import { getApiErrorMessage } from '@/utils'
 
 type Props = {
@@ -49,6 +50,10 @@ export const JobMatches = ({ resumeId, onAnalyze }: Props) => {
                   match.payload.work_mode,
                   match.payload.region,
                   match.payload.employment_type,
+                  formatUsdSalary(
+                    match.payload.salary_min_usd,
+                    match.payload.salary_max_usd,
+                  ),
                 ]
                   .filter(Boolean)
                   .join(' · ')}

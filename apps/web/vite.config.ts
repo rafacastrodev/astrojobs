@@ -22,6 +22,7 @@ const config = defineConfig(({ command }) => ({
     port: 3000,
     proxy: {
       '/health': 'http://localhost:8000',
+      '/regions': 'http://localhost:8000',
       '/auth': 'http://localhost:8000',
       '/recruiter': 'http://localhost:8000',
       '/documents': 'http://localhost:8000',

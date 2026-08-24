@@ -69,7 +69,7 @@ export interface paths {
     delete?: never
     options?: never
     head?: never
-    patch?: never
+    patch: operations['me_auth_me_get']
     trace?: never
   }
   '/auth/liveblocks': {
@@ -689,6 +689,15 @@ export interface components {
        */
       employment_type:
         'full-time' | 'part-time' | 'contract' | 'internship' | 'temporary'
+      /** Salary Min Usd */
+      salary_min_usd?: number | null
+      /** Salary Max Usd */
+      salary_max_usd?: number | null
+      /**
+       * Hide Salary
+       * @default false
+       */
+      hide_salary?: boolean
     }
     /** JobMatchResponse */
     JobMatchResponse: {
@@ -935,6 +944,11 @@ export interface components {
        * @enum {string}
        */
       role: 'professional' | 'recruiter'
+      company?: string | null
+      job_title?: string | null
+      region?: string | null
+      salary_min_usd?: number | null
+      salary_max_usd?: number | null
     }
     /** SyncDocumentsRequest */
     SyncDocumentsRequest: {
@@ -982,6 +996,16 @@ export interface components {
       created_at: string
       /** Photo Url */
       photo_url?: string | null
+      /** Company */
+      company?: string | null
+      /** Job Title */
+      job_title?: string | null
+      /** Region */
+      region?: string | null
+      /** Salary Min Usd */
+      salary_min_usd?: number | null
+      /** Salary Max Usd */
+      salary_max_usd?: number | null
     }
     /** ValidationError */
     ValidationError: {

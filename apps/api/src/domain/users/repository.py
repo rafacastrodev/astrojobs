@@ -16,6 +16,12 @@ class UserRepository(Protocol):
         email: str,
         hashed_password: str,
         role: str = "professional",
+        company: str | None = None,
+        job_title: str | None = None,
+        region: str | None = None,
+        salary_min_usd: int | None = None,
+        salary_max_usd: int | None = None,
+        onboarding_status: str | None = None,
     ) -> UserEntity: ...
 
     def create_social(
@@ -28,6 +34,18 @@ class UserRepository(Protocol):
 
     def update_photo_key(
         self, user_id: int, photo_key: str | None
+    ) -> UserEntity | None: ...
+
+    def update_profile(
+        self,
+        user_id: int,
+        *,
+        company: str | None,
+        job_title: str | None,
+        region: str | None,
+        salary_min_usd: int | None,
+        salary_max_usd: int | None,
+        onboarding_status: str | None = None,
     ) -> UserEntity | None: ...
 
     def ensure_recruiter(

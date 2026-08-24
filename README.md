@@ -10,7 +10,7 @@ AstroJobs is an AI-first platform that helps users create and improve their prof
 
 1. Monorepo Architecture
 
-- I put the backend and the frontend in one monorepo, so we can create a contract between the front and back using protocols like gRPC, GraphQL or use generated types from OpenAI. The types was generated using OpenAI, but I decided to not implement now. The CI/CD is easily managed in a monorepo too. The negative point is the IDE tha can sometimes get confused about the language attaches the wrong language server or stale diagnostics until you reload the window.
+- I put the backend and the frontend in one monorepo, so we can create a contract between the front and back using OpenAI, which creates /apps/web/src/types/api.d.ts automatically. The types was generated using OpenAI, but I decided to not implement now. The CI/CD is easily managed in a monorepo too. The negative point is the IDE tha can sometimes get confused about the language attaches the wrong language server or stale diagnostics until you reload the window.
 
 2. Frontend
 

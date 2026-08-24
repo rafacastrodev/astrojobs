@@ -4,7 +4,9 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from domain.applications.entities import ApplicationStatus
+from domain.documents.region_catalog import canonical_region
 from domain.documents.technology_catalog import canonical_technology
+from domain.users.profile import validate_salary_range
 from infrastructure.schemas.analysis_schemas import AnalysisResponse
 
 
@@ -60,6 +62,9 @@ class JobCreateRequest(BaseModel):
     employment_type: Literal[
         "full-time", "part-time", "contract", "internship", "temporary"
     ]
+    salary_min_usd: int | None = None
+    salary_max_usd: int | None = None
+    hide_salary: bool = False
 
     @field_validator("title")
     @classmethod
@@ -77,10 +82,10 @@ class JobCreateRequest(BaseModel):
     @field_validator("region")
     @classmethod
     def _trim_region(cls, value: str) -> str:
-        value = value.strip()
-        if not value:
-            raise ValueError("Region cannot be empty")
-        return value
+        canonical = canonical_region(value)
+        if canonical is None:
+            raise ValueError("Choose a region from the catalog")
+        return canonical
 
     @field_validator("technologies")
     @classmethod
@@ -105,6 +110,7 @@ class JobCreateRequest(BaseModel):
     def _require_technologies(self) -> "JobCreateRequest":
         if not self.technologies:
             raise ValueError("Add at least one technology")
+        validate_salary_range(self.salary_min_usd, self.salary_max_usd)
         return self
 
 

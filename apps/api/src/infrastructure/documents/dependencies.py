@@ -219,6 +219,7 @@ def get_match_jobs_use_case(db: Session = Depends(get_db)) -> MatchJobsForResume
         SqlAlchemyDocumentRepository(db),
         SqlAlchemyAnalysisRepository(db),
         make_semantic_matcher(),
+        SqlAlchemyUserRepository(db),
     )
 
 
@@ -229,6 +230,7 @@ def get_match_resumes_use_case(
         SqlAlchemyDocumentRepository(db),
         SqlAlchemyAnalysisRepository(db),
         make_semantic_matcher(),
+        SqlAlchemyUserRepository(db),
     )
 
 
@@ -248,12 +250,13 @@ def get_apply_to_job_use_case(db: Session = Depends(get_db)) -> ApplyToJobUseCas
 def get_create_offer_use_case(db: Session = Depends(get_db)) -> CreateOfferUseCase:
     documents = SqlAlchemyDocumentRepository(db)
     analyses = SqlAlchemyAnalysisRepository(db)
+    users = SqlAlchemyUserRepository(db)
     return CreateOfferUseCase(
         documents,
         SqlAlchemyApplicationRepository(db),
         SqlAlchemyOfferRepository(db),
-        MatchResumesForJobsUseCase(documents, analyses, make_semantic_matcher()),
-        SqlAlchemyUserRepository(db),
+        MatchResumesForJobsUseCase(documents, analyses, make_semantic_matcher(), users),
+        users,
         LiveblocksClient(settings.liveblocks_private_key),
         SqlAlchemyTransactionManager(db),
     )
