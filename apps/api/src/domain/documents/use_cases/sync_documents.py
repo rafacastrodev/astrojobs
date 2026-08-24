@@ -33,6 +33,13 @@ class SyncDocumentsUseCase:
         else:
             documents = [doc for doc in self._documents.list(status="draft")]
             documents.extend(self._documents.list(status="failed"))
+            documents.extend(
+                doc
+                for doc in self._documents.list(status="synced")
+                if doc.pinecone_id is None
+                and not (doc.type == "job" and doc.closed_at is not None)
+            )
+            documents = list({doc.id: doc for doc in documents}.values())
 
         if not documents:
             return {"synced": 0, "failed": 0, "skipped": 0, "results": []}
@@ -69,19 +76,32 @@ class SyncDocumentsUseCase:
                 )
                 self._documents.mark_synced(document.id, vector_id)
                 synced += 1
-                results.append({"id": document.id, "status": "synced", "pinecone_id": vector_id})
+                results.append(
+                    {"id": document.id, "status": "synced", "pinecone_id": vector_id}
+                )
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Failed to sync document %s: %s", document.id, exc)
-                skipped += 1
+                result_status = "skipped"
+                if document.type == "resume":
+                    self._documents.mark_failed(document.id, "Could not index document")
+                    failed += 1
+                    result_status = "failed"
+                else:
+                    skipped += 1
                 results.append(
                     {
                         "id": document.id,
-                        "status": "skipped",
+                        "status": result_status,
                         "error": "Could not index document",
                     }
                 )
 
-        return {"synced": synced, "failed": failed, "skipped": skipped, "results": results}
+        return {
+            "synced": synced,
+            "failed": failed,
+            "skipped": skipped,
+            "results": results,
+        }
 
     def _namespace_for(self, doc_type: DocumentType) -> str:
         if doc_type == "resume":

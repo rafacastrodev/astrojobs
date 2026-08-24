@@ -3,6 +3,8 @@ from types import SimpleNamespace
 import pytest
 
 from infrastructure.services.bedrock_kb_retriever import BedrockKnowledgeBaseRetriever
+from infrastructure.services.gemini_embedder import GeminiEmbedder
+from infrastructure.services.local_semantic_embedder import LocalSemanticEmbedder
 from infrastructure.services.openai_embedder import OpenAIEmbedder
 from infrastructure.services.pgvector_store import PgVectorStore
 from infrastructure.vector.factory import (
@@ -12,16 +14,40 @@ from infrastructure.vector.factory import (
 )
 
 
-def test_openai_generates_embeddings_for_every_storage_backend(monkeypatch):
+def test_explicit_openai_provider_uses_openai(monkeypatch):
     monkeypatch.setattr(
         "infrastructure.vector.factory.settings",
         SimpleNamespace(
             uses_pgvector=False,
             pinecone_api_key="configured",
-            openai_api_key="",
+            embedding_provider="openai",
         ),
     )
     assert isinstance(make_embedder(), OpenAIEmbedder)
+
+
+def test_auto_provider_prefers_gemini(monkeypatch):
+    monkeypatch.setattr(
+        "infrastructure.vector.factory.settings",
+        SimpleNamespace(
+            embedding_provider="auto",
+            gemini_api_key="configured",
+            openai_api_key="configured",
+        ),
+    )
+    assert isinstance(make_embedder(), GeminiEmbedder)
+
+
+def test_auto_provider_has_local_fallback_without_api_keys(monkeypatch):
+    monkeypatch.setattr(
+        "infrastructure.vector.factory.settings",
+        SimpleNamespace(
+            embedding_provider="auto",
+            gemini_api_key="",
+            openai_api_key="",
+        ),
+    )
+    assert isinstance(make_embedder(), LocalSemanticEmbedder)
 
 
 def test_pgvector_store_requires_a_session(monkeypatch):

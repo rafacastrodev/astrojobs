@@ -1,5 +1,7 @@
 """Canonical technology names accepted by recruiter job postings."""
 
+import re
+
 TECHNOLOGIES: tuple[str, ...] = (
     ".NET",
     "Android",
@@ -93,6 +95,7 @@ TECHNOLOGIES: tuple[str, ...] = (
 _ALIASES = {
     "amazon web services": "AWS",
     "dotnet": ".NET",
+    "fast api": "FastAPI",
     "golang": "Go",
     "google cloud": "GCP",
     "google cloud platform": "GCP",
@@ -102,6 +105,7 @@ _ALIASES = {
     "nodejs": "Node.js",
     "postgres": "PostgreSQL",
     "reactjs": "React",
+    "react.js": "React",
     "ts": "TypeScript",
     "vue": "Vue.js",
 }
@@ -215,6 +219,34 @@ def canonical_technology(value: str) -> str | None:
     return _ALIASES.get(key) or _BY_KEY.get(key)
 
 
+def technologies_in_text(text: str) -> list[str]:
+    """Return canonical technologies explicitly mentioned in free-form text."""
+    if not text.strip():
+        return []
+    candidates = [
+        *((alias, canonical) for alias, canonical in _ALIASES.items()),
+        *((technology, technology) for technology in TECHNOLOGIES),
+    ]
+    found: list[str] = []
+    seen: set[str] = set()
+    for phrase, canonical in sorted(
+        candidates, key=lambda item: len(item[0]), reverse=True
+    ):
+        flags = 0 if phrase in {"C", "Go"} else re.IGNORECASE
+        left_boundary = r"(?<![\w.])" if phrase in {"js", "ts"} else r"(?<![\w])"
+        if not re.search(
+            rf"{left_boundary}{re.escape(phrase)}(?![\w])",
+            text,
+            flags=flags,
+        ):
+            continue
+        key = canonical.casefold()
+        if key not in seen:
+            seen.add(key)
+            found.append(canonical)
+    return found
+
+
 def empty_tech_stack() -> dict[str, list[str]]:
     return {category: [] for category in TECH_STACK_CATEGORIES}
 
@@ -253,7 +285,9 @@ def normalize_tech_stack(*groups: object) -> dict[str, list[str]]:
 
 def _iter_tech_values(value: object):
     if isinstance(value, str):
-        for part in value.replace("|", ",").replace(";", ",").replace("\n", ",").split(","):
+        for part in (
+            value.replace("|", ",").replace(";", ",").replace("\n", ",").split(",")
+        ):
             if part.strip():
                 yield part.strip()
         return

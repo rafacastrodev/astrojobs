@@ -27,7 +27,9 @@ def test_bedrock_retrieve_extracts_chunk_text() -> None:
     snippets = retriever.retrieve("Engineer with Python and FastAPI", top_k=5)
     assert snippets == ["Python backend role at Astro"]
     assert client.kwargs["knowledgeBaseId"] == "QHZW0OOFQ7"
-    assert client.kwargs["retrievalQuery"] == {"text": "Engineer with Python and FastAPI"}
+    assert client.kwargs["retrievalQuery"] == {
+        "text": "Engineer with Python and FastAPI"
+    }
     assert "retrievalConfiguration" not in client.kwargs
 
 

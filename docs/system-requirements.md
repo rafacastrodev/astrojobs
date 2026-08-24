@@ -20,15 +20,15 @@
 
 - [x] Professionals can browse available job openings.
 - [x] Professionals can apply for job openings using an uploaded resume.
-- [ ] Professionals can view the status of their applications.
+- [x] Professionals can view the status of their applications.
 - [x] Duplicate applications to the same job opening are prevented.
 
 ### Recruiter Application Management
 
 - [x] Recruiters can view applications submitted to their own job openings.
 - [x] Recruiters can access the candidate’s relevant professional information.
-- [ ] Recruiters can update an application’s status.
-- [ ] Professionals are informed when their application status changes.
+- [x] Recruiters can update an application’s status.
+- [x] Professionals are informed when their application status changes.
 
 ## Technical Requirements
 
@@ -58,24 +58,24 @@
 
 ### Applications
 
-- [ ] The database must store the professional, recruiter-owned job, selected resume, application status, and timestamps.
+- [x] The database must store the professional, recruiter-owned job, selected resume, application status, and timestamps.
 - [x] A database constraint must prevent duplicate applications for the same professional and job.
-- [ ] Applying must verify that the job is open and the resume belongs to the professional.
+- [x] Applying must verify that the job is open and the resume belongs to the professional.
 - [x] Recruiters must only receive applications associated with jobs they own.
-- [ ] Application statuses must use a controlled set such as `submitted`, `reviewing`, `accepted`, and `rejected`.
-- [ ] Status changes must be validated and recorded.
+- [x] Application statuses must use a controlled set such as `submitted`, `reviewing`, `accepted`, and `rejected`.
+- [x] Status changes must be validated and recorded.
 
 ### API and Interface
 
 - [x] The API must expose authenticated endpoints for submitting and listing applications.
-- [ ] Recruiter endpoints must support listing applications by job opening.
+- [x] Recruiter endpoints must support listing applications by job opening.
 - [x] The frontend must provide loading, success, empty, and error states.
 - [x] API request and response contracts must be documented in OpenAPI.
 - [x] Generated TypeScript types must remain synchronized with the API schema.
 
 ### Quality and Security
 
-- [ ] Business rules must be covered by automated tests.
+- [x] Business rules must be covered by automated tests.
 - [x] Ownership and role checks must have authorization tests.
 - [x] User-facing errors must not expose internal services, credentials, or stack traces.
 - [ ] Resume and application data must be deleted or anonymized according to the platform’s privacy policy.

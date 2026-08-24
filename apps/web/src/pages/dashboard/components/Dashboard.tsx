@@ -8,9 +8,10 @@ import { ResumeSection } from './ResumeSection'
 type DashboardProps = {
   name: string
   photoUrl?: string | null
+  focusJobId?: number
 }
 
-export const Dashboard = ({ name, photoUrl }: DashboardProps) => {
+export const Dashboard = ({ name, photoUrl, focusJobId }: DashboardProps) => {
   const { handleLogout, isLoggingOut } = useDashboard()
 
   return (
@@ -30,7 +31,7 @@ export const Dashboard = ({ name, photoUrl }: DashboardProps) => {
 
         <main className="flex flex-col gap-8">
           <ResumeSection />
-          <JobsSection />
+          <JobsSection focusJobId={focusJobId} />
         </main>
       </div>
     </div>

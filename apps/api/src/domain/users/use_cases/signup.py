@@ -23,8 +23,6 @@ class SignupUseCase:
             raise UsernameAlreadyExistsError(username)
         if self._users.get_by_email(email) is not None:
             raise EmailAlreadyExistsError(email)
-        user = self._users.create(
-            username, email, self._hasher.hash(password), role
-        )
+        user = self._users.create(username, email, self._hasher.hash(password), role)
         token = self._tokens.create_access_token(user.id)
         return user, token

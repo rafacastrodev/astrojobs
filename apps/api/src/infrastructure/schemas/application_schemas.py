@@ -3,6 +3,8 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from domain.applications.entities import ApplicationStatus
+
 
 class ApplyToJobRequest(BaseModel):
     resume_document_id: int | None = None
@@ -13,6 +15,12 @@ class ApplicationResponse(BaseModel):
     job_document_id: int
     resume_document_id: int
     created_at: datetime
+    status: ApplicationStatus
+    updated_at: datetime
+
+
+class UpdateApplicationStatusRequest(BaseModel):
+    status: ApplicationStatus
 
 
 class RecruiterApplicationResponse(BaseModel):
@@ -28,3 +36,5 @@ class RecruiterApplicationResponse(BaseModel):
     resume_technologies: list[str] = []
     matched_technologies: list[str] = []
     resume_payload: dict[str, Any]
+    status: ApplicationStatus
+    updated_at: datetime

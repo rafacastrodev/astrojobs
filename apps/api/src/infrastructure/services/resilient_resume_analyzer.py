@@ -56,9 +56,13 @@ class HeuristicResumeAnalyzer:
 
         findings: list[str] = []
         if not summary:
-            findings.append("Add a short professional summary at the top of the resume.")
+            findings.append(
+                "Add a short professional summary at the top of the resume."
+            )
         if not skills:
-            findings.append("List core skills as keywords so ATS parsers can match them.")
+            findings.append(
+                "List core skills as keywords so ATS parsers can match them."
+            )
         if not has_experience:
             findings.append("Include work experience with role, company, and dates.")
         else:
@@ -66,9 +70,13 @@ class HeuristicResumeAnalyzer:
         if not has_education:
             findings.append("Add an education section with institution and dates.")
         if job:
-            findings.append("Mirror language from the target job description in skills and recent roles.")
+            findings.append(
+                "Mirror language from the target job description in skills and recent roles."
+            )
         if not findings:
-            findings.append("Tighten dates, titles, and keywords so ATS parsers can extract them cleanly.")
+            findings.append(
+                "Tighten dates, titles, and keywords so ATS parsers can extract them cleanly."
+            )
 
         companies: list[str] = []
         for item in experiences:
@@ -110,5 +118,7 @@ class ResilientResumeAnalyzer:
         try:
             return self._primary.analyze(resume, job, retrieved_context)
         except Exception as exc:  # noqa: BLE001
-            logger.warning("Primary analysis unavailable; using local analyzer (%s)", exc)
+            logger.warning(
+                "Primary analysis unavailable; using local analyzer (%s)", exc
+            )
             return self._fallback.analyze(resume, job, retrieved_context)

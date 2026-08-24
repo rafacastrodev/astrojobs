@@ -42,7 +42,9 @@ class ProcessResumeUseCase:
                     job_source="none",
                 )
             except AnalyzerError as exc:
-                logger.warning("Retry analysis failed for document %s: %s", document_id, exc)
+                logger.warning(
+                    "Retry analysis failed for document %s: %s", document_id, exc
+                )
 
         resume = self._get_resume.execute(document_id, user_id)
         if resume.status != "synced":

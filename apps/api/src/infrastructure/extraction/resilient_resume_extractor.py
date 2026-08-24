@@ -15,5 +15,7 @@ class ResilientResumeExtractor:
         try:
             return self._primary.extract(text, doc_type)
         except Exception as exc:  # noqa: BLE001
-            logger.warning("Primary extraction unavailable; using local extractor (%s)", exc)
+            logger.warning(
+                "Primary extraction unavailable; using local extractor (%s)", exc
+            )
             return self._fallback.extract(text, doc_type)

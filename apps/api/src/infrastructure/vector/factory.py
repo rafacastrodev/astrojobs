@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 from sqlalchemy.orm import Session
 
 from domain.documents.embedder import Embedder
@@ -7,16 +9,36 @@ from infrastructure.services.agentcore_gateway_retriever import (
     AgentCoreGatewayRetriever,
 )
 from infrastructure.services.bedrock_kb_retriever import BedrockKnowledgeBaseRetriever
+from infrastructure.services.gemini_embedder import GeminiEmbedder
+from infrastructure.services.local_semantic_embedder import LocalSemanticEmbedder
 from infrastructure.services.openai_embedder import OpenAIEmbedder
+from infrastructure.services.pairwise_semantic_matcher import PairwiseSemanticMatcher
 from infrastructure.services.pgvector_store import PgVectorStore
 from infrastructure.services.pinecone_service import PineconeClient
 
 
 def make_embedder(input_type: str = "passage") -> Embedder:
-    # Keep the vector space identical across pgVector and Pinecone. The
-    # storage backend changes by environment; OpenAI remains the embedder.
-    del input_type
-    return OpenAIEmbedder()
+    provider = settings.embedding_provider
+    if provider == "auto":
+        if settings.gemini_api_key.strip():
+            provider = "gemini"
+        elif settings.openai_api_key.strip():
+            provider = "openai"
+        else:
+            provider = "local"
+    if provider == "gemini":
+        return GeminiEmbedder(input_type=input_type)
+    if provider == "openai":
+        return OpenAIEmbedder()
+    return LocalSemanticEmbedder()
+
+
+@lru_cache(maxsize=1)
+def make_semantic_matcher() -> PairwiseSemanticMatcher:
+    return PairwiseSemanticMatcher(
+        make_embedder(input_type="query"),
+        make_embedder(input_type="passage"),
+    )
 
 
 def make_vector_store(db: Session | None = None) -> PineconeClientPort:

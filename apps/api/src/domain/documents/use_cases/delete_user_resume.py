@@ -48,7 +48,9 @@ class DeleteUserResumeUseCase:
 
         if document.pinecone_id:
             try:
-                self._pinecone_factory().delete([document.pinecone_id], self._namespace_resumes)
+                self._pinecone_factory().delete(
+                    [document.pinecone_id], self._namespace_resumes
+                )
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
                     "Failed to delete Pinecone vector %s: %s", document.pinecone_id, exc

@@ -2,7 +2,10 @@ import logging
 from collections.abc import Callable
 
 from domain.documents.entities import DocumentType
-from domain.documents.errors import DocumentNotFoundError
+from domain.documents.errors import (
+    DocumentNotFoundError,
+    PublishedJobCannotBeDeletedError,
+)
 from domain.documents.pinecone_client import PineconeClientPort
 from domain.documents.repository import DocumentRepository
 from domain.documents.use_cases.get_document import GetDocumentUseCase
@@ -26,13 +29,17 @@ class DeleteDocumentUseCase:
 
     def execute(self, document_id: int) -> None:
         document = self._get.execute(document_id)
+        if document.type == "job" and document.status == "synced":
+            raise PublishedJobCannotBeDeletedError()
         deleted = self._documents.delete(document_id)
         if not deleted:
             raise DocumentNotFoundError(f"Document {document_id} not found")
         if document.pinecone_id:
             try:
                 client = self._pinecone_factory()
-                client.delete([document.pinecone_id], self._namespace_for(document.type))
+                client.delete(
+                    [document.pinecone_id], self._namespace_for(document.type)
+                )
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
                     "Failed to delete Pinecone vector %s: %s",

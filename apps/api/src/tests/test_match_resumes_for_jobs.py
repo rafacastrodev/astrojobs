@@ -34,7 +34,9 @@ class _Documents:
 
     def list(self, doc_type=None, status=None):
         del status
-        return [doc for doc in self._documents if doc_type is None or doc.type == doc_type]
+        return [
+            doc for doc in self._documents if doc_type is None or doc.type == doc_type
+        ]
 
 
 class _Analyses:
@@ -47,6 +49,14 @@ class _Analyses:
             for resume_id in resume_ids
             if resume_id in self._by_resume
         }
+
+
+class _Semantic:
+    def __init__(self, scores: dict[int, float]):
+        self._scores = scores
+
+    def rank(self, _payload, _doc_type, _candidates):
+        return self._scores
 
 
 def test_matches_resumes_that_share_job_technologies() -> None:
@@ -80,12 +90,15 @@ def test_matches_resumes_that_share_job_technologies() -> None:
     assert [item.document.id for item in matches] == [2]
     assert matches[0].matched_technologies == ["Python"]
     assert matches[0].score == 0.5
+    assert matches[0].matched_job_scores == {1: 0.5}
 
 
 def test_uses_analysis_technologies_when_payload_has_none() -> None:
     job = _doc(1, "job", {"title": "Backend", "technologies": ["FastAPI"]}, user_id=10)
     resume = _doc(2, "resume", {"summary": "Engineer"}, user_id=20)
-    analysis = SimpleNamespace(technologies=["FastAPI"], summary="Strong API background")
+    analysis = SimpleNamespace(
+        technologies=["FastAPI"], summary="Strong API background"
+    )
     matches = MatchResumesForJobsUseCase(
         _Documents([job, resume]),
         _Analyses({2: analysis}),
@@ -95,8 +108,34 @@ def test_uses_analysis_technologies_when_payload_has_none() -> None:
     assert matches[0].summary == "Strong API background"
 
 
+def test_matches_resume_technologies_from_full_text() -> None:
+    job = _doc(
+        1,
+        "job",
+        {"title": "Full stack", "technologies": ["Python", "Django", "React"]},
+        user_id=10,
+    )
+    resume = _doc(
+        2,
+        "resume",
+        {
+            "skills": [],
+            "full_text": "Five years building Python, Django and React products.",
+        },
+        user_id=20,
+    )
+    matches = MatchResumesForJobsUseCase(
+        _Documents([job, resume]),
+        _Analyses({}),
+    ).execute(recruiter_id=10)
+    assert matches[0].score == 1.0
+    assert matches[0].matched_technologies == ["Django", "Python", "React"]
+
+
 def test_returns_empty_when_recruiter_has_no_jobs() -> None:
-    other_job = _doc(1, "job", {"title": "Backend", "technologies": ["Python"]}, user_id=99)
+    other_job = _doc(
+        1, "job", {"title": "Backend", "technologies": ["Python"]}, user_id=99
+    )
     resume = _doc(2, "resume", {"skills": ["Python"]}, user_id=20)
     matches = MatchResumesForJobsUseCase(
         _Documents([other_job, resume]),
@@ -165,3 +204,27 @@ def test_remote_jobs_do_not_require_region() -> None:
         _Analyses({}),
     ).execute(recruiter_id=10)
     assert [item.document.id for item in matches] == [2]
+
+
+def test_semantic_relevance_surfaces_candidate_without_exact_keyword() -> None:
+    job = _doc(
+        1,
+        "job",
+        {"title": "ML Engineer", "technologies": ["TensorFlow"]},
+        user_id=10,
+    )
+    resume = _doc(
+        2,
+        "resume",
+        {"summary": "Built and deployed production machine learning models"},
+        user_id=20,
+    )
+    matches = MatchResumesForJobsUseCase(
+        _Documents([job, resume]),
+        _Analyses({}),
+        _Semantic({2: 0.8}),
+    ).execute(recruiter_id=10)
+
+    assert [item.document.id for item in matches] == [2]
+    assert round(matches[0].score, 2) == 0.28
+    assert matches[0].matched_technologies == []

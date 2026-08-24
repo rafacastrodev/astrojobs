@@ -15,11 +15,18 @@ export type JobMatch = {
   id: number
   title: string
   source_filename: string
+  created_at: string
   score: number
   matched_technologies?: string[]
   applied?: boolean
+  offered?: boolean
+  closed_at?: string | null
   recruiter_name?: string | null
   recruiter_email?: string | null
+  application_id?: number | null
+  application_status?:
+    'submitted' | 'reviewing' | 'accepted' | 'rejected' | 'removed' | null
+  application_updated_at?: string | null
   payload: {
     technologies?: string[]
     description?: string

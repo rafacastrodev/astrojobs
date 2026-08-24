@@ -3,6 +3,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from domain.applications.entities import ApplicationStatus
 from domain.documents.technology_catalog import canonical_technology
 from infrastructure.schemas.analysis_schemas import AnalysisResponse
 
@@ -15,6 +16,7 @@ class DocumentResponse(BaseModel):
     status: Literal["draft", "synced", "failed"]
     pinecone_id: str | None
     error_message: str | None
+    closed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -50,10 +52,14 @@ class JobCreateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     technologies: list[str] = Field(default_factory=list, max_length=40)
     description: str = Field(default="", max_length=8_000)
-    seniority: Literal["intern", "junior", "mid", "senior", "lead", "principal", "staff"]
+    seniority: Literal[
+        "intern", "junior", "mid", "senior", "lead", "principal", "staff"
+    ]
     work_mode: Literal["remote", "hybrid", "on-site"]
     region: str = Field(min_length=1, max_length=120)
-    employment_type: Literal["full-time", "part-time", "contract", "internship", "temporary"]
+    employment_type: Literal[
+        "full-time", "part-time", "contract", "internship", "temporary"
+    ]
 
     @field_validator("title")
     @classmethod
@@ -106,27 +112,39 @@ class JobMatchResponse(BaseModel):
     id: int
     title: str
     source_filename: str
+    created_at: datetime
     score: float
     payload: dict[str, Any]
     matched_technologies: list[str] = []
     applied: bool = False
+    offered: bool = False
+    closed_at: datetime | None = None
     recruiter_name: str | None = None
     recruiter_email: str | None = None
+    application_id: int | None = None
+    application_status: ApplicationStatus | None = None
+    application_updated_at: datetime | None = None
 
 
 class MatchedJobSummary(BaseModel):
     id: int
     title: str
+    score: float
 
 
 class ResumeMatchResponse(BaseModel):
     id: int
+    created_at: datetime
+    professional_name: str
+    professional_email: str
     source_filename: str
     score: float
     matched_technologies: list[str]
     matched_jobs: list[MatchedJobSummary]
     payload: dict[str, Any]
     summary: str | None = None
+    applied_job_ids: list[int] = []
+    offered_job_ids: list[int] = []
 
 
 class SyncDocumentsRequest(BaseModel):

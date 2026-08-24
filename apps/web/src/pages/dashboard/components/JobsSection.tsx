@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/Button'
 import { UserAvatar } from '@/components/UserAvatar'
@@ -9,6 +9,11 @@ import { resumeServices } from '@/services/resumeServices'
 import { getApiErrorMessage } from '@/utils'
 
 import type { JobMatch, Resume } from '../types'
+import {
+  OPEN_JOBS_PAGE_SIZE,
+  pageJobs,
+  sortOpenJobs,
+} from '../utils/jobCatalog'
 
 const stringList = (value: unknown) =>
   Array.isArray(value)
@@ -17,6 +22,22 @@ const stringList = (value: unknown) =>
 
 const iconButtonClassName =
   'inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition hover:bg-card hover:text-card-foreground'
+
+const applicationStatusCopy = {
+  submitted: 'Submitted',
+  reviewing: 'In review',
+  accepted: 'Accepted',
+  rejected: 'Not selected',
+  removed: 'Removed from process',
+} as const
+
+const applicationStatusClass = {
+  submitted: 'border-border text-muted-foreground',
+  reviewing: 'border-primary/40 bg-primary/10 text-primary',
+  accepted: 'border-green-500/40 bg-green-500/10 text-green-700',
+  rejected: 'border-destructive/40 bg-destructive/10 text-destructive',
+  removed: 'border-border bg-muted text-muted-foreground',
+} as const
 
 const JobCard = ({
   job,
@@ -38,9 +59,13 @@ const JobCard = ({
   }
 }) => {
   const applied = Boolean(job.applied)
+  const applicationStatus = job.application_status ?? null
+  const closed = Boolean(job.closed_at)
   const isApplying = apply.isPending && apply.variables?.jobId === job.id
   const description =
-    typeof job.payload.description === 'string' ? job.payload.description.trim() : ''
+    typeof job.payload.description === 'string'
+      ? job.payload.description.trim()
+      : ''
   const requirements = stringList(job.payload.requirements)
   const recruiterName = job.recruiter_name?.trim() || null
   const recruiterEmail = job.recruiter_email?.trim() || null
@@ -54,10 +79,15 @@ const JobCard = ({
           onClick={onToggle}
           className="min-w-0 flex-1 cursor-pointer text-left"
         >
-          <p className="truncate font-medium text-card-foreground">{job.title}</p>
+          <p className="truncate font-medium text-card-foreground">
+            {job.title}
+          </p>
           {recruiterName || recruiterEmail ? (
             <span className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-              <UserAvatar name={recruiterName ?? recruiterEmail ?? ''} size="sm" />
+              <UserAvatar
+                name={recruiterName ?? recruiterEmail ?? ''}
+                size="sm"
+              />
               <span className="min-w-0">
                 {recruiterName ? (
                   <span className="block truncate text-card-foreground">
@@ -89,9 +119,27 @@ const JobCard = ({
             {isOpen ? 'Hide job' : 'View job'}
           </p>
         </button>
-        <span className="shrink-0 rounded-full border border-border px-3 py-1 text-sm font-medium text-card-foreground">
-          {Math.round(Math.max(0, Math.min(1, job.score)) * 100)}% match
-        </span>
+        {job.offered ? (
+          <span className="shrink-0 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+            Invited
+          </span>
+        ) : null}
+        {applicationStatus ? (
+          <span
+            className={`shrink-0 rounded-full border px-3 py-1 text-sm font-medium ${applicationStatusClass[applicationStatus]}`}
+          >
+            {applicationStatusCopy[applicationStatus]}
+          </span>
+        ) : null}
+        {closed ? (
+          <span className="shrink-0 rounded-full border border-border px-3 py-1 text-sm font-medium text-muted-foreground">
+            Closed
+          </span>
+        ) : resumeId != null ? (
+          <span className="shrink-0 rounded-full border border-border px-3 py-1 text-sm font-medium text-card-foreground">
+            {Math.round(Math.max(0, Math.min(1, job.score)) * 100)}% match
+          </span>
+        ) : null}
         <button
           type="button"
           aria-expanded={isOpen}
@@ -135,20 +183,26 @@ const JobCard = ({
         </div>
       ) : null}
 
-      <div className="mt-4 w-36">
-        <Button
-          type="button"
-          disabled={applied || resumeId == null}
-          isLoading={isApplying}
-          onClick={() => {
-            if (resumeId == null) return
-            apply.mutate({ jobId: job.id, resumeDocumentId: resumeId })
-          }}
-          className="!py-2 text-sm"
-        >
-          {applied ? 'Applied' : 'Apply'}
-        </Button>
-      </div>
+      {!closed ? (
+        <div className="mt-4 w-36">
+          <Button
+            type="button"
+            disabled={applied || resumeId == null}
+            isLoading={isApplying}
+            onClick={() => {
+              if (resumeId == null) return
+              apply.mutate({ jobId: job.id, resumeDocumentId: resumeId })
+            }}
+            className="!py-2 text-sm"
+          >
+            {applicationStatus
+              ? applicationStatusCopy[applicationStatus]
+              : applied
+                ? 'Applied'
+                : 'Apply'}
+          </Button>
+        </div>
+      ) : null}
       {apply.isError && apply.variables?.jobId === job.id ? (
         <p role="alert" className="mt-2 text-sm text-destructive">
           {getApiErrorMessage(apply.error, 'Could not apply')}
@@ -158,41 +212,80 @@ const JobCard = ({
   )
 }
 
-export const JobsSection = () => {
+export const JobsSection = ({ focusJobId }: { focusJobId?: number }) => {
   const queryClient = useQueryClient()
   const [openJobId, setOpenJobId] = useState<number | null>(null)
+  const [page, setPage] = useState(0)
   const resumesQuery = useQuery({
     queryKey: ['resumes'],
     queryFn: resumeServices.list,
   })
-  const resumes = (Array.isArray(resumesQuery.data) ? resumesQuery.data : []) as Resume[]
+  const resumes = (
+    Array.isArray(resumesQuery.data) ? resumesQuery.data : []
+  ) as Resume[]
   const hasResume = resumes.length > 0
   const resumeId = resumes[0]?.id
 
   const jobsQuery = useQuery({
     queryKey: ['catalog-jobs'],
     queryFn: analysisServices.listJobs,
-    enabled: hasResume,
+    refetchInterval: 15_000,
   })
   const jobs = (jobsQuery.data ?? []) as JobMatch[]
+  const openJobs = useMemo(
+    () => sortOpenJobs(jobs, hasResume),
+    [hasResume, jobs],
+  )
+  const closedApplications = jobs
+    .filter((job) => job.closed_at && job.applied)
+    .slice()
+    .sort(
+      (left, right) =>
+        new Date(right.created_at).getTime() -
+          new Date(left.created_at).getTime() || right.id - left.id,
+    )
+  const pageCount = Math.max(
+    1,
+    Math.ceil(openJobs.length / OPEN_JOBS_PAGE_SIZE),
+  )
+  const currentPage = Math.min(page, pageCount - 1)
+  const pagedOpenJobs = pageJobs(openJobs, currentPage)
+
+  useEffect(() => {
+    if (focusJobId == null) return
+    setOpenJobId(focusJobId)
+    const index = openJobs.findIndex((job) => job.id === focusJobId)
+    if (index >= 0) setPage(Math.floor(index / OPEN_JOBS_PAGE_SIZE))
+  }, [focusJobId, openJobs])
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, pageCount - 1))
+  }, [pageCount])
+
+  useEffect(() => {
+    setPage(0)
+  }, [hasResume])
 
   const apply = useMutation({
-    mutationFn: ({ jobId, resumeDocumentId }: { jobId: number; resumeDocumentId: number }) =>
-      analysisServices.applyToJob(jobId, resumeDocumentId),
+    mutationFn: ({
+      jobId,
+      resumeDocumentId,
+    }: {
+      jobId: number
+      resumeDocumentId: number
+    }) => analysisServices.applyToJob(jobId, resumeDocumentId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['catalog-jobs'] })
     },
   })
 
-  if (!hasResume) {
-    return null
-  }
-
   return (
     <section className="rounded-2xl border border-border bg-card p-8">
       <h2 className="text-lg font-semibold text-card-foreground">Open jobs</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        Ranked by how well they match your resume.
+        {hasResume
+          ? 'Best matches first, with the newest roles first when scores tie.'
+          : 'Newest roles first. Upload a resume to rank them by match.'}
       </p>
       <div className="mt-6">
         {jobsQuery.isLoading ? (
@@ -201,13 +294,71 @@ export const JobsSection = () => {
           <p role="alert" className="text-sm text-destructive">
             {getApiErrorMessage(jobsQuery.error, 'Failed to load jobs')}
           </p>
-        ) : jobs.length === 0 ? (
+        ) : openJobs.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No jobs have been posted yet.
           </p>
         ) : (
-          <ul className="flex flex-col gap-3">
-            {jobs.map((job) => (
+          <div className="flex flex-col gap-4">
+            <ul className="flex flex-col gap-3">
+              {pagedOpenJobs.map((job) => (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  resumeId={resumeId}
+                  isOpen={openJobId === job.id}
+                  onToggle={() =>
+                    setOpenJobId(openJobId === job.id ? null : job.id)
+                  }
+                  apply={apply}
+                />
+              ))}
+            </ul>
+            {pageCount > 1 ? (
+              <nav
+                aria-label="Open jobs pagination"
+                className="flex items-center justify-between gap-3 text-sm"
+              >
+                <button
+                  type="button"
+                  disabled={currentPage === 0}
+                  onClick={() => {
+                    setOpenJobId(null)
+                    setPage(currentPage - 1)
+                  }}
+                  className="cursor-pointer font-medium text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <p className="text-muted-foreground">
+                  Page {currentPage + 1} of {pageCount}
+                </p>
+                <button
+                  type="button"
+                  disabled={currentPage >= pageCount - 1}
+                  onClick={() => {
+                    setOpenJobId(null)
+                    setPage(currentPage + 1)
+                  }}
+                  className="cursor-pointer font-medium text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </nav>
+            ) : null}
+          </div>
+        )}
+      </div>
+      {closedApplications.length > 0 ? (
+        <div className="mt-8 border-t border-border pt-6">
+          <h3 className="font-semibold text-card-foreground">
+            Application history
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Closed roles you applied to remain available here.
+          </p>
+          <ul className="mt-4 flex flex-col gap-3">
+            {closedApplications.map((job) => (
               <JobCard
                 key={job.id}
                 job={job}
@@ -220,8 +371,8 @@ export const JobsSection = () => {
               />
             ))}
           </ul>
-        )}
-      </div>
+        </div>
+      ) : null}
     </section>
   )
 }

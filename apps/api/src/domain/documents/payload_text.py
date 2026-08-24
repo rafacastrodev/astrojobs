@@ -56,7 +56,9 @@ def _value_to_text(value: Any) -> str:
     if isinstance(value, (list, tuple)):
         return "; ".join(filter(None, (_value_to_text(item) for item in value)))
     if isinstance(value, dict):
-        return "; ".join(filter(None, (_value_to_text(item) for item in value.values())))
+        return "; ".join(
+            filter(None, (_value_to_text(item) for item in value.values()))
+        )
     if value is None:
         return ""
     return str(value)

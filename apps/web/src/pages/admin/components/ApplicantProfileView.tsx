@@ -1,8 +1,10 @@
 import { TechStackView } from '@/pages/dashboard/components/TechStackView'
+import { groupExperiences } from '@/utils/groupExperiences'
 
 type Props = {
   payload: Record<string, unknown>
   displayName: string
+  contactEmail?: string
   highlightTerms: string[]
   matchedTechnologies?: string[]
 }
@@ -139,6 +141,7 @@ const ExperienceItem = ({
 export const ApplicantProfileView = ({
   payload,
   displayName,
+  contactEmail,
   highlightTerms,
   matchedTechnologies = [],
 }: Props) => {
@@ -151,7 +154,7 @@ export const ApplicantProfileView = ({
   const links = unique(items(contact?.links).map(String))
   const contactValues = [...emails, ...phones, ...links]
   const summary = text(payload.summary) || text(payload.about)
-  const experiences = items(payload.experiences)
+  const experiences = groupExperiences(items(payload.experiences))
   const extraSections = [
     ['Education', payload.education],
     ['Projects', payload.projects],
@@ -178,9 +181,19 @@ export const ApplicantProfileView = ({
   return (
     <div className="space-y-5 text-sm text-card-foreground">
       <section>
-        <h4 className="text-base font-medium text-card-foreground">
-          {displayName}
-        </h4>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h4 className="text-base font-medium text-card-foreground">
+            {displayName}
+          </h4>
+          {contactEmail ? (
+            <a
+              href={`mailto:${contactEmail}`}
+              className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+            >
+              Contact
+            </a>
+          ) : null}
+        </div>
         {contactValues.length ? (
           <p className="mt-1 break-words text-muted-foreground">
             {contactValues.join(' · ')}

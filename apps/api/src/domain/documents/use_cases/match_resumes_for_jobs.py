@@ -5,6 +5,11 @@ from domain.analysis.entities import AnalysisEntity
 from domain.analysis.repository import AnalysisRepository
 from domain.documents.entities import DocumentEntity
 from domain.documents.repository import DocumentRepository
+from domain.documents.semantic_matcher import SemanticMatcher
+from domain.documents.technology_catalog import (
+    canonical_technology,
+    technologies_in_text,
+)
 
 SENIORITY_RANK = {
     "intern": 0,
@@ -37,19 +42,30 @@ class ResumeMatch:
     score: float
     matched_technologies: list[str]
     matched_jobs: list[DocumentEntity]
+    matched_job_scores: dict[int, float]
     summary: str | None = None
 
 
 def _normalize(value: str) -> str:
-    return " ".join(value.casefold().split())
+    canonical = canonical_technology(value) or value
+    return " ".join(canonical.casefold().split())
 
 
 def _as_techs(value: Any) -> list[str]:
     if isinstance(value, str):
-        return [part.strip() for part in value.replace(",", "\n").splitlines() if part.strip()]
+        return [
+            part.strip()
+            for part in value.replace(",", "\n").splitlines()
+            if part.strip()
+        ]
     if isinstance(value, (list, tuple)):
         items: list[str] = []
         for item in value:
+            items.extend(_as_techs(item))
+        return items
+    if isinstance(value, dict):
+        items: list[str] = []
+        for item in value.values():
             items.extend(_as_techs(item))
         return items
     return []
@@ -59,7 +75,9 @@ def _job_technologies(payload: dict[str, Any]) -> list[str]:
     return _as_techs(payload.get("technologies"))
 
 
-def _resume_technologies(payload: dict[str, Any], analysis: AnalysisEntity | None) -> list[str]:
+def _resume_technologies(
+    payload: dict[str, Any], analysis: AnalysisEntity | None
+) -> list[str]:
     techs = _as_techs(payload.get("technologies"))
     techs.extend(_as_techs(payload.get("skills")))
     stack = payload.get("tech_stack")
@@ -67,6 +85,7 @@ def _resume_technologies(payload: dict[str, Any], analysis: AnalysisEntity | Non
         techs.extend(_as_techs(list(stack.values())))
     if analysis is not None:
         techs.extend(analysis.technologies)
+    techs.extend(technologies_in_text(_payload_text(payload)))
     return techs
 
 
@@ -110,7 +129,9 @@ def _seniority_from_years(years: float | None) -> str | None:
     return "lead"
 
 
-def _resume_seniority(payload: dict[str, Any], analysis: AnalysisEntity | None) -> str | None:
+def _resume_seniority(
+    payload: dict[str, Any], analysis: AnalysisEntity | None
+) -> str | None:
     raw = payload.get("seniority")
     if isinstance(raw, str) and _normalize(raw) in SENIORITY_RANK:
         return _normalize(raw)
@@ -133,7 +154,9 @@ def _mentions(text: str, aliases: tuple[str, ...]) -> bool:
     return any(alias in text for alias in aliases)
 
 
-def _passes_seniority(job: dict[str, Any], resume: dict[str, Any], analysis: AnalysisEntity | None) -> bool:
+def _passes_seniority(
+    job: dict[str, Any], resume: dict[str, Any], analysis: AnalysisEntity | None
+) -> bool:
     wanted = job.get("seniority")
     if not isinstance(wanted, str) or wanted not in SENIORITY_RANK:
         return True
@@ -147,13 +170,11 @@ def _passes_work_mode(job: dict[str, Any], resume: dict[str, Any]) -> bool:
     wanted = job.get("work_mode")
     if not isinstance(wanted, str) or wanted not in WORK_MODE_ALIASES:
         return True
-    text = _resume_text(resume)
-    mentioned = {
-        mode for mode, aliases in WORK_MODE_ALIASES.items() if _mentions(text, aliases)
-    }
-    if not mentioned:
+    preference = resume.get("preferred_work_mode") or resume.get("work_mode")
+    if not isinstance(preference, str) or not preference.strip():
         return True
-    return wanted in mentioned
+    normalized = _normalize(preference)
+    return wanted == normalized or _mentions(normalized, WORK_MODE_ALIASES[wanted])
 
 
 def _passes_region(job: dict[str, Any], resume: dict[str, Any]) -> bool:
@@ -173,13 +194,13 @@ def _passes_employment(job: dict[str, Any], resume: dict[str, Any]) -> bool:
     wanted = job.get("employment_type")
     if not isinstance(wanted, str) or wanted not in EMPLOYMENT_ALIASES:
         return True
-    text = _resume_text(resume)
-    mentioned = {
-        mode for mode, aliases in EMPLOYMENT_ALIASES.items() if _mentions(text, aliases)
-    }
-    if not mentioned:
+    preference = resume.get("preferred_employment_type") or resume.get(
+        "employment_type"
+    )
+    if not isinstance(preference, str) or not preference.strip():
         return True
-    return wanted in mentioned
+    normalized = _normalize(preference)
+    return wanted == normalized or _mentions(normalized, EMPLOYMENT_ALIASES[wanted])
 
 
 def _passes_filters(
@@ -195,20 +216,41 @@ def _passes_filters(
     )
 
 
+def _combined_match_score(
+    technology_score: float,
+    semantic_score: float,
+    *,
+    has_required_technologies: bool,
+) -> float:
+    """Preserve exact skill coverage and let semantic relevance lift near matches."""
+    technology_score = max(0.0, min(1.0, technology_score))
+    semantic_score = max(0.0, min(1.0, semantic_score))
+    if not has_required_technologies:
+        return semantic_score
+    return technology_score + ((1.0 - technology_score) * semantic_score * 0.35)
+
+
 class MatchResumesForJobsUseCase:
     def __init__(
         self,
         document_repository: DocumentRepository,
         analysis_repository: AnalysisRepository,
+        semantic_matcher: SemanticMatcher | None = None,
     ):
         self._documents = document_repository
         self._analyses = analysis_repository
+        self._semantic = semantic_matcher
 
     def execute(self, recruiter_id: int) -> list[ResumeMatch]:
         jobs = [
             job
             for job in self._documents.list(doc_type="job")
-            if job.id is not None and job.user_id in (None, recruiter_id)
+            if (
+                job.id is not None
+                and job.user_id == recruiter_id
+                and job.status == "synced"
+                and job.closed_at is None
+            )
         ]
         if not jobs:
             return []
@@ -222,9 +264,6 @@ class MatchResumesForJobsUseCase:
             }
             if labels and job.id is not None:
                 job_techs[job.id] = labels
-        if not job_techs:
-            return []
-
         resumes = [
             resume
             for resume in self._documents.list(doc_type="resume")
@@ -233,6 +272,11 @@ class MatchResumesForJobsUseCase:
         analyses = self._analyses.list_latest_general_by_resume_ids(
             [resume.id for resume in resumes if resume.id is not None]
         )
+        semantic_scores_by_job = {
+            job.id: self._semantic.rank(job.payload, "job", resumes)
+            for job in jobs
+            if job.id is not None and self._semantic is not None
+        }
 
         matches: list[ResumeMatch] = []
         for resume in resumes:
@@ -244,37 +288,51 @@ class MatchResumesForJobsUseCase:
                 for tech in _resume_technologies(resume.payload, analysis)
                 if _normalize(tech)
             }
-            if not resume_labels:
-                continue
             matched_jobs: list[DocumentEntity] = []
+            matched_job_scores: dict[int, float] = {}
             matched_keys: dict[str, str] = {}
             best_ratio = 0.0
             for job in jobs:
-                if job.id not in job_techs:
+                if job.id is None:
                     continue
-                overlap = set(job_techs[job.id]) & set(resume_labels)
-                if not overlap:
+                labels = job_techs.get(job.id, {})
+                overlap = set(labels) & set(resume_labels)
+                technology_score = len(overlap) / len(labels) if labels else 0.0
+                score = _combined_match_score(
+                    technology_score,
+                    semantic_scores_by_job.get(job.id, {}).get(resume.id, 0.0),
+                    has_required_technologies=bool(labels),
+                )
+                if score <= 0:
                     continue
                 if not _passes_filters(job.payload, resume.payload, analysis):
                     continue
                 matched_jobs.append(job)
+                matched_job_scores[job.id] = score
                 for key in overlap:
-                    matched_keys.setdefault(key, job_techs[job.id][key])
-                best_ratio = max(best_ratio, len(overlap) / len(job_techs[job.id]))
+                    matched_keys.setdefault(key, labels[key])
+                best_ratio = max(best_ratio, score)
             if not matched_jobs:
                 continue
             matches.append(
                 ResumeMatch(
                     document=resume,
                     score=best_ratio,
-                    matched_technologies=[matched_keys[key] for key in sorted(matched_keys)],
+                    matched_technologies=[
+                        matched_keys[key] for key in sorted(matched_keys)
+                    ],
                     matched_jobs=matched_jobs,
+                    matched_job_scores=matched_job_scores,
                     summary=analysis.summary if analysis else None,
                 )
             )
 
         matches.sort(
-            key=lambda item: (item.score, len(item.matched_technologies)),
+            key=lambda item: (
+                item.score,
+                item.document.created_at,
+                len(item.matched_technologies),
+            ),
             reverse=True,
         )
         return matches

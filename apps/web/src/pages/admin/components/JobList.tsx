@@ -1,25 +1,47 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
-import { TrashIcon } from '@/components/icons'
-
-import type { AdminDocument, RecruiterApplication } from '../types'
+import type {
+  AdminDocument,
+  ApplicationStatus,
+  RecruiterApplication,
+} from '../types'
 import { ApplicantProfileView } from './ApplicantProfileView'
 
 const PAGE_SIZE = 5
-
-const iconButtonClassName =
-  'inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60'
 
 type JobListProps = {
   jobs: AdminDocument[]
   applications: RecruiterApplication[]
   emptyLabel: string
-  deletingId: number | null
-  onDelete: (job: AdminDocument) => void
+  closingId: number | null
+  onClose?: (job: AdminDocument) => void
+  initialOpenJobId?: number
+  initialApplicationId?: number
+  updatingApplicationId?: number | null
+  onStatusChange?: (applicationId: number, status: ApplicationStatus) => void
+  onRemove?: (application: RecruiterApplication) => void
+}
+
+const statusLabels: Record<ApplicationStatus, string> = {
+  submitted: 'Submitted',
+  reviewing: 'In review',
+  accepted: 'Accepted',
+  rejected: 'Rejected',
+  removed: 'Removed',
+}
+
+const transitions: Record<ApplicationStatus, ApplicationStatus[]> = {
+  submitted: ['reviewing', 'accepted', 'rejected'],
+  reviewing: ['accepted', 'rejected'],
+  accepted: [],
+  rejected: [],
+  removed: [],
 }
 
 const jobTitle = (job: AdminDocument) =>
-  typeof job.payload.title === 'string' ? job.payload.title : job.source_filename
+  typeof job.payload.title === 'string'
+    ? job.payload.title
+    : job.source_filename
 
 const stringList = (value: unknown) =>
   Array.isArray(value)
@@ -30,11 +52,30 @@ export const JobList = ({
   jobs,
   applications,
   emptyLabel,
-  deletingId,
-  onDelete,
+  closingId,
+  onClose,
+  initialOpenJobId,
+  initialApplicationId,
+  updatingApplicationId,
+  onStatusChange,
+  onRemove,
 }: JobListProps) => {
-  const [openJobId, setOpenJobId] = useState<number | null>(null)
-  const [page, setPage] = useState(0)
+  const initialJobIndex = jobs.findIndex((job) => job.id === initialOpenJobId)
+  const [openJobId, setOpenJobId] = useState<number | null>(
+    initialOpenJobId ?? null,
+  )
+  const [page, setPage] = useState(
+    initialJobIndex >= 0 ? Math.floor(initialJobIndex / PAGE_SIZE) : 0,
+  )
+
+  useEffect(() => {
+    if (initialOpenJobId == null) return
+    const index = jobs.findIndex((job) => job.id === initialOpenJobId)
+    if (index >= 0) {
+      setOpenJobId(initialOpenJobId)
+      setPage(Math.floor(index / PAGE_SIZE))
+    }
+  }, [initialOpenJobId, jobs])
 
   if (jobs.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyLabel}</p>
@@ -54,6 +95,12 @@ export const JobList = ({
           const applicants = applications.filter(
             (application) => application.job_document_id === job.id,
           )
+          const activeApplicants = applicants.filter(
+            (application) => application.status !== 'removed',
+          )
+          const removedApplicants = applicants.filter(
+            (application) => application.status === 'removed',
+          )
           const isOpen = openJobId === job.id
           return (
             <li
@@ -72,6 +119,11 @@ export const JobList = ({
                   <p className="truncate font-medium text-card-foreground">
                     {jobTitle(job)}
                   </p>
+                  {job.closed_at ? (
+                    <span className="mt-2 inline-flex rounded-full border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                      Closed
+                    </span>
+                  ) : null}
                   {stringList(job.payload.technologies).length > 0 ? (
                     <p className="mt-1 text-sm text-muted-foreground">
                       {stringList(job.payload.technologies).join(' · ')}
@@ -84,25 +136,28 @@ export const JobList = ({
                       job.payload.region,
                       job.payload.employment_type,
                     ]
-                      .filter((item): item is string => typeof item === 'string')
+                      .filter(
+                        (item): item is string => typeof item === 'string',
+                      )
                       .join(' · ')}
-                    {applicants.length > 0
-                      ? ` · ${applicants.length} application${applicants.length === 1 ? '' : 's'}`
+                    {activeApplicants.length > 0
+                      ? ` · ${activeApplicants.length} application${activeApplicants.length === 1 ? '' : 's'}`
                       : ''}
                   </p>
                   <p className="mt-2 text-sm font-medium text-primary">
                     {isOpen ? 'Hide details' : 'View details'}
                   </p>
                 </button>
-                <button
-                  type="button"
-                  aria-label={`Delete ${jobTitle(job)}`}
-                  onClick={() => onDelete(job)}
-                  disabled={deletingId === job.id}
-                  className={iconButtonClassName}
-                >
-                  <TrashIcon />
-                </button>
+                {!job.closed_at && onClose ? (
+                  <button
+                    type="button"
+                    onClick={() => onClose(job)}
+                    disabled={closingId === job.id}
+                    className="shrink-0 cursor-pointer rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-card-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Close role
+                  </button>
+                ) : null}
               </div>
 
               {isOpen ? (
@@ -114,36 +169,117 @@ export const JobList = ({
                     </p>
                   ) : null}
                   <p className="text-sm font-medium text-card-foreground">
-                    Applications · {applicants.length}
+                    Applications · {activeApplicants.length}
                   </p>
-                  {applicants.length === 0 ? (
+                  {activeApplicants.length === 0 ? (
                     <p className="mt-2 text-sm text-muted-foreground">
                       No applications yet.
                     </p>
                   ) : (
                     <ul className="mt-3 flex flex-col gap-2">
-                      {applicants.map((application) => {
+                      {activeApplicants.map((application) => {
                         const jobTechnologies = stringList(
                           job.payload.technologies,
                         )
                         return (
                           <li
                             key={application.id}
-                            className="rounded-lg border border-border p-3"
+                            className={`rounded-lg border p-3 ${application.id === initialApplicationId ? 'border-primary bg-primary/5' : 'border-border'}`}
                           >
                             <ApplicantProfileView
                               payload={application.resume_payload}
                               displayName={application.applicant_name}
+                              contactEmail={application.applicant_email}
                               highlightTerms={jobTechnologies}
                               matchedTechnologies={
-                                application.matched_technologies ?? []
+                                application.matched_technologies
                               }
                             />
+                            <div className="mt-4 flex flex-wrap items-end justify-between gap-3 border-t border-border pt-3">
+                              <label className="grid gap-1 text-xs font-medium text-muted-foreground">
+                                Application status
+                                <select
+                                  value={application.status}
+                                  disabled={
+                                    updatingApplicationId === application.id ||
+                                    transitions[application.status].length === 0
+                                  }
+                                  onChange={(event) =>
+                                    onStatusChange?.(
+                                      application.id,
+                                      event.target.value as ApplicationStatus,
+                                    )
+                                  }
+                                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-card-foreground disabled:opacity-60"
+                                >
+                                  <option value={application.status}>
+                                    {statusLabels[application.status]}
+                                  </option>
+                                  {transitions[application.status].map(
+                                    (status) => (
+                                      <option key={status} value={status}>
+                                        {statusLabels[status]}
+                                      </option>
+                                    ),
+                                  )}
+                                </select>
+                              </label>
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs text-muted-foreground">
+                                  Updated{' '}
+                                  {new Date(
+                                    application.updated_at,
+                                  ).toLocaleDateString()}
+                                </span>
+                                {onRemove ? (
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      updatingApplicationId === application.id
+                                    }
+                                    onClick={() => onRemove(application)}
+                                    className="cursor-pointer rounded-lg border border-destructive/40 px-3 py-2 text-sm font-medium text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                  >
+                                    Remove candidate
+                                  </button>
+                                ) : null}
+                              </div>
+                            </div>
                           </li>
                         )
                       })}
                     </ul>
                   )}
+                  {removedApplicants.length > 0 ? (
+                    <details className="mt-4 rounded-lg border border-dashed border-border p-3">
+                      <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
+                        Removed candidates · {removedApplicants.length}
+                      </summary>
+                      <ul className="mt-3 space-y-2">
+                        {removedApplicants.map((application) => (
+                          <li
+                            key={application.id}
+                            className="rounded-lg bg-muted/40 p-3 text-sm"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="font-medium text-card-foreground">
+                                {application.applicant_name}
+                              </span>
+                              <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                                Removed
+                              </span>
+                            </div>
+                            <a
+                              href={`mailto:${application.applicant_email}`}
+                              className="mt-1 block text-muted-foreground underline-offset-2 hover:underline"
+                            >
+                              {application.applicant_email}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : null}
                 </div>
               ) : null}
             </li>

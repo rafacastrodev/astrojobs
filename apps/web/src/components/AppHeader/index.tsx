@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { Logo } from '@/components/Logo'
+import { NotificationBell } from '@/components/NotificationBell'
 import { ProfileLink } from '@/components/ProfileLink'
 
 type AppHeaderProps = {
@@ -26,6 +27,7 @@ export const AppHeader = ({
     </div>
     <div className="flex items-center gap-4">
       {children}
+      <NotificationBell />
       <ProfileLink name={name} photoUrl={photoUrl} />
     </div>
   </header>

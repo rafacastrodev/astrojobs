@@ -22,9 +22,11 @@
 - [React Hook Form](https://react-hook-form.com/)
 - [Zod](https://zod.dev/)
 - [Axios](https://axios-http.com/)
+- [Liveblocks](https://liveblocks.io/)
 
 ## AI
 
+- [Gemini Embeddings](https://ai.google.dev/gemini-api/docs/embeddings)
 - [OpenAI](https://openai.com/)
 - [Pinecone](https://www.pinecone.io/)
 - [Amazon Bedrock](https://aws.amazon.com/bedrock/)

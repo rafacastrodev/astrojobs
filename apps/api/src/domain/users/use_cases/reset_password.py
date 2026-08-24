@@ -22,5 +22,7 @@ class ResetPasswordUseCase:
         reset_token = self._reset_tokens.get_valid_by_token_hash(token_hash)
         if reset_token is None:
             raise InvalidResetTokenError()
-        self._users.update_password(reset_token.user_id, self._hasher.hash(new_password))
+        self._users.update_password(
+            reset_token.user_id, self._hasher.hash(new_password)
+        )
         self._reset_tokens.mark_used(reset_token.id)

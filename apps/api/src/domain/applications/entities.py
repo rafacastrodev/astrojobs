@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
+
+ApplicationStatus = Literal["submitted", "reviewing", "accepted", "rejected", "removed"]
 
 
 @dataclass
@@ -11,6 +13,8 @@ class ApplicationEntity:
     applicant_user_id: int
     recruiter_user_id: int | None
     created_at: datetime
+    status: ApplicationStatus = "submitted"
+    updated_at: datetime | None = None
 
 
 @dataclass
@@ -27,3 +31,5 @@ class RecruiterApplication:
     resume_technologies: list[str]
     matched_technologies: list[str]
     resume_payload: dict[str, Any]
+    status: ApplicationStatus = "submitted"
+    updated_at: datetime | None = None

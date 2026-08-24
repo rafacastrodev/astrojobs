@@ -13,13 +13,17 @@ class SqlAlchemyPasswordResetTokenRepository:
     def create(
         self, user_id: int, token_hash: str, expires_at: datetime
     ) -> PasswordResetTokenEntity:
-        model = PasswordResetTokenModel(user_id=user_id, token_hash=token_hash, expires_at=expires_at)
+        model = PasswordResetTokenModel(
+            user_id=user_id, token_hash=token_hash, expires_at=expires_at
+        )
         self._session.add(model)
         self._session.commit()
         self._session.refresh(model)
         return self._to_entity(model)
 
-    def get_valid_by_token_hash(self, token_hash: str) -> PasswordResetTokenEntity | None:
+    def get_valid_by_token_hash(
+        self, token_hash: str
+    ) -> PasswordResetTokenEntity | None:
         model = (
             self._session.query(PasswordResetTokenModel)
             .filter(

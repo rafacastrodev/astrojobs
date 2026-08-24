@@ -2,9 +2,7 @@ import os
 
 from infrastructure.database.config import Settings, _drop_empty_libpq_env
 
-_ACCESS_POINT = (
-    "arn:aws:s3:us-east-1:956112822284:accesspoint/astrojobs-s3-access"
-)
+_ACCESS_POINT = "arn:aws:s3:us-east-1:956112822284:accesspoint/astrojobs-s3-access"
 
 
 def _settings(**kwargs) -> Settings:

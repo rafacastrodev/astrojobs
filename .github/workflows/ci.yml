@@ -45,10 +45,15 @@ jobs:
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
           EMBEDDING_DIMENSIONS: ${{ secrets.EMBEDDING_DIMENSIONS }}
+          EMBEDDING_PROVIDER: ${{ secrets.EMBEDDING_PROVIDER }}
           AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
           OPENAI_MODERATION_MODEL: ${{ secrets.OPENAI_MODERATION_MODEL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+          GEMINI_EMBEDDING_MODEL: ${{ secrets.GEMINI_EMBEDDING_MODEL }}
+          LIVEBLOCKS_PRIVATE_KEY: ${{ secrets.LIVEBLOCKS_PRIVATE_KEY }}
         run: |
           umask 077
           write_env() {
@@ -69,12 +74,17 @@ jobs:
             write_env PINECONE_API_KEY "$PINECONE_API_KEY"
             write_env PINECONE_INDEX_NAME "$PINECONE_INDEX_NAME"
             write_env EMBEDDING_DIMENSIONS "$EMBEDDING_DIMENSIONS"
+            write_env EMBEDDING_PROVIDER "${EMBEDDING_PROVIDER:-auto}"
             write_env AWS_REGION "$AWS_REGION"
             write_env AWS_S3_BUCKET "$AWS_S3_BUCKET"
             write_env AWS_S3_ENDPOINT_URL ""
             write_env OPENAI_API_KEY "$OPENAI_API_KEY"
             write_env OPENAI_MODEL "$OPENAI_MODEL"
             write_env OPENAI_MODERATION_MODEL "$OPENAI_MODERATION_MODEL"
+            write_env GEMINI_API_KEY "$GEMINI_API_KEY"
+            write_env GEMINI_MODEL "$GEMINI_MODEL"
+            write_env GEMINI_EMBEDDING_MODEL "${GEMINI_EMBEDDING_MODEL:-gemini-embedding-001}"
+            write_env LIVEBLOCKS_PRIVATE_KEY "$LIVEBLOCKS_PRIVATE_KEY"
             write_env VITE_API_URL "/api"
           } > "$GITHUB_WORKSPACE/.env"
 

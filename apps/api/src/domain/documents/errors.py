@@ -56,3 +56,13 @@ class DuplicateDocumentError(DocumentServiceError):
 
 class InvalidResumeNameError(DocumentServiceError):
     pass
+
+
+class JobClosedError(DocumentServiceError):
+    def __init__(self) -> None:
+        super().__init__("This job is closed")
+
+
+class PublishedJobCannotBeDeletedError(DocumentServiceError):
+    def __init__(self) -> None:
+        super().__init__("Published jobs cannot be removed; close the job instead")
