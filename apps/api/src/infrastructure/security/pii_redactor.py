@@ -27,7 +27,10 @@ class ResumePiiRedactor:
         ),
         (
             "links",
-            re.compile(r"\b(?:https?://|www\.)[^\s<>()]+", re.IGNORECASE),
+            re.compile(
+                r"\b(?:https?://|www\.)[^\s<>()]+|(?:linkedin\.com/in/|github\.com/)[^\s<>()]+",
+                re.IGNORECASE,
+            ),
         ),
         (
             "addresses",

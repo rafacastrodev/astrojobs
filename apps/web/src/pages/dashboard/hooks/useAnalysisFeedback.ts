@@ -25,7 +25,9 @@ export const useAnalysisFeedback = (analysis: AnalysisResult) => {
       setIsCorrecting(false)
       return queryClient.invalidateQueries({
         queryKey: ['resume-analyses', analysis.resume_document_id],
-      })
+      }).then(() =>
+        queryClient.invalidateQueries({ queryKey: ['resumes'] }),
+      )
     },
   })
 

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 
 import { Button } from '@/components/Button'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { CloseIcon, TrashIcon } from '@/components/icons'
+import { ChevronIcon, PencilIcon, TrashIcon } from '@/components/icons'
 
 import { ResumeWorkspace } from './ResumeWorkspace'
 import { ACCEPTED_EXTENSIONS, useResumes } from '../hooks/useResumes'
@@ -33,6 +33,8 @@ export const ResumeSection = () => {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDraggingOver, setIsDraggingOver] = useState(false)
   const [expandedResumeId, setExpandedResumeId] = useState<number | null>(null)
+  const [editingResumeId, setEditingResumeId] = useState<number | null>(null)
+  const [draftName, setDraftName] = useState('')
   const [resumePendingDelete, setResumePendingDelete] = useState<Resume | null>(
     null,
   )
@@ -49,6 +51,9 @@ export const ResumeSection = () => {
     handleProcess,
     processingId,
     processError,
+    handleRename,
+    renamingId,
+    renameError,
   } = useResumes()
 
   const submitFile = (file: File | undefined) => {
@@ -118,6 +123,11 @@ export const ResumeSection = () => {
           {processError}
         </p>
       ) : null}
+      {renameError ? (
+        <p role="alert" className="mt-4 text-sm text-destructive">
+          {renameError}
+        </p>
+      ) : null}
 
       <div className="mt-8">
         {isLoading ? (
@@ -132,16 +142,69 @@ export const ResumeSection = () => {
           </p>
         ) : (
           <ul className="flex flex-col gap-3">
-            {resumes.map((resume) => (
+            {resumes.map((resume) => {
+              const isOpen = expandedResumeId === resume.id
+              const isEditing = editingResumeId === resume.id
+              const commitRename = () => {
+                const next = draftName.trim()
+                setEditingResumeId(null)
+                if (next && next !== resume.source_filename) {
+                  handleRename(resume.id, next)
+                }
+              }
+              return (
               <li
                 key={resume.id}
-                className="rounded-xl border border-border p-4"
+                className="rounded-xl border border-border p-4 transition hover:border-ring hover:bg-muted"
               >
                 <div className="flex items-start gap-2">
-                  <div className="min-w-0 flex-1 pt-1.5">
-                    <p className="truncate font-medium text-card-foreground">
-                      {resume.source_filename}
-                    </p>
+                  <div className="min-w-0 flex-1">
+                    {isEditing ? (
+                      <input
+                        autoFocus
+                        value={draftName}
+                        disabled={renamingId === resume.id}
+                        onChange={(event) => setDraftName(event.target.value)}
+                        onBlur={commitRename}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault()
+                            event.currentTarget.blur()
+                          }
+                          if (event.key === 'Escape') {
+                            event.preventDefault()
+                            setDraftName(resume.source_filename)
+                            setEditingResumeId(null)
+                          }
+                        }}
+                        className="w-full rounded-md border border-border bg-input px-2 py-1 text-sm font-medium text-card-foreground outline-none focus:border-ring"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <p className="truncate font-medium text-card-foreground">
+                          {resume.source_filename}
+                        </p>
+                        <button
+                          type="button"
+                          aria-label={`Rename ${resume.source_filename}`}
+                          onClick={() => {
+                            setEditingResumeId(resume.id)
+                            setDraftName(resume.source_filename)
+                          }}
+                          className={iconButtonClassName}
+                        >
+                          <PencilIcon />
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      aria-expanded={isOpen}
+                      onClick={() =>
+                        setExpandedResumeId(isOpen ? null : resume.id)
+                      }
+                      className="mt-1 w-full cursor-pointer text-left"
+                    >
                     <p className="text-sm text-muted-foreground">
                       {STATUS_LABELS[resume.status]} ·{' '}
                       {ANALYSIS_STATUS_LABELS[resume.analysis_status]} ·{' '}
@@ -163,20 +226,24 @@ export const ResumeSection = () => {
                         </>
                       ) : null}
                     </p>
-                    {resume.status === 'failed' ||
-                    resume.analysis_status === 'failed' ? (
-                      <button
-                        type="button"
-                        onClick={() => handleProcess(resume.id)}
-                        disabled={processingId === resume.id}
-                        className="mt-2 cursor-pointer text-sm font-medium text-primary transition hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {processingId === resume.id
-                          ? 'Trying again…'
-                          : 'Try again'}
-                      </button>
-                    ) : null}
+                    <p className="mt-2 text-sm font-medium text-primary">
+                      {isOpen ? 'Hide details' : 'View details'}
+                    </p>
+                    </button>
                   </div>
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    aria-label={isOpen ? 'Hide details' : 'View details'}
+                    onClick={() =>
+                      setExpandedResumeId(isOpen ? null : resume.id)
+                    }
+                    className={iconButtonClassName}
+                  >
+                    <ChevronIcon
+                      className={`transition ${isOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
                   <button
                     type="button"
                     aria-label={`Delete ${resume.source_filename}`}
@@ -186,34 +253,29 @@ export const ResumeSection = () => {
                   >
                     <TrashIcon />
                   </button>
+                </div>
+                {resume.status === 'failed' ||
+                resume.analysis_status === 'failed' ? (
                   <button
                     type="button"
-                    aria-expanded={expandedResumeId === resume.id}
-                    aria-label={
-                      expandedResumeId === resume.id
-                        ? `Close ${resume.source_filename}`
-                        : `Open ${resume.source_filename}`
-                    }
-                    onClick={() =>
-                      setExpandedResumeId(
-                        expandedResumeId === resume.id ? null : resume.id,
-                      )
-                    }
-                    className={iconButtonClassName}
+                    onClick={() => handleProcess(resume.id)}
+                    disabled={processingId === resume.id}
+                    className="mt-2 cursor-pointer text-sm font-medium text-primary transition hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <CloseIcon />
+                    {processingId === resume.id
+                      ? 'Trying again…'
+                      : 'Try again'}
                   </button>
-                </div>
+                ) : null}
                 {resume.analysis_error_message || resume.error_message ? (
                   <p role="alert" className="mt-3 text-sm text-destructive">
                     {resume.analysis_error_message ?? resume.error_message}
                   </p>
                 ) : null}
-                {expandedResumeId === resume.id ? (
-                  <ResumeWorkspace resume={resume} />
-                ) : null}
+                {isOpen ? <ResumeWorkspace resume={resume} /> : null}
               </li>
-            ))}
+              )
+            })}
           </ul>
         )}
       </div>

@@ -49,3 +49,4 @@ class UserResponse(BaseModel):
     email: str
     role: Literal["professional", "recruiter"]
     created_at: datetime
+    photo_url: str | None = None

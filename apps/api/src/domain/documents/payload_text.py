@@ -6,6 +6,7 @@ SKIPPED_PAYLOAD_KEYS = frozenset({"structure"})
 RESUME_EMBEDDING_KEYS = (
     "summary",
     "skills",
+    "tech_stack",
     "experiences",
     "education",
     "projects",

@@ -2,6 +2,7 @@ import re
 from typing import Any, ClassVar
 
 from domain.documents.entities import DocumentType
+from domain.documents.technology_catalog import flatten_tech_stack, normalize_tech_stack
 
 
 class HeuristicTextExtractor:
@@ -47,15 +48,20 @@ class HeuristicTextExtractor:
             re.search(pattern, experience_block, flags=re.IGNORECASE)
             for pattern in self.EMPLOYED_PATTERNS
         )
+        first_line = self._first_line(text)
+        parsed_experiences = [self._parse_experience(entry) for entry in experiences]
+        stack = normalize_tech_stack(skills)
         return {
+            "full_name": first_line if self._looks_like_name(first_line) else "",
             "about": about,
             "summary": about,
-            "skills": skills,
-            "experiences": experiences,
+            "skills": flatten_tech_stack(stack),
+            "tech_stack": stack,
+            "experiences": parsed_experiences,
             "education": education,
             "structure": {
                 "has_about": bool(about.strip()),
-                "has_experience": len(experiences) > 0,
+                "has_experience": len(parsed_experiences) > 0,
                 "has_education": len(education) > 0,
                 "section_count": sum(
                     1
@@ -139,6 +145,35 @@ class HeuristicTextExtractor:
             return bullets or entries
         return entries
 
+    def _parse_experience(self, entry: str) -> dict[str, Any]:
+        lines = [line.strip() for line in entry.splitlines() if line.strip()]
+        heading = lines[0] if lines else entry.strip()
+        parts = [part.strip() for part in re.split(r"\s+[·|•]\s+", heading) if part.strip()]
+        date_match = re.search(
+            r"(\d{4}|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{4})"
+            r"\s*(?:-|–|—|to)\s*"
+            r"(\d{4}|present|current|now|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{4})",
+            heading,
+            flags=re.IGNORECASE,
+        )
+        start_date = date_match.group(1) if date_match else ""
+        end_date = date_match.group(2) if date_match else ""
+        job_title = parts[0] if parts else heading
+        company = parts[1] if len(parts) > 1 else ""
+        location = parts[2] if len(parts) > 2 else ""
+        if date_match and job_title == heading:
+            job_title = heading[: date_match.start()].strip(" ·|-–—")
+        return {
+            "job_title": job_title,
+            "company": company,
+            "location": location,
+            "start_date": start_date,
+            "end_date": end_date,
+            "current": bool(re.search(r"present|current|now", end_date, flags=re.IGNORECASE)),
+            "description": "\n".join(lines[1:]),
+            "highlights": [],
+        }
+
     def _bullet_lines(self, text: str) -> list[str]:
         lines = []
         for line in text.splitlines():
@@ -156,6 +191,25 @@ class HeuristicTextExtractor:
             if line.strip():
                 return line.strip()
         return text.strip()
+
+    @staticmethod
+    def _looks_like_name(value: str) -> bool:
+        if not value or "@" in value or "http" in value.casefold() or len(value) > 80:
+            return False
+        words = value.split()
+        if not 1 <= len(words) <= 6:
+            return False
+        if any(character.isdigit() for character in value):
+            return False
+        lowered = value.casefold()
+        return lowered not in {
+            "summary",
+            "experience",
+            "education",
+            "skills",
+            "profile",
+            "objective",
+        }
 
     def _guess_seniority(self, text: str) -> str:
         lowered = text.lower()

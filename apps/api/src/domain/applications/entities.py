@@ -20,8 +20,10 @@ class RecruiterApplication:
     job_document_id: int
     job_title: str
     applicant_name: str
+    applicant_email: str
     resume_document_id: int
     resume_filename: str
     resume_summary: str | None
     resume_technologies: list[str]
+    matched_technologies: list[str]
     resume_payload: dict[str, Any]

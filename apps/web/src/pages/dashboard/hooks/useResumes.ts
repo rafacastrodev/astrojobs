@@ -74,6 +74,14 @@ export const useResumes = () => {
     },
   })
 
+  const rename = useMutation({
+    mutationFn: ({ id, name }: { id: number; name: string }) =>
+      resumeServices.rename(id, name),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: resumesKey })
+    },
+  })
+
   const resumeList = Array.isArray(resumes.data) ? resumes.data : []
 
   const handleUpload = (file: File) => {
@@ -106,5 +114,8 @@ export const useResumes = () => {
     handleProcess: (id: number) => process.mutate(id),
     processingId: process.isPending ? process.variables : null,
     processError: process.isError ? getApiErrorMessage(process.error) : null,
+    handleRename: (id: number, name: string) => rename.mutate({ id, name }),
+    renamingId: rename.isPending ? rename.variables.id : null,
+    renameError: rename.isError ? getApiErrorMessage(rename.error) : null,
   }
 }

@@ -52,3 +52,7 @@ class StorageError(DocumentServiceError):
 
 class DuplicateDocumentError(DocumentServiceError):
     pass
+
+
+class InvalidResumeNameError(DocumentServiceError):
+    pass

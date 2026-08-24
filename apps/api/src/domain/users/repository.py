@@ -26,6 +26,10 @@ class UserRepository(Protocol):
 
     def update_password(self, user_id: int, hashed_password: str) -> None: ...
 
+    def update_photo_key(
+        self, user_id: int, photo_key: str | None
+    ) -> UserEntity | None: ...
+
     def ensure_recruiter(
         self, name: str, email: str, hashed_password: str
     ) -> UserEntity: ...

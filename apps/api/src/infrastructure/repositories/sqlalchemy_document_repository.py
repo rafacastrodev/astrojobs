@@ -158,6 +158,15 @@ class SqlAlchemyDocumentRepository:
         self._session.commit()
         return True
 
+    def update_source_filename(
+        self, document_id: int, source_filename: str
+    ) -> DocumentEntity:
+        model = self._require(document_id)
+        model.source_filename = source_filename
+        self._session.commit()
+        self._session.refresh(model)
+        return self._to_entity(model)
+
     @staticmethod
     def _to_entity(model: DocumentModel) -> DocumentEntity:
         return DocumentEntity(

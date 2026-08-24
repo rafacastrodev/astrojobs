@@ -36,6 +36,13 @@ async function process(id: number, forceAnalysis = false) {
   return response.data
 }
 
+async function rename(id: number, sourceFilename: string) {
+  const response = await api.patch<Resume>(`/documents/resumes/${id}`, {
+    source_filename: sourceFilename,
+  })
+  return response.data
+}
+
 export const resumeServices = {
   list,
   get,
@@ -43,4 +50,5 @@ export const resumeServices = {
   upload,
   remove,
   process,
+  rename,
 }

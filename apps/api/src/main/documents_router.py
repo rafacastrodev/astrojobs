@@ -12,6 +12,7 @@ from domain.documents.errors import (
     ExtractionError,
     ExtractionServiceError,
     FileTooLargeError,
+    InvalidResumeNameError,
     SafetyConfigurationError,
     SafetyServiceError,
     StorageError,
@@ -26,6 +27,7 @@ from domain.documents.use_cases.match_jobs_for_resume import (
     MatchJobsForResumeUseCase,
 )
 from domain.documents.use_cases.process_resume import ProcessResumeUseCase
+from domain.documents.use_cases.rename_user_resume import RenameUserResumeUseCase
 from domain.documents.use_cases.upload_resume import UploadResumeUseCase
 from domain.users.entities import UserEntity
 from infrastructure.documents.dependencies import (
@@ -35,11 +37,16 @@ from infrastructure.documents.dependencies import (
     get_list_user_resumes_use_case,
     get_match_jobs_use_case,
     get_process_resume_use_case,
+    get_rename_user_resume_use_case,
     get_upload_resume_use_case,
+    get_user_repository,
     get_user_resume_detail_use_case,
 )
 from infrastructure.repositories.sqlalchemy_application_repository import (
     SqlAlchemyApplicationRepository,
+)
+from infrastructure.repositories.sqlalchemy_user_repository import (
+    SqlAlchemyUserRepository,
 )
 from infrastructure.schemas.application_schemas import (
     ApplicationResponse,
@@ -48,6 +55,7 @@ from infrastructure.schemas.application_schemas import (
 from infrastructure.schemas.document_schemas import (
     JobMatchResponse,
     ProcessResumeRequest,
+    RenameResumeRequest,
     ResumeResponse,
 )
 from infrastructure.users.dependencies import get_current_user
@@ -118,6 +126,26 @@ def process_resume(
     return _to_resume_response(document, analysis)
 
 
+@router.patch("/resumes/{document_id}", response_model=ResumeResponse)
+def rename_resume(
+    document_id: int,
+    body: RenameResumeRequest,
+    user: UserEntity = Depends(get_current_user),
+    use_case: RenameUserResumeUseCase = Depends(get_rename_user_resume_use_case),
+    detail: GetUserResumeDetailUseCase = Depends(get_user_resume_detail_use_case),
+) -> ResumeResponse:
+    try:
+        use_case.execute(document_id, user.id, body.source_filename)
+        document, analysis = detail.execute(document_id, user.id)
+    except DocumentNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except InvalidResumeNameError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        )
+    return _to_resume_response(document, analysis)
+
+
 @router.get("/resumes", response_model=list[ResumeResponse])
 def list_resumes(
     user: UserEntity = Depends(get_current_user),
@@ -161,12 +189,17 @@ def match_jobs(
     top_k: int = DEFAULT_TOP_K,
     user: UserEntity = Depends(get_current_user),
     use_case: MatchJobsForResumeUseCase = Depends(get_match_jobs_use_case),
+    users: SqlAlchemyUserRepository = Depends(get_user_repository),
 ) -> list[JobMatchResponse]:
     try:
         matches = use_case.execute(document_id, user.id, top_k=top_k)
     except DocumentNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
-    return [_to_job_match_response(match) for match in matches]
+    recruiters = _recruiter_cache(users)
+    return [
+        _to_job_match_response(match, recruiter=recruiters(match.document.user_id))
+        for match in matches
+    ]
 
 
 @router.get("/jobs", response_model=list[JobMatchResponse])
@@ -174,10 +207,16 @@ def list_catalog_jobs(
     user: UserEntity = Depends(get_current_user),
     use_case: MatchJobsForResumeUseCase = Depends(get_match_jobs_use_case),
     applications: SqlAlchemyApplicationRepository = Depends(get_application_repository),
+    users: SqlAlchemyUserRepository = Depends(get_user_repository),
 ) -> list[JobMatchResponse]:
     applied_job_ids = set(applications.list_job_ids_for_applicant(user.id))
+    recruiters = _recruiter_cache(users)
     return [
-        _to_job_match_response(match, applied=match.document.id in applied_job_ids)
+        _to_job_match_response(
+            match,
+            applied=match.document.id in applied_job_ids,
+            recruiter=recruiters(match.document.user_id),
+        )
         for match in use_case.execute_for_user(user.id)
     ]
 
@@ -215,7 +254,9 @@ def apply_to_job(
     )
 
 
-def _to_job_match_response(match, applied: bool = False) -> JobMatchResponse:
+def _to_job_match_response(
+    match, applied: bool = False, recruiter: UserEntity | None = None
+) -> JobMatchResponse:
     return JobMatchResponse(
         id=match.document.id,  # type: ignore[arg-type]
         title=_job_title(match.document),
@@ -224,7 +265,22 @@ def _to_job_match_response(match, applied: bool = False) -> JobMatchResponse:
         payload=match.document.payload,
         matched_technologies=match.matched_technologies,
         applied=applied,
+        recruiter_name=recruiter.name if recruiter else None,
+        recruiter_email=recruiter.email if recruiter else None,
     )
+
+
+def _recruiter_cache(users: SqlAlchemyUserRepository):
+    cache: dict[int, UserEntity | None] = {}
+
+    def recruiter(user_id: int | None) -> UserEntity | None:
+        if user_id is None:
+            return None
+        if user_id not in cache:
+            cache[user_id] = users.get_by_id(user_id)
+        return cache[user_id]
+
+    return recruiter
 
 
 def _job_title(document: DocumentEntity) -> str:

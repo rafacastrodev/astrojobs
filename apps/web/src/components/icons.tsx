@@ -73,3 +73,16 @@ export const TrashIcon = (props: SVGProps<SVGSVGElement>) => (
     <path d="M10 11v6M14 11v6" />
   </svg>
 )
+
+export const ChevronIcon = ({ className = '', ...props }: SVGProps<SVGSVGElement>) => (
+  <svg {...baseProps} className={`h-4 w-4 shrink-0 ${className}`} {...props}>
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+)
+
+export const PencilIcon = ({ className = '', ...props }: SVGProps<SVGSVGElement>) => (
+  <svg {...baseProps} className={`h-4 w-4 shrink-0 ${className}`} {...props}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+  </svg>
+)

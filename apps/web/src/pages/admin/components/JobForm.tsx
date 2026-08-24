@@ -22,7 +22,11 @@ const addTechnology = (current: string[], raw: string, catalog: string[]) => {
   return [...current, canonical]
 }
 
-export const JobForm = () => {
+type JobFormProps = {
+  onCreated?: () => void
+}
+
+export const JobForm = ({ onCreated }: JobFormProps) => {
   const create = useCreateJob()
   const technologyCatalog = useTechnologyCatalog()
   const catalog = technologyCatalog.data ?? []
@@ -83,6 +87,7 @@ export const JobForm = () => {
               setWorkMode('remote')
               setRegion('')
               setEmploymentType('full-time')
+              onCreated?.()
             },
           },
         )

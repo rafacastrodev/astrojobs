@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { ProfilePage } from '@/pages/profile/components/ProfilePage'
-import { userServices } from '@/services/userServices'
+import { userPhotoUrl, userServices } from '@/services/userServices'
 
 export const Route = createFileRoute('/profile')({
   beforeLoad: async () => {
@@ -25,6 +25,7 @@ function ProfileRoute() {
       email={user.email}
       role={user.role}
       createdAt={user.created_at}
+      photoUrl={userPhotoUrl(user)}
     />
   )
 }

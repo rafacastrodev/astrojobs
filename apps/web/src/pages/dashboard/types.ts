@@ -18,6 +18,8 @@ export type JobMatch = {
   score: number
   matched_technologies?: string[]
   applied?: boolean
+  recruiter_name?: string | null
+  recruiter_email?: string | null
   payload: {
     technologies?: string[]
     description?: string

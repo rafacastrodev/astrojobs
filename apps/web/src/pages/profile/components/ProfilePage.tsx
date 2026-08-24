@@ -1,7 +1,13 @@
+import { useMutation } from '@tanstack/react-query'
+import { useRouter } from '@tanstack/react-router'
+import { useState } from 'react'
+
 import { AppHeader } from '@/components/AppHeader'
 import { Button } from '@/components/Button'
 import { ProfileSection } from '@/pages/dashboard/components/ProfileSection'
 import { useDashboard } from '@/pages/dashboard/hooks/useDashboard'
+import { userServices } from '@/services/userServices'
+import { getApiErrorMessage } from '@/utils'
 
 type ProfilePageProps = {
   name: string
@@ -11,6 +17,8 @@ type ProfilePageProps = {
   photoUrl?: string | null
 }
 
+const MAX_PHOTO_BYTES = 2 * 1024 * 1024
+
 export const ProfilePage = ({
   name,
   email,
@@ -19,11 +27,44 @@ export const ProfilePage = ({
   photoUrl,
 }: ProfilePageProps) => {
   const { handleLogout, isLoggingOut } = useDashboard()
+  const router = useRouter()
+  const [validationError, setValidationError] = useState<string | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
+  const upload = useMutation({
+    mutationFn: userServices.uploadPhoto,
+    onSuccess: async () => {
+      setPreviewUrl(null)
+      await router.invalidate()
+    },
+    onError: () => {
+      setPreviewUrl(null)
+    },
+  })
+
+  const handleChangePhoto = (file: File) => {
+    upload.reset()
+    if (!file.type.startsWith('image/') || file.type === 'image/svg+xml') {
+      setValidationError('Use a JPEG, PNG, or WebP image')
+      return
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      setValidationError('Photo is larger than the 2MB limit')
+      return
+    }
+    setValidationError(null)
+    setPreviewUrl(URL.createObjectURL(file))
+    upload.mutate(file)
+  }
 
   return (
     <div className="flex-1 bg-background px-4 py-10 text-foreground [animation:auth-fade-in_280ms_ease-out]">
       <div className="mx-auto flex w-full max-w-xl flex-col gap-8">
-        <AppHeader title="Profile" name={name} photoUrl={photoUrl}>
+        <AppHeader
+          title="Profile"
+          name={name}
+          photoUrl={previewUrl ?? photoUrl}
+        >
           <div className="w-28">
             <Button
               onClick={handleLogout}
@@ -39,7 +80,13 @@ export const ProfilePage = ({
           email={email}
           role={role}
           createdAt={createdAt}
-          photoUrl={photoUrl}
+          photoUrl={previewUrl ?? photoUrl}
+          onChangePhoto={handleChangePhoto}
+          isUploadingPhoto={upload.isPending}
+          photoError={
+            validationError ??
+            (upload.isError ? getApiErrorMessage(upload.error) : null)
+          }
         />
       </div>
     </div>

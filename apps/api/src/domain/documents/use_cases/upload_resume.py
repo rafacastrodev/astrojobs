@@ -234,7 +234,7 @@ class UploadResumeUseCase:
             "has_summary": bool(payload.get("summary")),
             "has_experience": bool(payload.get("experiences")),
             "has_education": bool(payload.get("education")),
-            "has_skills": bool(payload.get("skills")),
+            "has_skills": bool(payload.get("skills") or payload.get("tech_stack")),
             "section_count": sum(
                 bool(payload.get(key))
                 for key in (
