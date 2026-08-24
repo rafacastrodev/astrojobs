@@ -7,6 +7,7 @@ from domain.applications.use_cases.apply_to_job import ApplyToJobUseCase
 from domain.documents.entities import DocumentEntity
 from domain.documents.errors import (
     DocumentNotFoundError,
+    DuplicateDocumentError,
     ExtractionConfigurationError,
     ExtractionError,
     ExtractionServiceError,
@@ -82,6 +83,8 @@ async def upload_resume(
     filename = file.filename or "resume.txt"
     try:
         document, analysis = use_case.execute(content, filename, user.id)
+    except DuplicateDocumentError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
     except FileTooLargeError as exc:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=str(exc)

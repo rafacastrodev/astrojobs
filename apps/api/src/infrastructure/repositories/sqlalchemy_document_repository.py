@@ -35,7 +35,9 @@ class SqlAlchemyDocumentRepository:
             self._session.commit()
         except IntegrityError as exc:
             self._session.rollback()
-            raise DuplicateDocumentError("This document was already uploaded") from exc
+            if "uq_documents_user_type_content_hash" in str(exc.orig or exc):
+                raise DuplicateDocumentError("This resume was already uploaded") from exc
+            raise
         self._session.refresh(model)
         return self._to_entity(model)
 

@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import uuid
 from dataclasses import dataclass
@@ -9,6 +10,7 @@ from domain.analysis.errors import AnalyzerError
 from domain.analysis.repository import AnalysisRepository
 from domain.documents.entities import DocumentEntity
 from domain.documents.errors import (
+    DuplicateDocumentError,
     ExtractionError,
     ExtractionServiceError,
     FileTooLargeError,
@@ -35,6 +37,14 @@ CONTENT_TYPES = {
     ".txt": "text/plain",
     ".md": "text/markdown",
 }
+
+
+def _payload_file_size(payload: dict) -> int | None:
+    file_meta = payload.get("file") if isinstance(payload, dict) else None
+    if not isinstance(file_meta, dict):
+        return None
+    size = file_meta.get("size")
+    return size if isinstance(size, int) else None
 
 
 @dataclass
@@ -88,6 +98,10 @@ class UploadResumeUseCase:
             limit_mb = self._max_file_bytes / (1024 * 1024)
             raise FileTooLargeError(f"File is larger than the {limit_mb:.0f}MB limit")
 
+        content_hash = hashlib.sha256(content).hexdigest()
+        if self._already_uploaded(user_id, filename, len(content), content_hash):
+            raise DuplicateDocumentError("This resume was already uploaded")
+
         self._file_validator.validate(content, filename)
 
         try:
@@ -115,6 +129,7 @@ class UploadResumeUseCase:
             **payload,
             "contact": redaction.contact,
             "full_text": text,
+            "file": {"name": Path(filename).name, "size": len(content)},
             "structure": self._structure(payload),
         }
         extension = Path(filename).suffix.lower()
@@ -135,6 +150,7 @@ class UploadResumeUseCase:
                 filename,
                 user_id=user_id,
                 storage_key=storage_key,
+                content_hash=content_hash,
             )
         except Exception:
             self._discard(storage_key)
@@ -144,6 +160,20 @@ class UploadResumeUseCase:
 
         document = self._index(document)
         return document, analysis
+
+    def _already_uploaded(
+        self, user_id: int, filename: str, size: int, content_hash: str
+    ) -> bool:
+        if self._documents.get_by_user_content_hash(user_id, "resume", content_hash):
+            return True
+        incoming_name = Path(filename).name.casefold()
+        for document in self._documents.list_by_user(user_id, "resume"):
+            if Path(document.source_filename).name.casefold() != incoming_name:
+                continue
+            stored_size = _payload_file_size(document.payload)
+            if stored_size is None or stored_size == size:
+                return True
+        return False
 
     def _analyze(
         self, document: DocumentEntity, user_id: int

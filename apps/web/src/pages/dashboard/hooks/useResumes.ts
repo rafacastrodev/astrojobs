@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { resumeServices } from '@/services/resumeServices'
 import { getApiErrorMessage } from '@/utils'
 
+import type { Resume } from '../types'
+
 // Kept in sync with CompositeFileTextLoader and MAX_UPLOAD_BYTES on the API.
 export const ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.txt', '.md']
 export const MAX_FILE_BYTES = 5 * 1024 * 1024
@@ -22,6 +24,21 @@ function validateFile(file: File) {
     return 'That file is empty.'
   }
   return null
+}
+
+function storedFileSize(resume: Resume) {
+  const file = resume.payload.file
+  if (!file || typeof file !== 'object' || !('size' in file)) return null
+  return typeof file.size === 'number' ? file.size : null
+}
+
+function isDuplicateFile(file: File, resumes: Resume[]) {
+  const name = file.name.toLowerCase()
+  return resumes.some((resume) => {
+    if (resume.source_filename.toLowerCase() !== name) return false
+    const size = storedFileSize(resume)
+    return size === null || size === file.size
+  })
 }
 
 export const useResumes = () => {
@@ -57,15 +74,25 @@ export const useResumes = () => {
     },
   })
 
+  const resumeList = Array.isArray(resumes.data) ? resumes.data : []
+
   const handleUpload = (file: File) => {
+    upload.reset()
     const error = validateFile(file)
-    setValidationError(error)
-    if (error) return
+    if (error) {
+      setValidationError(error)
+      return
+    }
+    if (isDuplicateFile(file, resumeList)) {
+      setValidationError('This resume was already uploaded')
+      return
+    }
+    setValidationError(null)
     upload.mutate(file)
   }
 
   return {
-    resumes: Array.isArray(resumes.data) ? resumes.data : [],
+    resumes: resumeList,
     isLoading: resumes.isLoading,
     listError: resumes.isError ? getApiErrorMessage(resumes.error) : null,
     handleUpload,
