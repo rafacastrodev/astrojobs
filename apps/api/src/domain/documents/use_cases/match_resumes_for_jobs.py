@@ -4,8 +4,8 @@ from typing import Any
 from domain.analysis.entities import AnalysisEntity
 from domain.analysis.repository import AnalysisRepository
 from domain.documents.entities import DocumentEntity
-from domain.documents.repository import DocumentRepository
 from domain.documents.region_catalog import canonical_region, regions_compatible
+from domain.documents.repository import DocumentRepository
 from domain.documents.semantic_matcher import SemanticMatcher
 from domain.documents.technology_catalog import (
     canonical_technology,

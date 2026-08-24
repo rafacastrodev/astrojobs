@@ -1,7 +1,7 @@
 import type { components } from '@/types/api'
 import { api } from '@/utils/api/client'
-import { env } from '@/utils/env/config'
 import { hashPassword } from '@/utils/crypto/password'
+import { env } from '@/utils/env/config'
 import type {
   ForgotPasswordFormValues,
   LoginFormValues,

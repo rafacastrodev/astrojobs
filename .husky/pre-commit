@@ -1,2 +1,3 @@
-cd "./apps/api/" && uv run ruff check --fix && cd ../../
-cd "./apps/web/" && npx tsc --noEmit
+root="$(git rev-parse --show-toplevel)"
+cd "$root/apps/api" && uv run ruff check --fix
+cd "$root/apps/web" && npx tsc --noEmit

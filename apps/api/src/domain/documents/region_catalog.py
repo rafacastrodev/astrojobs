@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass
 from typing import Literal
-import unicodedata
 
 RegionKind = Literal["global", "macro", "country", "city"]
 

@@ -58,7 +58,7 @@ export const OnboardingPage = () => {
           </label>
           <RegionSelect
             id="onboarding-region"
-            placeholder="Sao Paulo"
+            placeholder="LATAM"
             aria-invalid={Boolean(errors.region)}
             {...register('region')}
           />
