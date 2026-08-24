@@ -95,9 +95,15 @@ class HeuristicTextExtractor:
         cleaned = cleaned.strip().lower()
         if not cleaned or len(cleaned) > 60:
             return None
+        candidates = {cleaned}
+        if cleaned.endswith("s"):
+            candidates.add(cleaned[:-1])
         for key, names in aliases.items():
             for name in names:
-                if cleaned == name or cleaned.startswith(f"{name} "):
+                if any(
+                    candidate == name or candidate.startswith(f"{name} ")
+                    for candidate in candidates
+                ):
                     return key
         return None
 

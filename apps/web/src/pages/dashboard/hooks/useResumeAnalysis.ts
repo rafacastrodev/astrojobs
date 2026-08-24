@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { analysisServices } from '@/services/analysisServices'
 import { getApiErrorMessage } from '@/utils'
@@ -7,14 +7,22 @@ import { getApiErrorMessage } from '@/utils'
 import type { JobSource } from '../types'
 
 type Mode = 'ats' | 'job'
-type JobInputMode = 'catalog' | 'pasted'
-
-export const useResumeAnalysis = (resumeId: number) => {
+export const useResumeAnalysis = (
+  resumeId: number,
+  initialJobId?: number | null,
+) => {
   const queryClient = useQueryClient()
   const [mode, setMode] = useState<Mode>('ats')
-  const [jobInputMode, setJobInputMode] = useState<JobInputMode>('catalog')
-  const [selectedJobId, setSelectedJobId] = useState<number | null>(null)
-  const [pastedText, setPastedText] = useState('')
+  const [selectedJobId, setSelectedJobId] = useState<number | null>(
+    initialJobId ?? null,
+  )
+
+  useEffect(() => {
+    if (initialJobId) {
+      setMode('job')
+      setSelectedJobId(initialJobId)
+    }
+  }, [initialJobId])
 
   const analysesQueryKey = ['resume-analyses', resumeId]
 
@@ -26,36 +34,30 @@ export const useResumeAnalysis = (resumeId: number) => {
   const jobs = useQuery({
     queryKey: ['catalog-jobs'],
     queryFn: analysisServices.listJobs,
-    enabled: mode === 'job' && jobInputMode === 'catalog',
+    enabled: mode === 'job',
   })
 
   const analyze = useMutation({
     mutationFn: () => {
-      const jobSource: JobSource =
-        mode === 'ats' ? 'none' : jobInputMode === 'catalog' ? 'catalog' : 'pasted'
+      const jobSource: Exclude<JobSource, 'pasted'> =
+        mode === 'ats' ? 'none' : 'catalog'
       return analysisServices.analyze(resumeId, {
         job_source: jobSource,
-        job_document_id: jobSource === 'catalog' ? (selectedJobId ?? undefined) : undefined,
-        job_text: jobSource === 'pasted' ? pastedText : undefined,
+        job_document_id:
+          jobSource === 'catalog' ? (selectedJobId ?? undefined) : undefined,
       })
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: analysesQueryKey }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: analysesQueryKey }),
   })
 
-  const canSubmit =
-    mode === 'ats' ||
-    (jobInputMode === 'catalog' && selectedJobId !== null) ||
-    (jobInputMode === 'pasted' && pastedText.trim().length > 0)
+  const canSubmit = mode === 'ats' || selectedJobId !== null
 
   return {
     mode,
     setMode,
-    jobInputMode,
-    setJobInputMode,
     selectedJobId,
     setSelectedJobId,
-    pastedText,
-    setPastedText,
     jobs: Array.isArray(jobs.data) ? jobs.data : [],
     jobsLoading: jobs.isLoading,
     canSubmit,

@@ -73,7 +73,6 @@ def analyze_resume(
             resume_document_id=resume_id,
             job_source=body.job_source,
             job_document_id=body.job_document_id,
-            job_text=body.job_text,
         )
     except DocumentNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))

@@ -25,6 +25,10 @@ services:
         VITE_API_URL: ${VITE_API_URL}
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
     restart: unless-stopped
     depends_on:
       api:
@@ -50,12 +54,16 @@ services:
       PINECONE_NAMESPACE_RESUMES: ${PINECONE_NAMESPACE_RESUMES:-resumes}
       PINECONE_NAMESPACE_JOBS: ${PINECONE_NAMESPACE_JOBS:-jobs}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1024}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.4-mini-2026-03-17}
+      OPENAI_MODERATION_MODEL: ${OPENAI_MODERATION_MODEL:-omni-moderation-latest}
+      OPENAI_TIMEOUT_SECONDS: ${OPENAI_TIMEOUT_SECONDS:-45}
+      OPENAI_MAX_RETRIES: ${OPENAI_MAX_RETRIES:-2}
       AWS_REGION: ${AWS_REGION}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET}
       AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL:-}
-      BEDROCK_MODEL_ID: ${BEDROCK_MODEL_ID:-}
-      AWS_BEARER_TOKEN_BEDROCK: ${AWS_BEARER_TOKEN_BEDROCK:-}
       MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-5242880}
+      MAX_LLM_INPUT_CHARS: ${MAX_LLM_INPUT_CHARS:-50000}
     ports:
       - "8000:8000"
     healthcheck:

@@ -5,18 +5,18 @@ import { useResumeAnalysis } from '../hooks/useResumeAnalysis'
 
 type AnalysisPanelProps = {
   resumeId: number
+  initialJobId?: number | null
 }
 
-export const AnalysisPanel = ({ resumeId }: AnalysisPanelProps) => {
+export const AnalysisPanel = ({
+  resumeId,
+  initialJobId,
+}: AnalysisPanelProps) => {
   const {
     mode,
     setMode,
-    jobInputMode,
-    setJobInputMode,
     selectedJobId,
     setSelectedJobId,
-    pastedText,
-    setPastedText,
     jobs,
     jobsLoading,
     canSubmit,
@@ -25,7 +25,7 @@ export const AnalysisPanel = ({ resumeId }: AnalysisPanelProps) => {
     analyses,
     analysesLoading,
     error,
-  } = useResumeAnalysis(resumeId)
+  } = useResumeAnalysis(resumeId, initialJobId)
 
   return (
     <div className="mt-4 rounded-lg border border-border bg-input/40 p-4">
@@ -39,7 +39,7 @@ export const AnalysisPanel = ({ resumeId }: AnalysisPanelProps) => {
               : 'bg-transparent text-muted-foreground'
           }`}
         >
-          Verificação geral
+          General review
         </button>
         <button
           type="button"
@@ -50,55 +50,29 @@ export const AnalysisPanel = ({ resumeId }: AnalysisPanelProps) => {
               : 'bg-transparent text-muted-foreground'
           }`}
         >
-          Comparar com vaga
+          Compare with job
         </button>
       </div>
 
       {mode === 'job' ? (
-        <div className="mt-3 flex flex-col gap-3">
-          <div className="flex gap-3 text-xs text-muted-foreground">
-            <button
-              type="button"
-              onClick={() => setJobInputMode('catalog')}
-              className={`cursor-pointer ${jobInputMode === 'catalog' ? 'font-semibold text-card-foreground' : ''}`}
-            >
-              Escolher vaga cadastrada
-            </button>
-            <span>·</span>
-            <button
-              type="button"
-              onClick={() => setJobInputMode('pasted')}
-              className={`cursor-pointer ${jobInputMode === 'pasted' ? 'font-semibold text-card-foreground' : ''}`}
-            >
-              Colar descrição
-            </button>
-          </div>
-
-          {jobInputMode === 'catalog' ? (
-            <select
-              value={selectedJobId ?? ''}
-              onChange={(event) =>
-                setSelectedJobId(event.target.value ? Number(event.target.value) : null)
-              }
-              className="rounded-md border border-border bg-card p-2 text-sm text-card-foreground"
-            >
-              <option value="">{jobsLoading ? 'Carregando vagas…' : 'Selecione uma vaga'}</option>
-              {jobs.map((job) => (
-                <option key={job.id} value={job.id}>
-                  {job.title}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <textarea
-              value={pastedText}
-              onChange={(event) => setPastedText(event.target.value)}
-              placeholder="Cole aqui a descrição da vaga"
-              rows={4}
-              className="rounded-md border border-border bg-card p-2 text-sm text-card-foreground"
-            />
-          )}
-        </div>
+        <select
+          value={selectedJobId ?? ''}
+          onChange={(event) =>
+            setSelectedJobId(
+              event.target.value ? Number(event.target.value) : null,
+            )
+          }
+          className="mt-3 w-full rounded-md border border-border bg-card p-2 text-sm text-card-foreground"
+        >
+          <option value="">
+            {jobsLoading ? 'Loading jobs…' : 'Select a catalog job'}
+          </option>
+          {jobs.map((job) => (
+            <option key={job.id} value={job.id}>
+              {job.title}
+            </option>
+          ))}
+        </select>
       ) : null}
 
       <div className="mt-4 w-40">
@@ -109,7 +83,7 @@ export const AnalysisPanel = ({ resumeId }: AnalysisPanelProps) => {
           disabled={!canSubmit}
           className="!py-2 text-sm"
         >
-          Analisar
+          Analyze
         </Button>
       </div>
 
@@ -120,7 +94,9 @@ export const AnalysisPanel = ({ resumeId }: AnalysisPanelProps) => {
       ) : null}
 
       {analysesLoading ? (
-        <p className="mt-4 text-sm text-muted-foreground">Carregando análises anteriores…</p>
+        <p className="mt-4 text-sm text-muted-foreground">
+          Loading previous analyses…
+        </p>
       ) : null}
 
       {analyses.length > 0 ? (

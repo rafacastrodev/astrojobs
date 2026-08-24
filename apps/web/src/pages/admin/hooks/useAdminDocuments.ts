@@ -54,3 +54,16 @@ export const useDeleteDocument = (type: DocumentType) => {
     },
   })
 }
+
+export const useCreateJob = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: adminDocumentServices.createJob,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['admin-documents', 'job'],
+      })
+      void queryClient.invalidateQueries({ queryKey: ['catalog-jobs'] })
+    },
+  })
+}

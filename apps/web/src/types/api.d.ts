@@ -124,6 +124,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Job */
+        post: operations["create_job_admin_jobs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/documents/{document_id}": {
         parameters: {
             query?: never;
@@ -159,10 +176,205 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/documents/resumes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Resumes */
+        get: operations["list_resumes_documents_resumes_get"];
+        put?: never;
+        /** Upload Resume */
+        post: operations["upload_resume_documents_resumes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/resumes/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Resume */
+        get: operations["get_resume_documents_resumes__document_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Resume */
+        delete: operations["delete_resume_documents_resumes__document_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/resumes/{document_id}/matches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Match Jobs */
+        get: operations["match_jobs_documents_resumes__document_id__matches_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Catalog Jobs */
+        get: operations["list_catalog_jobs_documents_jobs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analysis/resumes/{resume_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Resume Analyses */
+        get: operations["list_resume_analyses_analysis_resumes__resume_id__get"];
+        put?: never;
+        /** Analyze Resume */
+        post: operations["analyze_resume_analysis_resumes__resume_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analysis/{analysis_id}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Submit Analysis Feedback */
+        put: operations["submit_analysis_feedback_analysis__analysis_id__feedback_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Health */
+        get: operations["health_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AnalysisFeedbackRequest */
+        AnalysisFeedbackRequest: {
+            /**
+             * Rating
+             * @enum {string}
+             */
+            rating: "up" | "down";
+            /** Expected Score */
+            expected_score?: number | null;
+            /** Comment */
+            comment?: string | null;
+        };
+        /** AnalysisFeedbackResponse */
+        AnalysisFeedbackResponse: {
+            /**
+             * Rating
+             * @enum {string}
+             */
+            rating: "up" | "down";
+            /** Expected Score */
+            expected_score: number | null;
+            /** Comment */
+            comment: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** AnalysisResponse */
+        AnalysisResponse: {
+            /** Id */
+            id: number;
+            /** Resume Document Id */
+            resume_document_id: number;
+            /**
+             * Job Source
+             * @enum {string}
+             */
+            job_source: "none" | "catalog" | "pasted";
+            /** Job Document Id */
+            job_document_id: number | null;
+            /** Job Title */
+            job_title: string | null;
+            /** Score */
+            score: number;
+            /** Summary */
+            summary: string;
+            /** Findings */
+            findings: string[];
+            /** Years Of Experience */
+            years_of_experience: number | null;
+            /** Technologies */
+            technologies: string[];
+            /** Companies */
+            companies: string[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            feedback?: components["schemas"]["AnalysisFeedbackResponse"] | null;
+        };
+        /** AnalyzeResumeRequest */
+        AnalyzeResumeRequest: {
+            /**
+             * Job Source
+             * @enum {string}
+             */
+            job_source: "none" | "catalog";
+            /** Job Document Id */
+            job_document_id?: number | null;
+        };
         /** Body_upload_document_admin_documents_post */
         Body_upload_document_admin_documents_post: {
             /** File */
@@ -172,6 +384,11 @@ export interface components {
              * @enum {string}
              */
             type: "resume" | "job";
+        };
+        /** Body_upload_resume_documents_resumes_post */
+        Body_upload_resume_documents_resumes_post: {
+            /** File */
+            file: string;
         };
         /** DocumentResponse */
         DocumentResponse: {
@@ -221,6 +438,51 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** JobCreateRequest */
+        JobCreateRequest: {
+            /** Title */
+            title: string;
+            /** Requirements */
+            requirements?: string[];
+            /** Responsibilities */
+            responsibilities?: string[];
+            /**
+             * Seniority
+             * @default unspecified
+             * @enum {string}
+             */
+            seniority: "intern" | "junior" | "mid" | "senior" | "lead" | "principal" | "staff" | "unspecified";
+            /**
+             * Employment Type
+             * @default unspecified
+             * @enum {string}
+             */
+            employment_type: "full-time" | "part-time" | "contract" | "internship" | "temporary" | "unspecified";
+        };
+        /** JobMatchResponse */
+        JobMatchResponse: {
+            /** Id */
+            id: number;
+            /** Title */
+            title: string;
+            /** Source Filename */
+            source_filename: string;
+            /** Score */
+            score: number;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+        };
+        /** JobSummaryResponse */
+        JobSummaryResponse: {
+            /** Id */
+            id: number;
+            /** Title */
+            title: string;
+            /** Source Filename */
+            source_filename: string;
+        };
         /** LoginRequest */
         LoginRequest: {
             /**
@@ -237,6 +499,35 @@ export interface components {
             token: string;
             /** New Password */
             new_password: string;
+        };
+        /** ResumeResponse */
+        ResumeResponse: {
+            /** Id */
+            id: number;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Source Filename */
+            source_filename: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "synced" | "failed";
+            /** Error Message */
+            error_message: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            latest_analysis?: components["schemas"]["AnalysisResponse"] | null;
         };
         /** SignupRequest */
         SignupRequest: {
@@ -567,6 +858,41 @@ export interface operations {
             };
         };
     };
+    create_job_admin_jobs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                jwt?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_document_admin_documents__document_id__get: {
         parameters: {
             query?: never;
@@ -662,6 +988,331 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_resumes_documents_resumes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                jwt?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResumeResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_resume_documents_resumes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                jwt?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_resume_documents_resumes_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResumeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_resume_documents_resumes__document_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: number;
+            };
+            cookie?: {
+                jwt?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResumeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_resume_documents_resumes__document_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: number;
+            };
+            cookie?: {
+                jwt?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    match_jobs_documents_resumes__document_id__matches_get: {
+        parameters: {
+            query?: {
+                top_k?: number;
+            };
+            header?: never;
+            path: {
+                document_id: number;
+            };
+            cookie?: {
+                jwt?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobMatchResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_catalog_jobs_documents_jobs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                jwt?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobSummaryResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_resume_analyses_analysis_resumes__resume_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resume_id: number;
+            };
+            cookie?: {
+                jwt?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyze_resume_analysis_resumes__resume_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resume_id: number;
+            };
+            cookie?: {
+                jwt?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalyzeResumeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_analysis_feedback_analysis__analysis_id__feedback_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                analysis_id: number;
+            };
+            cookie?: {
+                jwt?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalysisFeedbackRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisFeedbackResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    health_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
         };

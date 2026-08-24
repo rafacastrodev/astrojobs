@@ -15,9 +15,10 @@ cleanup() {
 }
 trap cleanup EXIT
 
+test -s .env
+
 tar -czf "${archive}" \
   --exclude='.git' \
-  --exclude='.env' \
   --exclude='node_modules' \
   --exclude='.venv' \
   --exclude='dist' \
@@ -29,11 +30,11 @@ aws s3 cp "${archive}" "s3://${DEPLOY_BUCKET}/${artifact}"
 parameters=$(jq -cn \
   --arg source "s3://${DEPLOY_BUCKET}/${artifact}" \
   '{commands: [
-    "set -euo pipefail",
-    "test -s /home/ubuntu/astrojobs/.env",
+    "set -eu",
     "aws s3 cp " + $source + " /tmp/astrojobs.tar.gz",
     "tar -xzf /tmp/astrojobs.tar.gz -C /home/ubuntu/astrojobs",
     "chown -R ubuntu:ubuntu /home/ubuntu/astrojobs",
+    "chmod 600 /home/ubuntu/astrojobs/.env",
     "bash /home/ubuntu/astrojobs/scripts/deploy-host.sh",
     "rm -f /tmp/astrojobs.tar.gz"
   ]}')

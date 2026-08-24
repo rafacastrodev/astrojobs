@@ -1,0 +1,12 @@
+About
+Backend engineer with six years building server side systems in Python.
+
+Experiences
+Tech Lead at Acme (Jan 2021 - Current)
+Led a team building REST APIs with FastAPI and PostgreSQL on AWS.
+
+Backend Developer at Beta (Mar 2019 - Dec 2020)
+Maintained microservices and database schemas.
+
+Education
+Bachelor of Computer Science

@@ -19,12 +19,14 @@ from domain.documents.errors import (
 from domain.documents.use_cases.create_document_from_upload import (
     CreateDocumentFromUploadUseCase,
 )
+from domain.documents.use_cases.create_job import CreateJobUseCase
 from domain.documents.use_cases.delete_document import DeleteDocumentUseCase
 from domain.documents.use_cases.get_document import GetDocumentUseCase
 from domain.documents.use_cases.list_documents import ListDocumentsUseCase
 from domain.documents.use_cases.sync_documents import SyncDocumentsUseCase
 from infrastructure.documents.dependencies import (
     get_create_document_use_case,
+    get_create_job_use_case,
     get_delete_document_use_case,
     get_document_use_case,
     get_list_documents_use_case,
@@ -32,6 +34,7 @@ from infrastructure.documents.dependencies import (
 )
 from infrastructure.schemas.document_schemas import (
     DocumentResponse,
+    JobCreateRequest,
     SyncDocumentsRequest,
     SyncDocumentsResponse,
 )
@@ -67,6 +70,14 @@ async def upload_document(
     except (UnsupportedFileError, ExtractionError) as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     return _to_document_response(document)
+
+
+@router.post("/jobs", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+def create_job(
+    body: JobCreateRequest,
+    use_case: CreateJobUseCase = Depends(get_create_job_use_case),
+) -> DocumentResponse:
+    return _to_document_response(use_case.execute(body.model_dump()))
 
 
 @router.get("/documents", response_model=list[DocumentResponse])

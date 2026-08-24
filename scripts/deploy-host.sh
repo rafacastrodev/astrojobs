@@ -10,4 +10,5 @@ sg docker -c 'docker compose -p astrojobs up -d --build --remove-orphans --wait 
 docker compose -p astrojobs ps
 
 curl --fail --silent --show-error --max-time 10 http://127.0.0.1:8000/health
-curl --fail --silent --show-error --output /dev/null --max-time 10 http://127.0.0.1/
+curl --fail --silent --show-error --output /dev/null --max-time 10 http://127.0.0.1/healthz
+curl --fail --silent --show-error --output /dev/null --max-time 10 --insecure https://127.0.0.1/

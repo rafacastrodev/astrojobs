@@ -6,14 +6,16 @@ type AnalysisCardProps = {
 }
 
 const jobLabel = (analysis: AnalysisResult) => {
-  if (analysis.job_source === 'none') return 'Verificação geral'
-  return analysis.job_title ?? 'Comparação com vaga'
+  if (analysis.job_source === 'none') return 'General review'
+  return analysis.job_title ?? 'Job comparison'
 }
 
 export const AnalysisCard = ({ analysis }: AnalysisCardProps) => (
   <div className="rounded-lg border border-border bg-card p-4">
     <div className="flex flex-wrap items-baseline justify-between gap-2">
-      <p className="text-2xl font-semibold text-card-foreground">{analysis.score}/100</p>
+      <p className="text-2xl font-semibold text-card-foreground">
+        {analysis.score}/100
+      </p>
       <p className="text-xs text-muted-foreground">
         {jobLabel(analysis)} · {new Date(analysis.created_at).toLocaleString()}
       </p>
@@ -25,19 +27,23 @@ export const AnalysisCard = ({ analysis }: AnalysisCardProps) => (
       <dl className="mt-3 flex flex-col gap-1 text-xs text-muted-foreground">
         {analysis.years_of_experience !== null ? (
           <div>
-            <dt className="inline font-medium text-card-foreground">Experiência: </dt>
+            <dt className="inline font-medium text-card-foreground">
+              Experience:{' '}
+            </dt>
             <dd className="inline">{analysis.years_of_experience} anos</dd>
           </div>
         ) : null}
         {analysis.companies.length > 0 ? (
           <div>
-            <dt className="inline font-medium text-card-foreground">Empresas: </dt>
+            <dt className="inline font-medium text-card-foreground">
+              Companies:{' '}
+            </dt>
             <dd className="inline">{analysis.companies.join(', ')}</dd>
           </div>
         ) : null}
         {analysis.technologies.length > 0 ? (
           <div className="flex flex-wrap items-baseline gap-x-1">
-            <dt className="font-medium text-card-foreground">Tecnologias:</dt>
+            <dt className="font-medium text-card-foreground">Technologies:</dt>
             <dd className="flex flex-wrap gap-1">
               {analysis.technologies.map((tech) => (
                 <span

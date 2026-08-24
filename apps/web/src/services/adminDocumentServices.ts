@@ -2,6 +2,7 @@ import type {
   AdminDocument,
   DocumentStatus,
   DocumentType,
+  JobCreatePayload,
   SyncDocumentsResponse,
 } from '@/pages/admin/types'
 import { api } from '@/utils/api/client'
@@ -36,9 +37,15 @@ async function remove(id: number) {
   await api.delete(`/admin/documents/${id}`)
 }
 
+async function createJob(payload: JobCreatePayload) {
+  const response = await api.post<AdminDocument>('/admin/jobs', payload)
+  return response.data
+}
+
 export const adminDocumentServices = {
   list,
   upload,
   sync,
   remove,
+  createJob,
 }

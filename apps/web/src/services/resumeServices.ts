@@ -1,4 +1,4 @@
-import type { Resume } from '@/pages/dashboard/types'
+import type { JobMatch, Resume } from '@/pages/dashboard/types'
 import { api } from '@/utils/api/client'
 
 async function list() {
@@ -17,8 +17,22 @@ async function remove(id: number) {
   await api.delete(`/documents/resumes/${id}`)
 }
 
+async function get(id: number) {
+  const response = await api.get<Resume>(`/documents/resumes/${id}`)
+  return response.data
+}
+
+async function matches(id: number) {
+  const response = await api.get<JobMatch[]>(
+    `/documents/resumes/${id}/matches?top_k=5`,
+  )
+  return response.data
+}
+
 export const resumeServices = {
   list,
+  get,
+  matches,
   upload,
   remove,
 }

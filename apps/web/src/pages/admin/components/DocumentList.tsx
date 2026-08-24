@@ -25,7 +25,11 @@ export const DocumentList = ({
   isDeleting,
 }: DocumentListProps) => {
   if (documents.length === 0) {
-    return <p className="text-sm text-muted-foreground">No documents yet. Upload one to get started.</p>
+    return (
+      <p className="text-sm text-muted-foreground">
+        No documents yet. Upload one to get started.
+      </p>
+    )
   }
 
   return (
@@ -37,7 +41,11 @@ export const DocumentList = ({
           </Button>
         </div>
         <div className="w-28">
-          <Button type="button" onClick={onClearSelection} className="!bg-muted !text-muted-foreground !py-2 text-sm">
+          <Button
+            type="button"
+            onClick={onClearSelection}
+            className="!bg-muted !text-muted-foreground !py-2 text-sm"
+          >
             Clear
           </Button>
         </div>
@@ -45,18 +53,30 @@ export const DocumentList = ({
       <ul className="divide-y divide-border rounded-2xl border border-border bg-card">
         {documents.map((document) => {
           const checked = selectedIds.includes(document.id)
+          const label =
+            document.type === 'job' &&
+            typeof document.payload.title === 'string'
+              ? document.payload.title
+              : document.source_filename
           return (
-            <li key={document.id} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <li
+              key={document.id}
+              className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+            >
               <div className="flex items-start gap-3">
                 <input
                   type="checkbox"
                   checked={checked}
                   onChange={() => onToggle(document.id)}
                   className="mt-1"
-                  aria-label={`Select ${document.source_filename}`}
+                  aria-label={`Select ${label}`}
                 />
-                <button type="button" onClick={() => onSelect(document)} className="text-left">
-                  <p className="font-medium text-card-foreground">{document.source_filename}</p>
+                <button
+                  type="button"
+                  onClick={() => onSelect(document)}
+                  className="text-left"
+                >
+                  <p className="font-medium text-card-foreground">{label}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {new Date(document.created_at).toLocaleString()}
                   </p>

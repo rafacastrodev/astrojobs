@@ -7,6 +7,7 @@ import { useAdminDashboard } from '../hooks/useAdminDashboard'
 import { DocumentDetail } from './DocumentDetail'
 import { DocumentList } from './DocumentList'
 import { DocumentUpload } from './DocumentUpload'
+import { JobForm } from './JobForm'
 
 type AdminDashboardProps = {
   name: string
@@ -91,14 +92,18 @@ export const AdminDashboard = ({ name }: AdminDashboardProps) => {
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">
-            Upload {tab === 'resume' ? 'resume' : 'job'}
+            {tab === 'resume' ? 'Upload resume' : 'Create job'}
           </h2>
-          <DocumentUpload
-            accept={ACCEPT}
-            isLoading={isUploading}
-            onUpload={handleUpload}
-            error={uploadError}
-          />
+          {tab === 'resume' ? (
+            <DocumentUpload
+              accept={ACCEPT}
+              isLoading={isUploading}
+              onUpload={handleUpload}
+              error={uploadError}
+            />
+          ) : (
+            <JobForm />
+          )}
         </section>
 
         <section className="space-y-4">
@@ -146,7 +151,12 @@ export const AdminDashboard = ({ name }: AdminDashboardProps) => {
 
         {selectedDocument ? (
           <DocumentDetail
-            filename={selectedDocument.source_filename}
+            filename={
+              tab === 'job' &&
+              typeof selectedDocument.payload.title === 'string'
+                ? selectedDocument.payload.title
+                : selectedDocument.source_filename
+            }
             payload={selectedDocument.payload}
             errorMessage={selectedDocument.error_message}
             status={selectedDocument.status}

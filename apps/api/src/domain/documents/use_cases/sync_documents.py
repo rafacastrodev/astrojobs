@@ -1,4 +1,3 @@
-import json
 import logging
 from collections.abc import Callable, Sequence
 from typing import Any
@@ -6,6 +5,7 @@ from typing import Any
 from domain.documents.embedder import Embedder
 from domain.documents.entities import DocumentType
 from domain.documents.errors import SyncConfigurationError
+from domain.documents.payload_text import payload_to_embedding_text
 from domain.documents.pinecone_client import PineconeClientPort
 from domain.documents.repository import DocumentRepository
 
@@ -49,7 +49,7 @@ class SyncDocumentsUseCase:
         for document in documents:
             try:
                 vector_id = document.pinecone_id or f"{document.type}-{document.id}"
-                text = self._payload_to_text(document.payload)
+                text = payload_to_embedding_text(document.payload, document.type)
                 values = self._embedder.embed([text])[0]
                 client.upsert(
                     [
@@ -80,6 +80,3 @@ class SyncDocumentsUseCase:
         if doc_type == "resume":
             return self._namespace_resumes
         return self._namespace_jobs
-
-    def _payload_to_text(self, payload: dict[str, Any]) -> str:
-        return json.dumps(payload, ensure_ascii=True, sort_keys=True)

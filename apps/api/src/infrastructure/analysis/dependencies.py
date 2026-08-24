@@ -16,11 +16,11 @@ from infrastructure.repositories.sqlalchemy_analysis_repository import (
 from infrastructure.repositories.sqlalchemy_document_repository import (
     SqlAlchemyDocumentRepository,
 )
-from infrastructure.services.bedrock_resume_analyzer import BedrockResumeAnalyzer
+from infrastructure.services.openai_resume_analyzer import OpenAIResumeAnalyzer
 
 
 def get_analyze_resume_use_case(db: Session = Depends(get_db)) -> AnalyzeResumeUseCase:
-    if not settings.bedrock_model_id:
+    if not settings.openai_api_key:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Resume analysis is not configured",
@@ -28,7 +28,7 @@ def get_analyze_resume_use_case(db: Session = Depends(get_db)) -> AnalyzeResumeU
     return AnalyzeResumeUseCase(
         SqlAlchemyAnalysisRepository(db),
         SqlAlchemyDocumentRepository(db),
-        BedrockResumeAnalyzer(),
+        OpenAIResumeAnalyzer(),
         HeuristicTextExtractor(),
     )
 

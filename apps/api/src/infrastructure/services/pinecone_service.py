@@ -19,3 +19,19 @@ class PineconeClient:
         if not ids:
             return
         self.index.delete(ids=ids, namespace=namespace)
+
+    def query(self, vector: list[float], namespace: str, top_k: int) -> list[dict]:
+        response = self.index.query(
+            vector=vector,
+            namespace=namespace,
+            top_k=top_k,
+            include_metadata=True,
+        )
+        return [
+            {
+                "id": match.get("id"),
+                "score": float(match.get("score") or 0.0),
+                "metadata": dict(match.get("metadata") or {}),
+            }
+            for match in response.matches
+        ]

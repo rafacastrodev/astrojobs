@@ -1,5 +1,6 @@
 packages:
   - "apps/*"
+  - "e2e"
 allowBuilds:
   '@swc/core': true
   esbuild: true

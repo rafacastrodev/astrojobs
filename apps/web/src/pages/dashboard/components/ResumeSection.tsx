@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 
 import { Button } from '@/components/Button'
 
-import { AnalysisPanel } from './AnalysisPanel'
+import { ResumeWorkspace } from './ResumeWorkspace'
 import { ACCEPTED_EXTENSIONS, useResumes } from '../hooks/useResumes'
 import type { Resume } from '../types'
 
@@ -120,14 +120,15 @@ export const ResumeSection = () => {
                       {resume.latest_analysis ? (
                         <>
                           {' '}
-                          · <span className="font-medium text-card-foreground">
+                          ·{' '}
+                          <span className="font-medium text-card-foreground">
                             {resume.latest_analysis.score}/100
                           </span>
                           {resume.latest_analysis.years_of_experience !== null
                             ? ` · ${resume.latest_analysis.years_of_experience} anos`
                             : ''}
                           {resume.latest_analysis.technologies.length > 0
-                            ? ` · ${resume.latest_analysis.technologies.length} tecnologias`
+                            ? ` · ${resume.latest_analysis.technologies.length} technologies`
                             : ''}
                         </>
                       ) : null}
@@ -137,11 +138,13 @@ export const ResumeSection = () => {
                     <button
                       type="button"
                       onClick={() =>
-                        setExpandedResumeId(expandedResumeId === resume.id ? null : resume.id)
+                        setExpandedResumeId(
+                          expandedResumeId === resume.id ? null : resume.id,
+                        )
                       }
                       className="cursor-pointer text-sm text-muted-foreground transition hover:text-card-foreground"
                     >
-                      {expandedResumeId === resume.id ? 'Fechar' : 'Analisar'}
+                      {expandedResumeId === resume.id ? 'Close' : 'Open'}
                     </button>
                     <button
                       type="button"
@@ -153,7 +156,9 @@ export const ResumeSection = () => {
                     </button>
                   </div>
                 </div>
-                {expandedResumeId === resume.id ? <AnalysisPanel resumeId={resume.id} /> : null}
+                {expandedResumeId === resume.id ? (
+                  <ResumeWorkspace resume={resume} />
+                ) : null}
               </li>
             ))}
           </ul>

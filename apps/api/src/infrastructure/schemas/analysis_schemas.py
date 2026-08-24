@@ -5,9 +5,8 @@ from pydantic import BaseModel
 
 
 class AnalyzeResumeRequest(BaseModel):
-    job_source: Literal["none", "catalog", "pasted"]
+    job_source: Literal["none", "catalog"]
     job_document_id: int | None = None
-    job_text: str | None = None
 
 
 class AnalysisFeedbackRequest(BaseModel):

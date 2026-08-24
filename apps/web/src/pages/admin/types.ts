@@ -17,5 +17,32 @@ export type SyncDocumentsResponse = {
   synced: number
   failed: number
   skipped: number
-  results: Array<{ id: number; status: string; error?: string; pinecone_id?: string }>
+  results: Array<{
+    id: number
+    status: string
+    error?: string
+    pinecone_id?: string
+  }>
+}
+
+export type JobCreatePayload = {
+  title: string
+  requirements: string[]
+  responsibilities: string[]
+  seniority:
+    | 'intern'
+    | 'junior'
+    | 'mid'
+    | 'senior'
+    | 'lead'
+    | 'principal'
+    | 'staff'
+    | 'unspecified'
+  employment_type:
+    | 'full-time'
+    | 'part-time'
+    | 'contract'
+    | 'internship'
+    | 'temporary'
+    | 'unspecified'
 }

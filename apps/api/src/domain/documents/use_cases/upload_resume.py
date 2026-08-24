@@ -2,12 +2,13 @@ import logging
 import uuid
 from pathlib import Path
 
+from domain.analysis.analyzer import ResumeAnalyzer
 from domain.analysis.entities import AnalysisEntity
-from domain.analysis.errors import AnalysisServiceError
-from domain.analysis.use_cases.analyze_resume import AnalyzeResumeUseCase
+from domain.analysis.repository import AnalysisRepository
 from domain.documents.entities import DocumentEntity
 from domain.documents.errors import (
     ExtractionError,
+    ExtractionServiceError,
     FileTooLargeError,
     StorageError,
     UnsupportedFileError,
@@ -15,7 +16,13 @@ from domain.documents.errors import (
 from domain.documents.file_storage import FileStoragePort
 from domain.documents.file_text_loader import FileTextLoader
 from domain.documents.repository import DocumentRepository
+from domain.documents.safety import (
+    ContentSafetyChecker,
+    FileSafetyValidator,
+    PiiRedactor,
+)
 from domain.documents.text_extractor import TextExtractor
+from domain.documents.use_cases.sync_documents import SyncDocumentsUseCase
 
 logger = logging.getLogger(__name__)
 
@@ -41,14 +48,24 @@ class UploadResumeUseCase:
         extractor: TextExtractor,
         file_storage: FileStoragePort,
         max_file_bytes: int,
-        analyze_resume_use_case: AnalyzeResumeUseCase | None = None,
+        file_validator: FileSafetyValidator,
+        pii_redactor: PiiRedactor,
+        content_safety: ContentSafetyChecker,
+        analyzer: ResumeAnalyzer,
+        analysis_repository: AnalysisRepository,
+        sync_documents_use_case: SyncDocumentsUseCase | None = None,
     ):
         self._documents = document_repository
         self._file_loader = file_loader
         self._extractor = extractor
         self._storage = file_storage
         self._max_file_bytes = max_file_bytes
-        self._analyze = analyze_resume_use_case
+        self._file_validator = file_validator
+        self._pii_redactor = pii_redactor
+        self._content_safety = content_safety
+        self._analyzer = analyzer
+        self._analyses = analysis_repository
+        self._sync = sync_documents_use_case
 
     def execute(
         self, content: bytes, filename: str, user_id: int
@@ -59,6 +76,8 @@ class UploadResumeUseCase:
             limit_mb = self._max_file_bytes / (1024 * 1024)
             raise FileTooLargeError(f"File is larger than the {limit_mb:.0f}MB limit")
 
+        self._file_validator.validate(content, filename)
+
         try:
             text = self._file_loader.load(content, filename)
         except UnsupportedFileError:
@@ -66,13 +85,27 @@ class UploadResumeUseCase:
         except Exception as exc:
             raise UnsupportedFileError(str(exc)) from exc
 
+        redaction = self._pii_redactor.redact(text)
+        self._content_safety.check(redaction.redacted_text)
+
         try:
-            payload = self._extractor.extract(text, "resume")
+            payload = self._extractor.extract(redaction.redacted_text, "resume")
+        except (ExtractionError, ExtractionServiceError):
+            raise
         except Exception as exc:
             raise ExtractionError(str(exc)) from exc
 
         if not payload:
             raise ExtractionError("Extractor returned an empty payload")
+
+        payload = {
+            "schema_version": 2,
+            **payload,
+            "contact": redaction.contact,
+            "full_text": text,
+            "structure": self._structure(payload),
+        }
+        analysis_result = self._analyzer.analyze(payload, None)
 
         extension = Path(filename).suffix.lower()
         storage_key = f"resumes/{user_id}/{uuid.uuid4().hex}{extension}"
@@ -97,27 +130,63 @@ class UploadResumeUseCase:
             self._discard(storage_key)
             raise
 
-        analysis = self._run_initial_analysis(document.id, user_id)  # type: ignore[arg-type]
+        try:
+            analysis = self._analyses.create(
+                user_id=user_id,
+                resume_document_id=document.id,  # type: ignore[arg-type]
+                job_source="none",
+                job_document_id=None,
+                job_title=None,
+                score=analysis_result["score"],
+                summary=analysis_result["summary"],
+                findings=analysis_result["findings"],
+                years_of_experience=analysis_result["years_of_experience"],
+                technologies=analysis_result["technologies"],
+                companies=analysis_result["companies"],
+            )
+        except Exception:
+            self._documents.delete(document.id)  # type: ignore[arg-type]
+            self._discard(storage_key)
+            raise
+
+        document = self._index(document)
         return document, analysis
 
-    def _run_initial_analysis(
-        self, resume_document_id: int, user_id: int
-    ) -> AnalysisEntity | None:
-        if self._analyze is None:
-            return None
+    def _index(self, document: DocumentEntity) -> DocumentEntity:
+        if self._sync is None or document.id is None:
+            return document
         try:
-            return self._analyze.execute(
-                user_id=user_id,
-                resume_document_id=resume_document_id,
-                job_source="none",
-            )
-        except AnalysisServiceError as exc:
+            self._sync.execute([document.id])
+        except Exception as exc:  # noqa: BLE001
             logger.warning(
-                "Initial resume analysis failed for document %s: %s",
-                resume_document_id,
+                "Initial resume indexing failed for document %s: %s",
+                document.id,
                 exc,
             )
-            return None
+            self._documents.mark_failed(document.id, "Could not index resume")
+        return self._documents.get_by_id(document.id) or document
+
+    @staticmethod
+    def _structure(payload: dict) -> dict[str, object]:
+        return {
+            "has_summary": bool(payload.get("summary")),
+            "has_experience": bool(payload.get("experiences")),
+            "has_education": bool(payload.get("education")),
+            "has_skills": bool(payload.get("skills")),
+            "section_count": sum(
+                bool(payload.get(key))
+                for key in (
+                    "summary",
+                    "skills",
+                    "experiences",
+                    "education",
+                    "projects",
+                    "certifications",
+                    "languages",
+                    "additional_sections",
+                )
+            ),
+        }
 
     def _discard(self, storage_key: str) -> None:
         try:

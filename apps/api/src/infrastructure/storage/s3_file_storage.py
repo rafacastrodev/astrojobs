@@ -1,7 +1,6 @@
 import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
-
 from infrastructure.database.config import settings
 
 
@@ -34,7 +33,7 @@ class S3FileStorage:
             self._client.head_bucket(Bucket=self._bucket)
         except ClientError:
             params: dict[str, object] = {"Bucket": self._bucket}
-            if settings.aws_region != "us-east-2":
+            if settings.aws_region != "us-east-1":
                 params["CreateBucketConfiguration"] = {
                     "LocationConstraint": settings.aws_region
                 }

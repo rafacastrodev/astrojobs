@@ -1,42 +1,82 @@
-name: ci-cd
+name: AWS Deploy
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 concurrency:
-  group: production
+  group: aws-deploy-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-  id-token: write
-
-env:
-  AWS_REGION: us-east-2
-  EC2_INSTANCE_ID: i-079d9fce38404b208
-  DEPLOY_BUCKET: astrojobs-s3
-  AWS_DEPLOY_ROLE_ARN: arn:aws:iam::956112822284:role/astrojobs-github-deploy
-
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Validate and build containers
-        run: |
-          cp .env.example .env
-          docker compose config --quiet
-          docker compose build api frontend
-
   deploy:
-    needs: build
     runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    env:
+      AWS_REGION: us-east-1
+      EC2_INSTANCE_ID: i-0d74e95a51f949226
+      DEPLOY_BUCKET: astrojobs-s3
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: aws-actions/configure-aws-credentials@v5
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.2.3
         with:
-          role-to-assume: ${{ env.AWS_DEPLOY_ROLE_ARN }}
+          audience: sts.amazonaws.com
           aws-region: ${{ env.AWS_REGION }}
-      - name: Deploy with Systems Manager
-        run: scripts/deploy-ci.sh
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHub
+
+      - name: Create .env
+        env:
+          POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
+          POSTGRES_PORT: ${{ secrets.POSTGRES_PORT }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          FRONTEND_ORIGIN: ${{ secrets.FRONTEND_ORIGIN }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
+          EMBEDDING_DIMENSIONS: ${{ secrets.EMBEDDING_DIMENSIONS }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPEN_API_MODEL: ${{ secrets.OPEN_API_MODEL }}
+          OPENAI_MODERATION_MODEL: ${{ secrets.OPENAI_MODERATION_MODEL }}
+        run: |
+          umask 077
+          write_env() {
+            printf '%s=%s\n' "$1" "$(jq -Rn --arg value "$2" '$value')"
+          }
+          {
+            write_env POSTGRES_HOST "$POSTGRES_HOST"
+            write_env POSTGRES_PORT "$POSTGRES_PORT"
+            write_env POSTGRES_USER "$POSTGRES_USER"
+            write_env POSTGRES_PASSWORD "$POSTGRES_PASSWORD"
+            write_env POSTGRES_DB "$POSTGRES_DB"
+            write_env PGSSLMODE "verify-full"
+            write_env PGSSLROOTCERT "/etc/ssl/certs/rds-global-bundle.pem"
+            write_env JWT_SECRET "$JWT_SECRET"
+            write_env COOKIE_SECURE "true"
+            write_env FRONTEND_ORIGIN "$FRONTEND_ORIGIN"
+            write_env ENVIRONMENT "production"
+            write_env PINECONE_API_KEY "$PINECONE_API_KEY"
+            write_env PINECONE_INDEX_NAME "$PINECONE_INDEX_NAME"
+            write_env EMBEDDING_DIMENSIONS "$EMBEDDING_DIMENSIONS"
+            write_env AWS_REGION "$AWS_REGION"
+            write_env AWS_S3_BUCKET "$AWS_S3_BUCKET"
+            write_env AWS_S3_ENDPOINT_URL ""
+            write_env OPENAI_API_KEY "$OPENAI_API_KEY"
+            write_env OPENAI_MODEL "$OPENAI_API_MODEL"
+            write_env OPENAI_MODERATION_MODEL "$OPENAI_MODERATION_MODEL"
+            write_env VITE_API_URL "/api"
+          } > "$GITHUB_WORKSPACE/.env"
+
+      - name: Deploy to EC2 via Systems Manager
+        run: bash scripts/deploy-ci.sh

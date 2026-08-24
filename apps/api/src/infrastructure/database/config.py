@@ -64,21 +64,26 @@ class Settings(BaseSettings):
     pinecone_index_name: str = ""
     pinecone_namespace_resumes: str = "resumes"
     pinecone_namespace_jobs: str = "jobs"
+    pinecone_embed_model: str = "multilingual-e5-large"
     embedding_dimensions: int = 1024
 
-    # Cross-region inference profile id, e.g. "us.anthropic.claude-sonnet-4-6".
-    # Verify the current id with: aws bedrock list-foundation-models --region <region>
-    bedrock_model_id: str = ""
+    openai_api_key: str = ""
+    openai_model: str = "gpt-5.4-mini-2026-03-17"
+    openai_moderation_model: str = "omni-moderation-latest"
+    openai_timeout_seconds: float = 45.0
+    openai_max_retries: int = 2
 
-    aws_region: str = "us-east-2"
+    aws_region: str = "us-east-1"
     aws_s3_bucket: str = ""
     # Empty means real AWS S3; set it to a LocalStack URL for dev and CI.
     aws_s3_endpoint_url: str = ""
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
     aws_session_token: str = ""
-    aws_bearer_token_bedrock: str = ""
     max_upload_bytes: int = 5 * 1024 * 1024
+    max_pdf_pages: int = 30
+    max_extracted_chars: int = 200_000
+    max_llm_input_chars: int = 50_000
 
     @field_validator("postgres_host", "frontend_origin", mode="before")
     @classmethod
@@ -92,13 +97,6 @@ class Settings(BaseSettings):
     def _empty_port_to_none(cls, value: object) -> object:
         if value == "" or value is None:
             return None
-        return value
-
-    @field_validator("aws_bearer_token_bedrock", mode="before")
-    @classmethod
-    def _compact_bearer_token(cls, value: object) -> object:
-        if isinstance(value, str):
-            return "".join(value.split())
         return value
 
     @property

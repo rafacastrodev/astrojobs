@@ -2,5 +2,7 @@
 !.env.example
 .playwright-mcp/
 .superpowers/
-node_modules/*
+node_modules/
+test-results/
+playwright-report/
 *.log

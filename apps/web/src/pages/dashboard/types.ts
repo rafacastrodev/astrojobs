@@ -9,6 +9,19 @@ export type Resume = {
   latest_analysis: AnalysisResult | null
 }
 
+export type JobMatch = {
+  id: number
+  title: string
+  source_filename: string
+  score: number
+  payload: {
+    requirements?: string[]
+    responsibilities?: string[]
+    seniority?: string
+    employment_type?: string
+  }
+}
+
 export type JobSource = 'none' | 'catalog' | 'pasted'
 
 export type FeedbackRating = 'up' | 'down'
