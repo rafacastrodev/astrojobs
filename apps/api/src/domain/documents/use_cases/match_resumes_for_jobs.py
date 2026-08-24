@@ -62,6 +62,9 @@ def _job_technologies(payload: dict[str, Any]) -> list[str]:
 def _resume_technologies(payload: dict[str, Any], analysis: AnalysisEntity | None) -> list[str]:
     techs = _as_techs(payload.get("technologies"))
     techs.extend(_as_techs(payload.get("skills")))
+    stack = payload.get("tech_stack")
+    if isinstance(stack, dict):
+        techs.extend(_as_techs(list(stack.values())))
     if analysis is not None:
         techs.extend(analysis.technologies)
     return techs

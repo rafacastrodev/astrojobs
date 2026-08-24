@@ -47,8 +47,10 @@ export const useResumeAnalysis = (
           jobSource === 'catalog' ? (selectedJobId ?? undefined) : undefined,
       })
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: analysesQueryKey }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: analysesQueryKey })
+      void queryClient.invalidateQueries({ queryKey: ['resumes'] })
+    },
   })
 
   const canSubmit = mode === 'ats' || selectedJobId !== null

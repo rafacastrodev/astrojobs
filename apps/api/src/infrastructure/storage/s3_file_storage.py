@@ -48,6 +48,15 @@ class S3FileStorage:
             ContentType=content_type,
         )
 
+    def get(self, key: str) -> tuple[bytes, str]:
+        try:
+            obj = self._client.get_object(Bucket=self._bucket, Key=key)
+        except ClientError as exc:
+            raise FileNotFoundError(key) from exc
+        body = obj["Body"].read()
+        content_type = obj.get("ContentType") or "application/octet-stream"
+        return body, content_type
+
     def delete(self, key: str) -> None:
         self._client.delete_object(Bucket=self._bucket, Key=key)
 

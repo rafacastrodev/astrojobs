@@ -47,9 +47,11 @@ export type RecruiterApplication = {
   job_document_id: number
   job_title: string
   applicant_name: string
+  applicant_email: string
   resume_document_id: number
   resume_filename: string
   resume_summary: string | null
   resume_technologies: string[]
+  matched_technologies: string[]
   resume_payload: Record<string, unknown>
 }

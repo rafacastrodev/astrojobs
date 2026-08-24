@@ -17,7 +17,7 @@ _AUTH_PATHS = {
     "/auth/forgot-password",
     "/auth/reset-password",
 }
-_UPLOAD_PATHS = {"/documents/resumes"}
+_UPLOAD_PATHS = {"/documents/resumes", "/auth/me/photo"}
 
 
 def client_ip(request: Request) -> str:

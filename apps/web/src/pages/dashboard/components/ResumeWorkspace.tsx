@@ -1,49 +1,73 @@
 import { useState } from 'react'
 
 import type { Resume } from '../types'
+import { AnalysisFeedback } from './AnalysisFeedback'
 import { AnalysisPanel } from './AnalysisPanel'
 import { JobMatches } from './JobMatches'
 import { ResumeProfileView } from './ResumeProfileView'
 
-type Tab = 'resume' | 'analysis' | 'matches'
-
 export const ResumeWorkspace = ({ resume }: { resume: Resume }) => {
-  const [tab, setTab] = useState<Tab>('resume')
   const [analysisJobId, setAnalysisJobId] = useState<number | null>(null)
+  const analysis = resume.latest_analysis
 
   return (
-    <div className="mt-4 rounded-lg border border-border bg-input/40 p-4">
-      <div className="mb-4 flex flex-wrap gap-2 text-sm">
-        {(
-          [
-            ['resume', 'Full resume'],
-            ['analysis', 'Score and tips'],
-            ['matches', 'Matching jobs'],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setTab(value)}
-            className={`rounded-md px-3 py-1.5 ${tab === value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      {tab === 'resume' ? <ResumeProfileView payload={resume.payload} /> : null}
-      {tab === 'analysis' ? (
-        <AnalysisPanel resumeId={resume.id} initialJobId={analysisJobId} />
-      ) : null}
-      {tab === 'matches' ? (
-        <JobMatches
+    <div className="mt-4 space-y-8 border-t border-border pt-6">
+      <section>
+        <h3 className="text-base font-semibold text-card-foreground">Resume</h3>
+        <div className="mt-3">
+          <ResumeProfileView payload={resume.payload} analysis={analysis} />
+        </div>
+      </section>
+
+      <section>
+        <h3 className="text-base font-semibold text-card-foreground">
+          Suggestions
+        </h3>
+        {analysis ? (
+          <div className="mt-3">
+            <ul className="flex flex-col gap-1 text-sm text-card-foreground">
+              {analysis.findings.map((finding, index) => (
+                <li key={index}>• {finding}</li>
+              ))}
+            </ul>
+            {analysis.summary ? (
+              <p className="mt-3 text-sm text-muted-foreground">
+                {analysis.summary}
+              </p>
+            ) : null}
+            <AnalysisFeedback analysis={analysis} />
+          </div>
+        ) : resume.analysis_status === 'pending' ? (
+          <p className="mt-3 text-sm text-muted-foreground">
+            ATS analysis is still running…
+          </p>
+        ) : resume.analysis_status === 'failed' ? (
+          <p role="alert" className="mt-3 text-sm text-destructive">
+            {resume.analysis_error_message ?? 'ATS analysis failed.'}
+          </p>
+        ) : (
+          <p className="mt-3 text-sm text-muted-foreground">
+            No ATS analysis yet.
+          </p>
+        )}
+        <AnalysisPanel
           resumeId={resume.id}
-          onAnalyze={(jobId) => {
-            setAnalysisJobId(jobId)
-            setTab('analysis')
-          }}
+          initialJobId={analysisJobId}
+          hiddenAnalysisId={analysis?.id}
         />
-      ) : null}
+      </section>
+
+      <section>
+        <h3 className="text-base font-semibold text-card-foreground">
+          Matching jobs
+        </h3>
+        <div className="mt-3">
+          <JobMatches
+            resumeId={resume.id}
+            onAnalyze={(jobId) => setAnalysisJobId(jobId)}
+          />
+        </div>
+      </section>
     </div>
   )
 }

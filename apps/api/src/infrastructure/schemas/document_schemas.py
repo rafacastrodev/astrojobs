@@ -36,6 +36,10 @@ class ProcessResumeRequest(BaseModel):
     force_analysis: bool = False
 
 
+class RenameResumeRequest(BaseModel):
+    source_filename: str = Field(min_length=1, max_length=200)
+
+
 class JobSummaryResponse(BaseModel):
     id: int
     title: str
@@ -106,6 +110,8 @@ class JobMatchResponse(BaseModel):
     payload: dict[str, Any]
     matched_technologies: list[str] = []
     applied: bool = False
+    recruiter_name: str | None = None
+    recruiter_email: str | None = None
 
 
 class MatchedJobSummary(BaseModel):

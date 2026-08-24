@@ -19,6 +19,7 @@ from domain.documents.use_cases.list_user_resumes import ListUserResumesUseCase
 from domain.documents.use_cases.match_jobs_for_resume import MatchJobsForResumeUseCase
 from domain.documents.use_cases.match_resumes_for_jobs import MatchResumesForJobsUseCase
 from domain.documents.use_cases.process_resume import ProcessResumeUseCase
+from domain.documents.use_cases.rename_user_resume import RenameUserResumeUseCase
 from domain.documents.use_cases.retrieve_similar_jobs import RetrieveSimilarJobsUseCase
 from domain.documents.use_cases.sync_documents import SyncDocumentsUseCase
 from domain.documents.use_cases.upload_resume import UploadResumeUseCase
@@ -184,6 +185,10 @@ def get_delete_user_resume_use_case(db: Session = Depends(get_db)) -> DeleteUser
     )
 
 
+def get_rename_user_resume_use_case(db: Session = Depends(get_db)) -> RenameUserResumeUseCase:
+    return RenameUserResumeUseCase(SqlAlchemyDocumentRepository(db))
+
+
 def get_match_jobs_use_case(db: Session = Depends(get_db)) -> MatchJobsForResumeUseCase:
     return MatchJobsForResumeUseCase(
         SqlAlchemyDocumentRepository(db),
@@ -226,3 +231,7 @@ def get_application_repository(
     db: Session = Depends(get_db),
 ) -> SqlAlchemyApplicationRepository:
     return SqlAlchemyApplicationRepository(db)
+
+
+def get_user_repository(db: Session = Depends(get_db)) -> SqlAlchemyUserRepository:
+    return SqlAlchemyUserRepository(db)

@@ -14,3 +14,4 @@ class UserEntity:
     hashed_password: str | None
     role: UserRole
     created_at: datetime
+    photo_key: str | None = None

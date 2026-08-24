@@ -35,7 +35,9 @@ class SqlAlchemyDocumentRepository:
             self._session.commit()
         except IntegrityError as exc:
             self._session.rollback()
-            raise DuplicateDocumentError("This document was already uploaded") from exc
+            if "uq_documents_user_type_content_hash" in str(exc.orig or exc):
+                raise DuplicateDocumentError("This resume was already uploaded") from exc
+            raise
         self._session.refresh(model)
         return self._to_entity(model)
 
@@ -155,6 +157,15 @@ class SqlAlchemyDocumentRepository:
         self._session.delete(model)
         self._session.commit()
         return True
+
+    def update_source_filename(
+        self, document_id: int, source_filename: str
+    ) -> DocumentEntity:
+        model = self._require(document_id)
+        model.source_filename = source_filename
+        self._session.commit()
+        self._session.refresh(model)
+        return self._to_entity(model)
 
     @staticmethod
     def _to_entity(model: DocumentModel) -> DocumentEntity:

@@ -1,5 +1,6 @@
 import type { components } from '@/types/api'
 import { api } from '@/utils/api/client'
+import { env } from '@/utils/env/config'
 import { hashPassword } from '@/utils/crypto/password'
 import type {
   ForgotPasswordFormValues,
@@ -9,6 +10,12 @@ import type {
 } from '@/utils/validation/authSchemas'
 
 type User = components['schemas']['UserResponse']
+
+export function userPhotoUrl(user: Pick<User, 'photo_url'> | null | undefined) {
+  if (!user?.photo_url) return null
+  const base = env.API_URL.replace(/\/$/, '')
+  return `${base}${user.photo_url}`
+}
 
 async function signIn(values: LoginFormValues) {
   const response = await api.post<User>('/auth/login', {
@@ -60,6 +67,13 @@ async function resetPassword(token: string, values: ResetPasswordFormValues) {
   return response.data
 }
 
+async function uploadPhoto(file: File) {
+  const body = new FormData()
+  body.append('file', file)
+  const response = await api.post<User>('/auth/me/photo', body)
+  return response.data
+}
+
 export const userServices = {
   signIn,
   signUp,
@@ -67,4 +81,5 @@ export const userServices = {
   getCurrentUser,
   forgotPassword,
   resetPassword,
+  uploadPhoto,
 }

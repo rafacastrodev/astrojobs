@@ -3,10 +3,12 @@ from sqlalchemy.orm import Session
 
 from domain.users.entities import UserEntity
 from domain.users.use_cases.get_current_user import GetCurrentUserUseCase
+from domain.users.use_cases.get_profile_photo import GetProfilePhotoUseCase
 from domain.users.use_cases.login import LoginUseCase
 from domain.users.use_cases.request_password_reset import RequestPasswordResetUseCase
 from domain.users.use_cases.reset_password import ResetPasswordUseCase
 from domain.users.use_cases.signup import SignupUseCase
+from domain.users.use_cases.upload_profile_photo import UploadProfilePhotoUseCase
 from infrastructure.database.config import settings
 from infrastructure.database.session import get_db
 from infrastructure.repositories.sqlalchemy_password_reset_token_repository import (
@@ -17,6 +19,7 @@ from infrastructure.repositories.sqlalchemy_user_repository import (
 )
 from infrastructure.security.hashing import BcryptPasswordHasher
 from infrastructure.security.jwt import JwtTokenService
+from infrastructure.storage.s3_file_storage import S3FileStorage
 
 COOKIE_NAME = "jwt"
 
@@ -54,6 +57,16 @@ def get_reset_password_use_case(db: Session = Depends(get_db)) -> ResetPasswordU
         SqlAlchemyPasswordResetTokenRepository(db),
         BcryptPasswordHasher(),
     )
+
+
+def get_upload_profile_photo_use_case(
+    db: Session = Depends(get_db),
+) -> UploadProfilePhotoUseCase:
+    return UploadProfilePhotoUseCase(SqlAlchemyUserRepository(db), S3FileStorage())
+
+
+def get_profile_photo_use_case() -> GetProfilePhotoUseCase:
+    return GetProfilePhotoUseCase(S3FileStorage())
 
 
 def get_current_user(

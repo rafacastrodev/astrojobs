@@ -66,6 +66,17 @@ class SqlAlchemyUserRepository:
         model.hashed_password = hashed_password
         self._session.commit()
 
+    def update_photo_key(
+        self, user_id: int, photo_key: str | None
+    ) -> UserEntity | None:
+        model = self._session.get(UserModel, user_id)
+        if model is None:
+            return None
+        model.photo_key = photo_key
+        self._session.commit()
+        self._session.refresh(model)
+        return self._to_entity(model)
+
     def ensure_recruiter(self, name: str, email: str, hashed_password: str) -> UserEntity:
         existing = self.get_by_email(email)
         if existing is not None:
@@ -94,4 +105,5 @@ class SqlAlchemyUserRepository:
             hashed_password=model.hashed_password,
             role=role,
             created_at=model.created_at,
+            photo_key=model.photo_key,
         )

@@ -18,8 +18,8 @@ export const UserAvatar = ({
   photoUrl,
   size = 'sm',
 }: UserAvatarProps) => {
-  const [broken, setBroken] = useState(false)
-  const showPhoto = Boolean(photoUrl) && !broken
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null)
+  const showPhoto = Boolean(photoUrl) && brokenUrl !== photoUrl
 
   return (
     <span
@@ -31,7 +31,7 @@ export const UserAvatar = ({
           src={photoUrl ?? ''}
           alt=""
           className="h-full w-full object-cover"
-          onError={() => setBroken(true)}
+          onError={() => setBrokenUrl(photoUrl ?? null)}
         />
       ) : (
         <UserIcon className="h-4 w-4" aria-hidden="true" />

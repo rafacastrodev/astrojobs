@@ -18,6 +18,18 @@ class InvalidResetTokenError(Exception):
         super().__init__("Invalid or expired reset token")
 
 
+class UnsupportedPhotoError(Exception):
+    pass
+
+
+class PhotoTooLargeError(Exception):
+    pass
+
+
+class PhotoNotFoundError(Exception):
+    pass
+
+
 class EmailNotVerifiedError(Exception):
     def __init__(self):
         super().__init__(

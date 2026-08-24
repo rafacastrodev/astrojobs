@@ -683,6 +683,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Photo Url */
+            photo_url: string | null;
         };
         /** ValidationError */
         ValidationError: {

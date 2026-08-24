@@ -115,10 +115,12 @@ def list_applications(
             job_document_id=application.job_document_id,
             job_title=application.job_title,
             applicant_name=application.applicant_name,
+            applicant_email=application.applicant_email,
             resume_document_id=application.resume_document_id,
             resume_filename=application.resume_filename,
             resume_summary=application.resume_summary,
             resume_technologies=application.resume_technologies,
+            matched_technologies=application.matched_technologies,
             resume_payload=application.resume_payload,
         )
         for application in use_case.execute(user.id)

@@ -5,7 +5,7 @@ import pytest
 from domain.analysis.entities import AnalysisEntity, ats_category_for_score
 from domain.analysis.errors import AnalyzerError
 from domain.documents.entities import DocumentEntity
-from domain.documents.errors import UnsafeContentError
+from domain.documents.errors import DuplicateDocumentError, UnsafeContentError
 from domain.documents.safety import PiiRedactionResult
 from domain.documents.use_cases.upload_resume import UploadResumeUseCase
 
@@ -13,9 +13,21 @@ from domain.documents.use_cases.upload_resume import UploadResumeUseCase
 class _Documents:
     def __init__(self):
         self.document = None
+        self.existing_by_hash = None
+        self.existing_resumes = []
+        self.last_content_hash = None
 
-    def create(self, doc_type, payload, filename, user_id=None, storage_key=None):
+    def create(
+        self,
+        doc_type,
+        payload,
+        filename,
+        user_id=None,
+        storage_key=None,
+        content_hash=None,
+    ):
         now = datetime.now(UTC)
+        self.last_content_hash = content_hash
         self.document = DocumentEntity(
             id=1,
             type=doc_type,
@@ -28,10 +40,22 @@ class _Documents:
             updated_at=now,
             user_id=user_id,
             storage_key=storage_key,
+            content_hash=content_hash,
         )
         return self.document
 
+    def get_by_user_content_hash(self, _user_id, _doc_type, _content_hash):
+        return self.existing_by_hash
+
+    def list_by_user(self, _user_id, _doc_type=None):
+        return self.existing_resumes
+
     def get_by_id(self, _document_id):
+        return self.document
+
+    def mark_published(self, _document_id):
+        self.document.status = "synced"
+        self.document.error_message = None
         return self.document
 
     def mark_failed(self, _document_id, message):
@@ -184,3 +208,59 @@ def test_analysis_failure_preserves_upload_for_retry() -> None:
     assert documents.document is document
     assert document.analysis_status == "failed"
     assert document.analysis_error_message == "Resume analysis is temporarily unavailable"
+
+
+def test_duplicate_resume_is_rejected_before_storage() -> None:
+    use_case, documents, storage, _extractor = _use_case()
+    documents.existing_by_hash = DocumentEntity(
+        id=9,
+        type="resume",
+        payload={},
+        source_filename="other.txt",
+        status="synced",
+        pinecone_id=None,
+        error_message=None,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+        user_id=7,
+        content_hash="abc",
+    )
+
+    with pytest.raises(DuplicateDocumentError, match="already uploaded"):
+        use_case.execute(b"resume", "resume.txt", user_id=7)
+
+    assert storage.uploaded is False
+    assert documents.document is None
+
+
+def test_duplicate_resume_is_rejected_by_filename() -> None:
+    use_case, documents, storage, _extractor = _use_case()
+    documents.existing_resumes = [
+        DocumentEntity(
+            id=3,
+            type="resume",
+            payload={},
+            source_filename="Resume.TXT",
+            status="synced",
+            pinecone_id=None,
+            error_message=None,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            user_id=7,
+        )
+    ]
+
+    with pytest.raises(DuplicateDocumentError, match="already uploaded"):
+        use_case.execute(b"resume", "resume.txt", user_id=7)
+
+    assert storage.uploaded is False
+    assert documents.document is None
+
+
+def test_upload_persists_file_metadata() -> None:
+    use_case, documents, _storage, _extractor = _use_case()
+    document, _analysis = use_case.execute(b"resume", "resume.txt", user_id=7)
+    assert document.payload["file"] == {"name": "resume.txt", "size": 6}
+    assert documents.last_content_hash == (
+        "a83a31320d921b888a48fa5edd0b4b5a29984de6e96bf7b8ac7d29ba06caf616"
+    )

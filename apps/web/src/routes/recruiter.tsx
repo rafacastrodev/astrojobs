@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { AdminDashboard } from '@/pages/admin/components/AdminDashboard'
-import { userServices } from '@/services/userServices'
+import { userPhotoUrl, userServices } from '@/services/userServices'
 
 export const Route = createFileRoute('/recruiter')({
   beforeLoad: async () => {
@@ -22,5 +22,5 @@ export const Route = createFileRoute('/recruiter')({
 
 function RecruiterPage() {
   const { user } = Route.useRouteContext()
-  return <AdminDashboard name={user.name} />
+  return <AdminDashboard name={user.name} photoUrl={userPhotoUrl(user)} />
 }

@@ -6,11 +6,13 @@ import { useResumeAnalysis } from '../hooks/useResumeAnalysis'
 type AnalysisPanelProps = {
   resumeId: number
   initialJobId?: number | null
+  hiddenAnalysisId?: number
 }
 
 export const AnalysisPanel = ({
   resumeId,
   initialJobId,
+  hiddenAnalysisId,
 }: AnalysisPanelProps) => {
   const {
     mode,
@@ -26,6 +28,9 @@ export const AnalysisPanel = ({
     analysesLoading,
     error,
   } = useResumeAnalysis(resumeId, initialJobId)
+  const visibleAnalyses = analyses.filter(
+    (item) => item.id !== hiddenAnalysisId,
+  )
 
   return (
     <div className="mt-4 rounded-lg border border-border bg-input/40 p-4">
@@ -99,9 +104,9 @@ export const AnalysisPanel = ({
         </p>
       ) : null}
 
-      {analyses.length > 0 ? (
+      {visibleAnalyses.length > 0 ? (
         <div className="mt-4 flex flex-col gap-3">
-          {analyses.map((analysis) => (
+          {visibleAnalyses.map((analysis) => (
             <AnalysisCard key={analysis.id} analysis={analysis} />
           ))}
         </div>
