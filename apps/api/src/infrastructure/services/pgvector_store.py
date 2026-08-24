@@ -1,11 +1,10 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import DateTime, ForeignKey, String, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, Session, mapped_column
-
-from pgvector.sqlalchemy import Vector
 
 from infrastructure.database.config import settings
 from infrastructure.database.session import Base
@@ -44,7 +43,7 @@ class PgVectorStore:
             row.document_id = int(document_id) if document_id is not None else None
             row.embedding = list(item["values"])
             row.meta = metadata
-            row.updated_at = datetime.utcnow()
+            row.updated_at = datetime.now(UTC)
         self._session.commit()
 
     def delete(self, ids: list[str], namespace: str) -> None:

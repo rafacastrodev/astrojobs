@@ -72,17 +72,13 @@ class SyncDocumentsUseCase:
                 results.append({"id": document.id, "status": "synced", "pinecone_id": vector_id})
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Failed to sync document %s: %s", document.id, exc)
-                public_error = "Could not index document"
-                if document.type == "job":
-                    skipped += 1
-                    results.append(
-                        {"id": document.id, "status": "skipped", "error": public_error}
-                    )
-                    continue
-                self._documents.mark_failed(document.id, public_error)
-                failed += 1
+                skipped += 1
                 results.append(
-                    {"id": document.id, "status": "failed", "error": public_error}
+                    {
+                        "id": document.id,
+                        "status": "skipped",
+                        "error": "Could not index document",
+                    }
                 )
 
         return {"synced": synced, "failed": failed, "skipped": skipped, "results": results}

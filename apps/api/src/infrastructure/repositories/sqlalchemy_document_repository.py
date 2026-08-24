@@ -1,8 +1,10 @@
 from collections.abc import Sequence
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from domain.documents.entities import DocumentEntity, DocumentStatus, DocumentType
+from domain.documents.errors import DuplicateDocumentError
 from infrastructure.models.document_model import DocumentModel
 
 
@@ -17,6 +19,7 @@ class SqlAlchemyDocumentRepository:
         source_filename: str,
         user_id: int | None = None,
         storage_key: str | None = None,
+        content_hash: str | None = None,
     ) -> DocumentEntity:
         model = DocumentModel(
             type=doc_type,
@@ -25,14 +28,36 @@ class SqlAlchemyDocumentRepository:
             status="draft",
             user_id=user_id,
             storage_key=storage_key,
+            content_hash=content_hash,
         )
         self._session.add(model)
-        self._session.commit()
+        try:
+            self._session.commit()
+        except IntegrityError as exc:
+            self._session.rollback()
+            raise DuplicateDocumentError("This document was already uploaded") from exc
         self._session.refresh(model)
         return self._to_entity(model)
 
     def get_by_id(self, document_id: int) -> DocumentEntity | None:
         model = self._session.get(DocumentModel, document_id)
+        return self._to_entity(model) if model else None
+
+    def get_by_user_content_hash(
+        self,
+        user_id: int,
+        doc_type: DocumentType,
+        content_hash: str,
+    ) -> DocumentEntity | None:
+        model = (
+            self._session.query(DocumentModel)
+            .filter(
+                DocumentModel.user_id == user_id,
+                DocumentModel.type == doc_type,
+                DocumentModel.content_hash == content_hash,
+            )
+            .one_or_none()
+        )
         return self._to_entity(model) if model else None
 
     def list(
@@ -145,6 +170,7 @@ class SqlAlchemyDocumentRepository:
             updated_at=model.updated_at,
             user_id=model.user_id,
             storage_key=model.storage_key,
+            content_hash=model.content_hash,
             analysis_status=model.analysis_status,  # type: ignore[arg-type]
             analysis_error_message=model.analysis_error_message,
         )

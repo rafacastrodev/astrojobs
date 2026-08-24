@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 from domain.documents.embedder import Embedder
 from domain.documents.pinecone_client import PineconeClientPort
 from infrastructure.database.config import settings
-from infrastructure.services.agentcore_gateway_retriever import AgentCoreGatewayRetriever
+from infrastructure.services.agentcore_gateway_retriever import (
+    AgentCoreGatewayRetriever,
+)
 from infrastructure.services.bedrock_kb_retriever import BedrockKnowledgeBaseRetriever
 from infrastructure.services.openai_embedder import OpenAIEmbedder
 from infrastructure.services.pgvector_store import PgVectorStore

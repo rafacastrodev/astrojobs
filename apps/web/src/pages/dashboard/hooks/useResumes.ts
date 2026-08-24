@@ -35,17 +35,26 @@ export const useResumes = () => {
 
   const upload = useMutation({
     mutationFn: resumeServices.upload,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: resumesKey }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: resumesKey })
+      void queryClient.invalidateQueries({ queryKey: ['catalog-jobs'] })
+    },
   })
 
   const remove = useMutation({
     mutationFn: resumeServices.remove,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: resumesKey }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: resumesKey })
+      void queryClient.invalidateQueries({ queryKey: ['catalog-jobs'] })
+    },
   })
 
   const process = useMutation({
     mutationFn: (id: number) => resumeServices.process(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: resumesKey }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: resumesKey })
+      void queryClient.invalidateQueries({ queryKey: ['catalog-jobs'] })
+    },
   })
 
   const handleUpload = (file: File) => {

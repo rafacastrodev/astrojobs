@@ -4,30 +4,33 @@ import { Button } from '@/components/Button'
 import { CloseIcon } from '@/components/icons'
 import { getApiErrorMessage } from '@/utils'
 
-import { useCreateJob } from '../hooks/useAdminDocuments'
-import type {
-  JobEmploymentType,
-  JobSeniority,
-  JobWorkMode,
-} from '../types'
+import { useCreateJob, useTechnologyCatalog } from '../hooks/useAdminDocuments'
+import type { JobEmploymentType, JobSeniority, JobWorkMode } from '../types'
 
 const selectClassName = 'rounded-lg border border-border bg-input p-3'
 
-const addTechnology = (current: string[], raw: string) => {
+const addTechnology = (current: string[], raw: string, catalog: string[]) => {
   const value = raw.trim()
   if (!value) return current
-  if (current.some((item) => item.toLowerCase() === value.toLowerCase())) {
+  const canonical = catalog.find(
+    (technology) => technology.toLowerCase() === value.toLowerCase(),
+  )
+  if (!canonical) return null
+  if (current.some((item) => item.toLowerCase() === canonical.toLowerCase())) {
     return current
   }
-  return [...current, value]
+  return [...current, canonical]
 }
 
 export const JobForm = () => {
   const create = useCreateJob()
+  const technologyCatalog = useTechnologyCatalog()
+  const catalog = technologyCatalog.data ?? []
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [technologies, setTechnologies] = useState<string[]>([])
   const [draftTech, setDraftTech] = useState('')
+  const [technologyError, setTechnologyError] = useState<string | null>(null)
   const [seniority, setSeniority] = useState<JobSeniority>('mid')
   const [workMode, setWorkMode] = useState<JobWorkMode>('remote')
   const [region, setRegion] = useState('')
@@ -35,8 +38,15 @@ export const JobForm = () => {
     useState<JobEmploymentType>('full-time')
 
   const commitDraft = () => {
-    setTechnologies((current) => addTechnology(current, draftTech))
+    const next = addTechnology(technologies, draftTech, catalog)
+    if (next === null) {
+      setTechnologyError('Choose a technology from the catalog.')
+      return false
+    }
+    setTechnologies(next)
     setDraftTech('')
+    setTechnologyError(null)
+    return true
   }
 
   return (
@@ -44,7 +54,11 @@ export const JobForm = () => {
       className="grid gap-4 rounded-2xl border border-border bg-card p-6"
       onSubmit={(event) => {
         event.preventDefault()
-        const nextTechnologies = addTechnology(technologies, draftTech)
+        const nextTechnologies = addTechnology(technologies, draftTech, catalog)
+        if (nextTechnologies === null) {
+          setTechnologyError('Choose a technology from the catalog.')
+          return
+        }
         if (!title.trim() || nextTechnologies.length === 0 || !region.trim()) {
           return
         }
@@ -64,6 +78,7 @@ export const JobForm = () => {
               setDescription('')
               setTechnologies([])
               setDraftTech('')
+              setTechnologyError(null)
               setSeniority('mid')
               setWorkMode('remote')
               setRegion('')
@@ -109,8 +124,12 @@ export const JobForm = () => {
             </span>
           ))}
           <input
+            list="technology-catalog"
             value={draftTech}
-            onChange={(event) => setDraftTech(event.target.value)}
+            onChange={(event) => {
+              setDraftTech(event.target.value)
+              setTechnologyError(null)
+            }}
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ',') {
                 event.preventDefault()
@@ -126,11 +145,28 @@ export const JobForm = () => {
             }}
             onBlur={commitDraft}
             placeholder={
-              technologies.length === 0 ? 'Python, FastAPI, React' : 'Add another'
+              technologies.length === 0
+                ? 'Python, FastAPI, React'
+                : 'Add another'
             }
             className="min-w-40 flex-1 bg-transparent p-2 outline-none placeholder-muted-foreground"
           />
+          <datalist id="technology-catalog">
+            {catalog.map((technology) => (
+              <option key={technology} value={technology} />
+            ))}
+          </datalist>
         </div>
+        {technologyError ? (
+          <span role="alert" className="text-destructive">
+            {technologyError}
+          </span>
+        ) : null}
+        {technologyCatalog.isError ? (
+          <span role="alert" className="text-destructive">
+            Could not load the technology catalog.
+          </span>
+        ) : null}
       </label>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-1 text-sm">
@@ -155,9 +191,7 @@ export const JobForm = () => {
           <span className="font-medium">Work mode</span>
           <select
             value={workMode}
-            onChange={(event) =>
-              setWorkMode(event.target.value as JobWorkMode)
-            }
+            onChange={(event) => setWorkMode(event.target.value as JobWorkMode)}
             className={selectClassName}
           >
             <option value="remote">Remote</option>
@@ -208,7 +242,8 @@ export const JobForm = () => {
           disabled={
             !title.trim() ||
             !region.trim() ||
-            (technologies.length === 0 && !draftTech.trim())
+            (technologies.length === 0 && !draftTech.trim()) ||
+            technologyCatalog.isLoading
           }
           isLoading={create.isPending}
         >

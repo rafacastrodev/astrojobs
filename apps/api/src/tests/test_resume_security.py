@@ -5,7 +5,6 @@ from types import SimpleNamespace
 import pytest
 
 from domain.documents.errors import (
-    SafetyServiceError,
     UnsafeContentError,
     UnsupportedFileError,
 )
@@ -134,12 +133,10 @@ def test_skips_forbidden_moderation() -> None:
     checker.check("ordinary resume content")
 
 
-def test_wraps_moderation_service_failure() -> None:
+def test_skips_moderation_service_failure() -> None:
     checker = OpenAIContentSafetyChecker.__new__(OpenAIContentSafetyChecker)
     checker._client = SimpleNamespace(moderations=_FailingModerations())
-
-    with pytest.raises(SafetyServiceError, match="Could not verify"):
-        checker.check("ordinary resume content")
+    checker.check("ordinary resume content")
 
 
 class _RateLimitedModerations:
@@ -152,9 +149,7 @@ class _RateLimitedModerations:
         raise error
 
 
-def test_maps_moderation_rate_limit_to_unavailable_message() -> None:
+def test_skips_moderation_rate_limit() -> None:
     checker = OpenAIContentSafetyChecker.__new__(OpenAIContentSafetyChecker)
     checker._client = SimpleNamespace(moderations=_RateLimitedModerations())
-
-    with pytest.raises(SafetyServiceError, match="credits|unavailable"):
-        checker.check("ordinary resume content")
+    checker.check("ordinary resume content")

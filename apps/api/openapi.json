@@ -251,6 +251,59 @@
         }
       }
     },
+    "/recruiter/technologies": {
+      "get": {
+        "tags": [
+          "recruiter"
+        ],
+        "summary": "List Technologies",
+        "operationId": "list_technologies_recruiter_technologies_get",
+        "parameters": [
+          {
+            "name": "jwt",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Jwt"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response List Technologies Recruiter Technologies Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/recruiter/documents": {
       "post": {
         "tags": [
@@ -444,6 +497,59 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recruiter/matches": {
+      "get": {
+        "tags": [
+          "recruiter"
+        ],
+        "summary": "List Matching Resumes",
+        "operationId": "list_matching_resumes_recruiter_matches_get",
+        "parameters": [
+          {
+            "name": "jwt",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Jwt"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResumeMatchResponse"
+                  },
+                  "title": "Response List Matching Resumes Recruiter Matches Get"
                 }
               }
             }
@@ -1024,7 +1130,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/JobSummaryResponse"
+                    "$ref": "#/components/schemas/JobMatchResponse"
                   },
                   "title": "Response List Catalog Jobs Documents Jobs Get"
                 }
@@ -1654,21 +1760,19 @@
             "minLength": 1,
             "title": "Title"
           },
-          "requirements": {
+          "technologies": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "maxItems": 50,
-            "title": "Requirements"
+            "maxItems": 40,
+            "title": "Technologies"
           },
-          "responsibilities": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "maxItems": 50,
-            "title": "Responsibilities"
+          "description": {
+            "type": "string",
+            "maxLength": 8000,
+            "title": "Description",
+            "default": ""
           },
           "seniority": {
             "type": "string",
@@ -1679,11 +1783,24 @@
               "senior",
               "lead",
               "principal",
-              "staff",
-              "unspecified"
+              "staff"
             ],
-            "title": "Seniority",
-            "default": "unspecified"
+            "title": "Seniority"
+          },
+          "work_mode": {
+            "type": "string",
+            "enum": [
+              "remote",
+              "hybrid",
+              "on-site"
+            ],
+            "title": "Work Mode"
+          },
+          "region": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Region"
           },
           "employment_type": {
             "type": "string",
@@ -1692,16 +1809,18 @@
               "part-time",
               "contract",
               "internship",
-              "temporary",
-              "unspecified"
+              "temporary"
             ],
-            "title": "Employment Type",
-            "default": "unspecified"
+            "title": "Employment Type"
           }
         },
         "type": "object",
         "required": [
-          "title"
+          "title",
+          "seniority",
+          "work_mode",
+          "region",
+          "employment_type"
         ],
         "title": "JobCreateRequest"
       },
@@ -1727,6 +1846,14 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Payload"
+          },
+          "matched_technologies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Matched Technologies",
+            "default": []
           }
         },
         "type": "object",
@@ -1738,29 +1865,6 @@
           "payload"
         ],
         "title": "JobMatchResponse"
-      },
-      "JobSummaryResponse": {
-        "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title"
-          },
-          "source_filename": {
-            "type": "string",
-            "title": "Source Filename"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "title",
-          "source_filename"
-        ],
-        "title": "JobSummaryResponse"
       },
       "LoginRequest": {
         "properties": {
@@ -1781,6 +1885,24 @@
           "password"
         ],
         "title": "LoginRequest"
+      },
+      "MatchedJobSummary": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "MatchedJobSummary"
       },
       "ProcessResumeRequest": {
         "properties": {
@@ -1812,6 +1934,62 @@
           "new_password"
         ],
         "title": "ResetPasswordRequest"
+      },
+      "ResumeMatchResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "source_filename": {
+            "type": "string",
+            "title": "Source Filename"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "matched_technologies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Matched Technologies"
+          },
+          "matched_jobs": {
+            "items": {
+              "$ref": "#/components/schemas/MatchedJobSummary"
+            },
+            "type": "array",
+            "title": "Matched Jobs"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source_filename",
+          "score",
+          "matched_technologies",
+          "matched_jobs",
+          "payload"
+        ],
+        "title": "ResumeMatchResponse"
       },
       "ResumeResponse": {
         "properties": {

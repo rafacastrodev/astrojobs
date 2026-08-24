@@ -1,14 +1,23 @@
 import { fileURLToPath, URL } from 'node:url'
 
+import tailwindcss from '@tailwindcss/vite'
 import { devtools } from '@tanstack/devtools-vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
-import tailwindcss from '@tailwindcss/vite'
 import viteReact from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
-const config = defineConfig({
-  envDir: fileURLToPath(new URL('../..', import.meta.url)),
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+const config = defineConfig(({ command }) => ({
+  envDir: fileURLToPath(new URL('../../', import.meta.url)),
   resolve: { tsconfigPaths: true },
+  build: {
+    sourcemap: false,
+    cssMinify: true,
+  },
+  esbuild: {
+    legalComments: 'none' as const,
+  },
   server: {
     port: 3000,
     proxy: {
@@ -20,11 +29,11 @@ const config = defineConfig({
     },
   },
   plugins: [
-    devtools(),
+    ...(command === 'serve' ? [devtools()] : []),
     tailwindcss(),
     tanstackRouter({ target: 'react', autoCodeSplitting: true }),
     viteReact(),
   ],
-})
+}))
 
 export default config

@@ -2,6 +2,7 @@ import { AppHeader } from '@/components/AppHeader'
 import { Button } from '@/components/Button'
 
 import { useDashboard } from '../hooks/useDashboard'
+import { JobsSection } from './JobsSection'
 import { ResumeSection } from './ResumeSection'
 
 type DashboardProps = {
@@ -27,8 +28,9 @@ export const Dashboard = ({ name, photoUrl }: DashboardProps) => {
           </div>
         </AppHeader>
 
-        <main>
+        <main className="flex flex-col gap-8">
           <ResumeSection />
+          <JobsSection />
         </main>
       </div>
     </div>

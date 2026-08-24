@@ -4,9 +4,9 @@ from collections.abc import Callable
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from boto3 import Session
 from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
-from boto3 import Session
 
 from infrastructure.database.config import settings
 

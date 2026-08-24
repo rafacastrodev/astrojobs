@@ -1,8 +1,8 @@
-from types import SimpleNamespace
-
 from domain.analysis.errors import AnalyzerError
 from domain.documents.errors import ExtractionServiceError
-from infrastructure.extraction.resilient_resume_extractor import ResilientResumeExtractor
+from infrastructure.extraction.resilient_resume_extractor import (
+    ResilientResumeExtractor,
+)
 from infrastructure.services.resilient_resume_analyzer import (
     HeuristicResumeAnalyzer,
     ResilientResumeAnalyzer,
@@ -27,20 +27,12 @@ class _FallbackExtractor:
         return {"summary": "from-local", "skills": ["Python"]}
 
 
-def test_resilient_extractor_falls_back_in_development(monkeypatch):
-    monkeypatch.setattr(
-        "infrastructure.extraction.resilient_resume_extractor.settings",
-        SimpleNamespace(is_development=True),
-    )
+def test_resilient_extractor_falls_back_when_primary_fails():
     extractor = ResilientResumeExtractor(_QuotaExtractor(), _FallbackExtractor())
     assert extractor.extract("resume", "resume")["summary"] == "from-local"
 
 
-def test_resilient_extractor_keeps_openai_result(monkeypatch):
-    monkeypatch.setattr(
-        "infrastructure.extraction.resilient_resume_extractor.settings",
-        SimpleNamespace(is_development=True),
-    )
+def test_resilient_extractor_keeps_openai_result():
     extractor = ResilientResumeExtractor(_OkExtractor(), _FallbackExtractor())
     assert extractor.extract("resume", "resume")["summary"] == "from-openai"
 
@@ -62,12 +54,7 @@ def test_heuristic_analyzer_returns_structured_result():
     assert result["years_of_experience"] == 5
 
 
-def test_resilient_extractor_falls_back_on_timeout(monkeypatch):
-    monkeypatch.setattr(
-        "infrastructure.extraction.resilient_resume_extractor.settings",
-        SimpleNamespace(is_development=True),
-    )
-
+def test_resilient_extractor_falls_back_on_timeout():
     class _TimeoutExtractor:
         def extract(self, text, doc_type):
             raise ExtractionServiceError("Resume extraction failed") from TimeoutError(
@@ -78,12 +65,7 @@ def test_resilient_extractor_falls_back_on_timeout(monkeypatch):
     assert extractor.extract("resume", "resume")["summary"] == "from-local"
 
 
-def test_resilient_analyzer_falls_back_in_development(monkeypatch):
-    monkeypatch.setattr(
-        "infrastructure.services.resilient_resume_analyzer.settings",
-        SimpleNamespace(is_development=True),
-    )
-
+def test_resilient_analyzer_falls_back_when_primary_fails():
     class _QuotaAnalyzer:
         def analyze(self, resume, job, retrieved_context=None):
             error = RuntimeError("quota")

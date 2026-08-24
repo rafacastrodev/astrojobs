@@ -1,10 +1,10 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from types import SimpleNamespace
 
 from domain.documents.entities import DocumentEntity
 from domain.documents.use_cases.match_resumes_for_jobs import MatchResumesForJobsUseCase
 
-NOW = datetime(2026, 8, 24)
+NOW = datetime(2026, 8, 24, tzinfo=UTC)
 
 
 def _doc(

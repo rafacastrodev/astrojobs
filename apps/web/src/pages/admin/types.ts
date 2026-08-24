@@ -41,12 +41,15 @@ export type JobCreatePayload = {
   employment_type: JobEmploymentType
 }
 
-export type ResumeMatch = {
+export type RecruiterApplication = {
   id: number
-  source_filename: string
-  score: number
-  matched_technologies: string[]
-  matched_jobs: { id: number; title: string }[]
-  payload: Record<string, unknown>
-  summary: string | null
+  created_at: string
+  job_document_id: number
+  job_title: string
+  applicant_name: string
+  resume_document_id: number
+  resume_filename: string
+  resume_summary: string | null
+  resume_technologies: string[]
+  resume_payload: Record<string, unknown>
 }

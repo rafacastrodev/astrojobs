@@ -2,9 +2,6 @@ import logging
 import re
 
 from domain.analysis.analyzer import AnalysisResult
-from domain.analysis.errors import AnalyzerError
-from infrastructure.database.config import settings
-from infrastructure.openai_errors import caused_by_llm_unavailability
 
 logger = logging.getLogger(__name__)
 
@@ -112,8 +109,6 @@ class ResilientResumeAnalyzer:
     ) -> AnalysisResult:
         try:
             return self._primary.analyze(resume, job, retrieved_context)
-        except AnalyzerError as exc:
-            if not settings.is_development or not caused_by_llm_unavailability(exc):
-                raise
-            logger.warning("Primary analysis unavailable; using local analyzer")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Primary analysis unavailable; using local analyzer (%s)", exc)
             return self._fallback.analyze(resume, job, retrieved_context)

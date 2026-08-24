@@ -1,6 +1,4 @@
-import type { Resume } from '../types'
-
-type Props = { resume: Resume }
+type Props = { payload: Record<string, unknown> }
 
 const text = (value: unknown) => (typeof value === 'string' ? value : '')
 const items = (value: unknown) => (Array.isArray(value) ? value : [])
@@ -42,8 +40,7 @@ const renderItem = (item: unknown, index: number) => {
   )
 }
 
-export const ResumeProfileView = ({ resume }: Props) => {
-  const payload = resume.payload
+export const ResumeProfileView = ({ payload }: Props) => {
   const summary = text(payload.summary) || text(payload.about)
   const sections = [
     ['Experience', payload.experiences],

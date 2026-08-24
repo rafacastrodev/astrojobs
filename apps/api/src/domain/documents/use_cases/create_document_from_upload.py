@@ -24,7 +24,11 @@ class CreateDocumentFromUploadUseCase:
         self._sync = sync_documents_use_case
 
     def execute(
-        self, content: bytes, filename: str, doc_type: DocumentType
+        self,
+        content: bytes,
+        filename: str,
+        doc_type: DocumentType,
+        user_id: int,
     ) -> DocumentEntity:
         try:
             text = self._file_loader.load(content, filename)
@@ -41,14 +45,16 @@ class CreateDocumentFromUploadUseCase:
         if not payload:
             raise ExtractionError("Extractor returned an empty payload")
 
-        document = self._documents.create(doc_type, payload, filename)
+        document = self._documents.create(
+            doc_type, payload, filename, user_id=user_id
+        )
         try:
             self._sync.execute([document.id])  # type: ignore[list-item]
         except Exception as exc:  # noqa: BLE001
             logger.warning(
                 "Initial indexing failed for document %s: %s", document.id, exc
             )
-            self._documents.mark_failed(
-                document.id, "Could not index document"  # type: ignore[arg-type]
-            )
-        return self._documents.get_by_id(document.id) or document  # type: ignore[arg-type]
+        published = self._documents.get_by_id(document.id) or document  # type: ignore[arg-type]
+        if published.status == "synced":
+            return published
+        return self._documents.mark_published(document.id)  # type: ignore[arg-type]

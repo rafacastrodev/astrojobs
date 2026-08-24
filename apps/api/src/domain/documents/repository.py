@@ -12,9 +12,17 @@ class DocumentRepository(Protocol):
         source_filename: str,
         user_id: int | None = None,
         storage_key: str | None = None,
+        content_hash: str | None = None,
     ) -> DocumentEntity: ...
 
     def get_by_id(self, document_id: int) -> DocumentEntity | None: ...
+
+    def get_by_user_content_hash(
+        self,
+        user_id: int,
+        doc_type: DocumentType,
+        content_hash: str,
+    ) -> DocumentEntity | None: ...
 
     def list(
         self,

@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
-from pydantic import ValidationError
 import pytest
+from pydantic import ValidationError
 
 from domain.users.entities import UserEntity
 from domain.users.errors import InvalidCredentialsError

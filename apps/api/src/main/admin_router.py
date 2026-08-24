@@ -9,6 +9,9 @@ from fastapi import (
     status,
 )
 
+from domain.applications.use_cases.list_recruiter_applications import (
+    ListRecruiterApplicationsUseCase,
+)
 from domain.documents.entities import DocumentEntity, DocumentStatus, DocumentType
 from domain.documents.errors import (
     DocumentNotFoundError,
@@ -16,6 +19,7 @@ from domain.documents.errors import (
     SyncConfigurationError,
     UnsupportedFileError,
 )
+from domain.documents.technology_catalog import TECHNOLOGIES
 from domain.documents.use_cases.create_document_from_upload import (
     CreateDocumentFromUploadUseCase,
 )
@@ -32,14 +36,16 @@ from infrastructure.documents.dependencies import (
     get_delete_document_use_case,
     get_document_use_case,
     get_list_documents_use_case,
+    get_list_recruiter_applications_use_case,
     get_match_resumes_use_case,
     get_sync_documents_use_case,
 )
+from infrastructure.schemas.application_schemas import RecruiterApplicationResponse
 from infrastructure.schemas.document_schemas import (
     DocumentResponse,
     JobCreateRequest,
-    ResumeMatchResponse,
     MatchedJobSummary,
+    ResumeMatchResponse,
     SyncDocumentsRequest,
     SyncDocumentsResponse,
 )
@@ -50,6 +56,11 @@ router = APIRouter(
     tags=["recruiter"],
     dependencies=[Depends(require_recruiter)],
 )
+
+
+@router.get("/technologies", response_model=list[str])
+def list_technologies() -> list[str]:
+    return list(TECHNOLOGIES)
 
 
 def _to_document_response(document: DocumentEntity) -> DocumentResponse:
@@ -88,6 +99,30 @@ def create_job(
     use_case: CreateJobUseCase = Depends(get_create_job_use_case),
 ) -> DocumentResponse:
     return _to_document_response(use_case.execute(body.model_dump(), user.id))
+
+
+@router.get("/applications", response_model=list[RecruiterApplicationResponse])
+def list_applications(
+    user: UserEntity = Depends(require_recruiter),
+    use_case: ListRecruiterApplicationsUseCase = Depends(
+        get_list_recruiter_applications_use_case
+    ),
+) -> list[RecruiterApplicationResponse]:
+    return [
+        RecruiterApplicationResponse(
+            id=application.id,
+            created_at=application.created_at,
+            job_document_id=application.job_document_id,
+            job_title=application.job_title,
+            applicant_name=application.applicant_name,
+            resume_document_id=application.resume_document_id,
+            resume_filename=application.resume_filename,
+            resume_summary=application.resume_summary,
+            resume_technologies=application.resume_technologies,
+            resume_payload=application.resume_payload,
+        )
+        for application in use_case.execute(user.id)
+    ]
 
 
 @router.get("/matches", response_model=list[ResumeMatchResponse])

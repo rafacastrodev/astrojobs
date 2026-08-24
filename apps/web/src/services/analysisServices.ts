@@ -2,8 +2,8 @@ import type {
   AnalysisFeedback,
   AnalysisResult,
   FeedbackRating,
+  JobMatch,
   JobSource,
-  JobSummary,
 } from '@/pages/dashboard/types'
 import { api } from '@/utils/api/client'
 
@@ -28,7 +28,14 @@ async function listAnalyses(resumeId: number) {
 }
 
 async function listJobs() {
-  const response = await api.get<JobSummary[]>('/documents/jobs')
+  const response = await api.get<JobMatch[]>('/documents/jobs')
+  return response.data
+}
+
+async function applyToJob(jobId: number, resumeDocumentId: number) {
+  const response = await api.post(`/documents/jobs/${jobId}/apply`, {
+    resume_document_id: resumeDocumentId,
+  })
   return response.data
 }
 
@@ -50,5 +57,6 @@ export const analysisServices = {
   analyze,
   listAnalyses,
   listJobs,
+  applyToJob,
   submitFeedback,
 }

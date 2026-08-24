@@ -5,7 +5,6 @@ from domain.analysis.errors import AnalyzerError
 from domain.analysis.repository import AnalysisRepository
 from domain.analysis.use_cases.analyze_resume import AnalyzeResumeUseCase
 from domain.documents.entities import DocumentEntity
-from domain.documents.errors import SyncConfigurationError
 from domain.documents.repository import DocumentRepository
 from domain.documents.use_cases.get_user_resume import GetUserResumeUseCase
 from domain.documents.use_cases.sync_documents import SyncDocumentsUseCase
@@ -49,12 +48,10 @@ class ProcessResumeUseCase:
         if resume.status != "synced":
             try:
                 self._sync_documents.execute([document_id])
-            except SyncConfigurationError as exc:
-                self._documents.mark_failed(document_id, str(exc))
             except Exception:
                 logger.exception("Retry indexing failed for document %s", document_id)
-                self._documents.mark_failed(
-                    document_id, "Resume indexing is temporarily unavailable"
-                )
+            resume = self._get_resume.execute(document_id, user_id)
+            if resume.status != "synced":
+                self._documents.mark_published(document_id)
 
         return self._get_resume.execute(document_id, user_id), analysis

@@ -26,6 +26,7 @@ class DocumentModel(Base):
         ForeignKey("users.id"), nullable=True, index=True
     )
     storage_key: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,

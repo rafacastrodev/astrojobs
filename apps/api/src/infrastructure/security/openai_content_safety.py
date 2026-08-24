@@ -4,12 +4,8 @@ from typing import ClassVar
 
 from openai import OpenAI
 
-from domain.documents.errors import (
-    SafetyServiceError,
-    UnsafeContentError,
-)
+from domain.documents.errors import UnsafeContentError
 from infrastructure.database.config import settings
-from infrastructure.openai_errors import is_openai_forbidden, is_openai_quota_error
 
 logger = logging.getLogger(__name__)
 
@@ -48,32 +44,16 @@ class OpenAIContentSafetyChecker:
                     model=settings.openai_moderation_model,
                     input=chunk,
                 )
-            except Exception as exc:
-                if is_openai_forbidden(exc):
-                    logger.warning(
-                        "OpenAI moderation is not available for this project; using local checks only"
-                    )
-                    return
-                logger.exception(
-                    "OpenAI moderation request failed (model=%s, chunk_chars=%d)",
-                    settings.openai_moderation_model,
-                    len(chunk),
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "OpenAI moderation is not available; using local checks only (%s)",
+                    exc,
                 )
-                raise SafetyServiceError(self._service_error_message(exc)) from exc
+                return
             if any(result.flagged for result in response.results):
                 raise UnsafeContentError(
                     "Resume content did not pass the safety check"
                 )
-
-    @staticmethod
-    def _service_error_message(exc: Exception) -> str:
-        if is_openai_quota_error(exc):
-            if settings.is_development:
-                return (
-                    "OpenAI has no remaining credits. Add credits in billing and try again."
-                )
-            return "The safety check is temporarily unavailable. Please try again shortly."
-        return "Could not verify resume content safety"
 
     @staticmethod
     def _build_client() -> OpenAI:

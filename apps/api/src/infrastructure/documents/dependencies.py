@@ -2,6 +2,10 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from domain.analysis.use_cases.analyze_resume import AnalyzeResumeUseCase
+from domain.applications.use_cases.apply_to_job import ApplyToJobUseCase
+from domain.applications.use_cases.list_recruiter_applications import (
+    ListRecruiterApplicationsUseCase,
+)
 from domain.documents.use_cases.create_document_from_upload import (
     CreateDocumentFromUploadUseCase,
 )
@@ -29,8 +33,14 @@ from infrastructure.extraction.resilient_resume_extractor import (
 from infrastructure.repositories.sqlalchemy_analysis_repository import (
     SqlAlchemyAnalysisRepository,
 )
+from infrastructure.repositories.sqlalchemy_application_repository import (
+    SqlAlchemyApplicationRepository,
+)
 from infrastructure.repositories.sqlalchemy_document_repository import (
     SqlAlchemyDocumentRepository,
+)
+from infrastructure.repositories.sqlalchemy_user_repository import (
+    SqlAlchemyUserRepository,
 )
 from infrastructure.security.openai_content_safety import OpenAIContentSafetyChecker
 from infrastructure.security.pii_redactor import ResumePiiRedactor
@@ -49,17 +59,11 @@ from infrastructure.vector.factory import (
 
 
 def _resume_extractor():
-    primary = OpenAIResumeExtractor()
-    if not settings.is_development:
-        return primary
-    return ResilientResumeExtractor(primary, HeuristicTextExtractor())
+    return ResilientResumeExtractor(OpenAIResumeExtractor(), HeuristicTextExtractor())
 
 
 def _resume_analyzer():
-    primary = OpenAIResumeAnalyzer()
-    if not settings.is_development:
-        return primary
-    return ResilientResumeAnalyzer(primary, HeuristicResumeAnalyzer())
+    return ResilientResumeAnalyzer(OpenAIResumeAnalyzer(), HeuristicResumeAnalyzer())
 
 
 def _sync_documents_use_case(documents, db: Session) -> SyncDocumentsUseCase:
@@ -183,9 +187,7 @@ def get_delete_user_resume_use_case(db: Session = Depends(get_db)) -> DeleteUser
 def get_match_jobs_use_case(db: Session = Depends(get_db)) -> MatchJobsForResumeUseCase:
     return MatchJobsForResumeUseCase(
         SqlAlchemyDocumentRepository(db),
-        make_embedder(input_type="query"),
-        pinecone_client_factory=lambda: make_vector_store(db),
-        namespace_jobs=settings.pinecone_namespace_jobs,
+        SqlAlchemyAnalysisRepository(db),
     )
 
 
@@ -200,3 +202,27 @@ def get_match_resumes_use_case(
 
 def get_sync_documents_use_case(db: Session = Depends(get_db)) -> SyncDocumentsUseCase:
     return _sync_documents_use_case(SqlAlchemyDocumentRepository(db), db)
+
+
+def get_apply_to_job_use_case(db: Session = Depends(get_db)) -> ApplyToJobUseCase:
+    return ApplyToJobUseCase(
+        SqlAlchemyDocumentRepository(db),
+        SqlAlchemyApplicationRepository(db),
+    )
+
+
+def get_list_recruiter_applications_use_case(
+    db: Session = Depends(get_db),
+) -> ListRecruiterApplicationsUseCase:
+    return ListRecruiterApplicationsUseCase(
+        SqlAlchemyApplicationRepository(db),
+        SqlAlchemyDocumentRepository(db),
+        SqlAlchemyUserRepository(db),
+        SqlAlchemyAnalysisRepository(db),
+    )
+
+
+def get_application_repository(
+    db: Session = Depends(get_db),
+) -> SqlAlchemyApplicationRepository:
+    return SqlAlchemyApplicationRepository(db)

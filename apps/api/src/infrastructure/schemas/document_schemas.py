@@ -3,6 +3,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from domain.documents.technology_catalog import canonical_technology
 from infrastructure.schemas.analysis_schemas import AnalysisResponse
 
 
@@ -77,9 +78,14 @@ class JobCreateRequest(BaseModel):
         cleaned: list[str] = []
         seen: set[str] = set()
         for item in value:
-            tech = item.strip()
+            raw = item.strip()
+            tech = canonical_technology(raw)
+            if raw and tech is None:
+                raise ValueError(f"Unknown technology: {raw}")
+            if tech is None:
+                continue
             key = tech.casefold()
-            if not tech or key in seen:
+            if key in seen:
                 continue
             seen.add(key)
             cleaned.append(tech)
@@ -98,6 +104,8 @@ class JobMatchResponse(BaseModel):
     source_filename: str
     score: float
     payload: dict[str, Any]
+    matched_technologies: list[str] = []
+    applied: bool = False
 
 
 class MatchedJobSummary(BaseModel):

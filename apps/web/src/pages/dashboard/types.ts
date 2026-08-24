@@ -16,6 +16,8 @@ export type JobMatch = {
   title: string
   source_filename: string
   score: number
+  matched_technologies?: string[]
+  applied?: boolean
   payload: {
     technologies?: string[]
     description?: string

@@ -16,7 +16,7 @@ class CreateJobUseCase:
         self._documents = document_repository
         self._sync = sync_documents_use_case
 
-    def execute(self, payload: dict, user_id: int | None = None) -> DocumentEntity:
+    def execute(self, payload: dict, user_id: int) -> DocumentEntity:
         title = str(payload.get("title") or "job").strip() or "job"
         document = self._documents.create("job", payload, title[:512], user_id=user_id)
         try:

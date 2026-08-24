@@ -48,3 +48,7 @@ class SearchConfigurationError(DocumentServiceError):
 
 class StorageError(DocumentServiceError):
     pass
+
+
+class DuplicateDocumentError(DocumentServiceError):
+    pass

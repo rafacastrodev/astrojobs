@@ -78,3 +78,11 @@ def require_recruiter(user: UserEntity = Depends(get_current_user)) -> UserEntit
             status_code=status.HTTP_403_FORBIDDEN, detail="Recruiter access required"
         )
     return user
+
+
+def require_professional(user: UserEntity = Depends(get_current_user)) -> UserEntity:
+    if user.role != "professional":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Professional access required"
+        )
+    return user

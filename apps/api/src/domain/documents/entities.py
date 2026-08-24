@@ -20,5 +20,6 @@ class DocumentEntity:
     updated_at: datetime
     user_id: int | None = None
     storage_key: str | None = None
+    content_hash: str | None = None
     analysis_status: AnalysisStatus = "pending"
     analysis_error_message: str | None = None

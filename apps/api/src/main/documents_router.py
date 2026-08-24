@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 from domain.analysis.entities import AnalysisEntity
 from domain.analysis.errors import AnalyzerConfigurationError, AnalyzerError
+from domain.applications.errors import AlreadyAppliedError, NoResumeToApplyError
+from domain.applications.use_cases.apply_to_job import ApplyToJobUseCase
 from domain.documents.entities import DocumentEntity
 from domain.documents.errors import (
     DocumentNotFoundError,
@@ -11,14 +13,12 @@ from domain.documents.errors import (
     FileTooLargeError,
     SafetyConfigurationError,
     SafetyServiceError,
-    SearchConfigurationError,
     StorageError,
     UnsafeContentError,
     UnsupportedFileError,
 )
 from domain.documents.use_cases.delete_user_resume import DeleteUserResumeUseCase
 from domain.documents.use_cases.get_user_resume_detail import GetUserResumeDetailUseCase
-from domain.documents.use_cases.list_documents import ListDocumentsUseCase
 from domain.documents.use_cases.list_user_resumes import ListUserResumesUseCase
 from domain.documents.use_cases.match_jobs_for_resume import (
     DEFAULT_TOP_K,
@@ -28,17 +28,24 @@ from domain.documents.use_cases.process_resume import ProcessResumeUseCase
 from domain.documents.use_cases.upload_resume import UploadResumeUseCase
 from domain.users.entities import UserEntity
 from infrastructure.documents.dependencies import (
+    get_application_repository,
+    get_apply_to_job_use_case,
     get_delete_user_resume_use_case,
-    get_list_documents_use_case,
     get_list_user_resumes_use_case,
     get_match_jobs_use_case,
     get_process_resume_use_case,
     get_upload_resume_use_case,
     get_user_resume_detail_use_case,
 )
+from infrastructure.repositories.sqlalchemy_application_repository import (
+    SqlAlchemyApplicationRepository,
+)
+from infrastructure.schemas.application_schemas import (
+    ApplicationResponse,
+    ApplyToJobRequest,
+)
 from infrastructure.schemas.document_schemas import (
     JobMatchResponse,
-    JobSummaryResponse,
     ProcessResumeRequest,
     ResumeResponse,
 )
@@ -156,34 +163,65 @@ def match_jobs(
         matches = use_case.execute(document_id, user.id, top_k=top_k)
     except DocumentNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
-    except SearchConfigurationError as exc:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
-    return [
-        JobMatchResponse(
-            id=match.document.id,  # type: ignore[arg-type]
-            title=_job_title(match.document),
-            source_filename=match.document.source_filename,
-            score=match.score,
-            payload=match.document.payload,
-        )
-        for match in matches
-    ]
+    return [_to_job_match_response(match) for match in matches]
 
 
-@router.get("/jobs", response_model=list[JobSummaryResponse])
+@router.get("/jobs", response_model=list[JobMatchResponse])
 def list_catalog_jobs(
     user: UserEntity = Depends(get_current_user),
-    use_case: ListDocumentsUseCase = Depends(get_list_documents_use_case),
-) -> list[JobSummaryResponse]:
-    documents = use_case.execute(doc_type="job", status="synced")
+    use_case: MatchJobsForResumeUseCase = Depends(get_match_jobs_use_case),
+    applications: SqlAlchemyApplicationRepository = Depends(get_application_repository),
+) -> list[JobMatchResponse]:
+    applied_job_ids = set(applications.list_job_ids_for_applicant(user.id))
     return [
-        JobSummaryResponse(
-            id=document.id,  # type: ignore[arg-type]
-            title=_job_title(document),
-            source_filename=document.source_filename,
-        )
-        for document in documents
+        _to_job_match_response(match, applied=match.document.id in applied_job_ids)
+        for match in use_case.execute_for_user(user.id)
     ]
+
+
+@router.post(
+    "/jobs/{job_id}/apply",
+    response_model=ApplicationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def apply_to_job(
+    job_id: int,
+    body: ApplyToJobRequest | None = None,
+    user: UserEntity = Depends(get_current_user),
+    use_case: ApplyToJobUseCase = Depends(get_apply_to_job_use_case),
+) -> ApplicationResponse:
+    try:
+        application = use_case.execute(
+            job_id,
+            user.id,
+            body.resume_document_id if body else None,
+        )
+    except DocumentNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except NoResumeToApplyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        )
+    except AlreadyAppliedError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+    return ApplicationResponse(
+        id=application.id,
+        job_document_id=application.job_document_id,
+        resume_document_id=application.resume_document_id,
+        created_at=application.created_at,
+    )
+
+
+def _to_job_match_response(match, applied: bool = False) -> JobMatchResponse:
+    return JobMatchResponse(
+        id=match.document.id,  # type: ignore[arg-type]
+        title=_job_title(match.document),
+        source_filename=match.document.source_filename,
+        score=match.score,
+        payload=match.document.payload,
+        matched_technologies=match.matched_technologies,
+        applied=applied,
+    )
 
 
 def _job_title(document: DocumentEntity) -> str:

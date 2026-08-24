@@ -1,52 +1,29 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { adminDocumentServices } from '@/services/adminDocumentServices'
-import type { DocumentStatus, DocumentType } from '../types'
 
-const documentsKey = (type: DocumentType, status?: DocumentStatus) =>
-  ['admin-documents', type, status ?? 'all'] as const
+const recruiterJobsKey = ['recruiter-jobs'] as const
+const recruiterApplicationsKey = ['recruiter-applications'] as const
+const technologiesKey = ['technology-catalog'] as const
 
-export const useAdminDocuments = (
-  type: DocumentType,
-  status?: DocumentStatus,
-) => {
+export const useTechnologyCatalog = () =>
+  useQuery({
+    queryKey: technologiesKey,
+    queryFn: adminDocumentServices.listTechnologies,
+    staleTime: Infinity,
+  })
+
+export const useRecruiterJobs = () => {
   return useQuery({
-    queryKey: documentsKey(type, status),
-    queryFn: () => adminDocumentServices.list(type, status),
+    queryKey: recruiterJobsKey,
+    queryFn: adminDocumentServices.listJobs,
   })
 }
 
-export const useUploadDocument = (type: DocumentType) => {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: (file: File) => adminDocumentServices.upload(type, file),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ['admin-documents', type],
-      })
-    },
-  })
-}
-
-export const useDeleteDocument = (type: DocumentType) => {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: adminDocumentServices.remove,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ['admin-documents', type],
-      })
-    },
-  })
-}
-
-export const useMatchingResumes = (enabled: boolean) => {
+export const useRecruiterApplications = () => {
   return useQuery({
-    queryKey: ['recruiter-matches'] as const,
-    queryFn: adminDocumentServices.listMatches,
-    enabled,
+    queryKey: recruiterApplicationsKey,
+    queryFn: adminDocumentServices.listApplications,
   })
 }
 
@@ -55,11 +32,20 @@ export const useCreateJob = () => {
   return useMutation({
     mutationFn: adminDocumentServices.createJob,
     onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ['admin-documents', 'job'],
-      })
+      void queryClient.invalidateQueries({ queryKey: recruiterJobsKey })
       void queryClient.invalidateQueries({ queryKey: ['catalog-jobs'] })
-      void queryClient.invalidateQueries({ queryKey: ['recruiter-matches'] })
+    },
+  })
+}
+
+export const useDeleteJob = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: adminDocumentServices.removeJob,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: recruiterJobsKey })
+      void queryClient.invalidateQueries({ queryKey: recruiterApplicationsKey })
+      void queryClient.invalidateQueries({ queryKey: ['catalog-jobs'] })
     },
   })
 }

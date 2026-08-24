@@ -138,15 +138,6 @@ export const ResumeSection = () => {
                 className="rounded-xl border border-border p-4"
               >
                 <div className="flex items-start gap-2">
-                  <button
-                    type="button"
-                    aria-label={`Delete ${resume.source_filename}`}
-                    onClick={() => setResumePendingDelete(resume)}
-                    disabled={deletingId === resume.id}
-                    className={`${iconButtonClassName} hover:text-destructive`}
-                  >
-                    <TrashIcon />
-                  </button>
                   <div className="min-w-0 flex-1 pt-1.5">
                     <p className="truncate font-medium text-card-foreground">
                       {resume.source_filename}
@@ -186,6 +177,15 @@ export const ResumeSection = () => {
                       </button>
                     ) : null}
                   </div>
+                  <button
+                    type="button"
+                    aria-label={`Delete ${resume.source_filename}`}
+                    onClick={() => setResumePendingDelete(resume)}
+                    disabled={deletingId === resume.id}
+                    className={`${iconButtonClassName} hover:text-destructive`}
+                  >
+                    <TrashIcon />
+                  </button>
                   <button
                     type="button"
                     aria-expanded={expandedResumeId === resume.id}

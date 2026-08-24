@@ -106,6 +106,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/recruiter/technologies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Technologies */
+        get: operations["list_technologies_recruiter_technologies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/recruiter/documents": {
         parameters: {
             query?: never;
@@ -135,6 +152,23 @@ export interface paths {
         put?: never;
         /** Create Job */
         post: operations["create_job_recruiter_jobs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recruiter/matches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Matching Resumes */
+        get: operations["list_matching_resumes_recruiter_matches_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -464,22 +498,30 @@ export interface components {
         JobCreateRequest: {
             /** Title */
             title: string;
-            /** Requirements */
-            requirements?: string[];
-            /** Responsibilities */
-            responsibilities?: string[];
+            /** Technologies */
+            technologies?: string[];
+            /**
+             * Description
+             * @default
+             */
+            description: string;
             /**
              * Seniority
-             * @default unspecified
              * @enum {string}
              */
-            seniority: "intern" | "junior" | "mid" | "senior" | "lead" | "principal" | "staff" | "unspecified";
+            seniority: "intern" | "junior" | "mid" | "senior" | "lead" | "principal" | "staff";
+            /**
+             * Work Mode
+             * @enum {string}
+             */
+            work_mode: "remote" | "hybrid" | "on-site";
+            /** Region */
+            region: string;
             /**
              * Employment Type
-             * @default unspecified
              * @enum {string}
              */
-            employment_type: "full-time" | "part-time" | "contract" | "internship" | "temporary" | "unspecified";
+            employment_type: "full-time" | "part-time" | "contract" | "internship" | "temporary";
         };
         /** JobMatchResponse */
         JobMatchResponse: {
@@ -495,15 +537,11 @@ export interface components {
             payload: {
                 [key: string]: unknown;
             };
-        };
-        /** JobSummaryResponse */
-        JobSummaryResponse: {
-            /** Id */
-            id: number;
-            /** Title */
-            title: string;
-            /** Source Filename */
-            source_filename: string;
+            /**
+             * Matched Technologies
+             * @default []
+             */
+            matched_technologies: string[];
         };
         /** LoginRequest */
         LoginRequest: {
@@ -511,6 +549,13 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** MatchedJobSummary */
+        MatchedJobSummary: {
+            /** Id */
+            id: number;
+            /** Title */
+            title: string;
         };
         /** ProcessResumeRequest */
         ProcessResumeRequest: {
@@ -526,6 +571,25 @@ export interface components {
             token: string;
             /** New Password */
             new_password: string;
+        };
+        /** ResumeMatchResponse */
+        ResumeMatchResponse: {
+            /** Id */
+            id: number;
+            /** Source Filename */
+            source_filename: string;
+            /** Score */
+            score: number;
+            /** Matched Technologies */
+            matched_technologies: string[];
+            /** Matched Jobs */
+            matched_jobs: components["schemas"]["MatchedJobSummary"][];
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Summary */
+            summary?: string | null;
         };
         /** ResumeResponse */
         ResumeResponse: {
@@ -831,6 +895,37 @@ export interface operations {
             };
         };
     };
+    list_technologies_recruiter_technologies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                jwt?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_documents_recruiter_documents_get: {
         parameters: {
             query?: {
@@ -922,6 +1017,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_matching_resumes_recruiter_matches_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                jwt?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResumeMatchResponse"][];
                 };
             };
             /** @description Validation Error */
@@ -1253,7 +1379,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["JobSummaryResponse"][];
+                    "application/json": components["schemas"]["JobMatchResponse"][];
                 };
             };
             /** @description Validation Error */

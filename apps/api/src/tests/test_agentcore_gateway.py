@@ -1,6 +1,8 @@
 import json
 
-from infrastructure.services.agentcore_gateway_retriever import AgentCoreGatewayRetriever
+from infrastructure.services.agentcore_gateway_retriever import (
+    AgentCoreGatewayRetriever,
+)
 
 
 class _Http:

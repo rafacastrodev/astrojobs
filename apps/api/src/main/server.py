@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from infrastructure.database.config import settings
 from infrastructure.database.session import init_db
+from infrastructure.security.rate_limit import RateLimitMiddleware
 from infrastructure.storage.s3_file_storage import ensure_s3_bucket
 from main.admin_router import router as recruiter_router
 from main.analysis_router import router as analysis_router
@@ -24,25 +25,14 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-allowed_origins = {settings.frontend_origin or "http://localhost"}
-if settings.is_development:
-    allowed_origins.update(
-        {
-            "http://localhost",
-            "http://localhost:3000",
-            "http://127.0.0.1",
-            "http://127.0.0.1:3000",
-        }
-    )
-
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=sorted(allowed_origins),
+    allow_origins=settings.cors_allow_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
-
 
 app.include_router(auth_router)
 app.include_router(recruiter_router)

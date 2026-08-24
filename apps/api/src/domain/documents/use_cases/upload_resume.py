@@ -1,5 +1,6 @@
 import logging
 import uuid
+from dataclasses import dataclass
 from pathlib import Path
 
 from domain.analysis.analyzer import ResumeAnalyzer
@@ -34,6 +35,13 @@ CONTENT_TYPES = {
     ".txt": "text/plain",
     ".md": "text/markdown",
 }
+
+
+@dataclass
+class UploadedResume:
+    document: DocumentEntity
+    analysis: AnalysisEntity | None
+    created: bool
 
 
 class UploadResumeUseCase:
@@ -185,8 +193,10 @@ class UploadResumeUseCase:
                 document.id,
                 exc,
             )
-            self._documents.mark_failed(document.id, "Could not index resume")
-        return self._documents.get_by_id(document.id) or document
+        published = self._documents.get_by_id(document.id) or document
+        if published.status == "synced":
+            return published
+        return self._documents.mark_published(document.id)
 
     @staticmethod
     def _structure(payload: dict) -> dict[str, object]:

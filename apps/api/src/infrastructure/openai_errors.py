@@ -27,7 +27,7 @@ def openai_status_and_code(exc: BaseException) -> tuple[int | None, str | None]:
     if body is None and response is not None:
         try:
             body = response.json()
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             body = None
     code = None
     if isinstance(body, dict):

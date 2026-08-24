@@ -31,7 +31,7 @@ export const ResumeWorkspace = ({ resume }: { resume: Resume }) => {
           </button>
         ))}
       </div>
-      {tab === 'resume' ? <ResumeProfileView resume={resume} /> : null}
+      {tab === 'resume' ? <ResumeProfileView payload={resume.payload} /> : null}
       {tab === 'analysis' ? (
         <AnalysisPanel resumeId={resume.id} initialJobId={analysisJobId} />
       ) : null}

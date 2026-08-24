@@ -20,6 +20,7 @@ _POSTGRES_PORT = 5432
 _LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
 _DUMMY_AWS_ACCESS_KEYS = {"test", "localstack"}
 _GEMINI_OPENAI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+_PRODUCTION_FRONTEND_ORIGIN = "https://astrojobs.rafacastro.dev"
 _LIBPQ_ENV_KEYS = ("PGSSLMODE", "PGSSLROOTCERT")
 
 
@@ -133,6 +134,19 @@ class Settings(BaseSettings):
         return self.environment.strip().lower() in _DEV_ENVIRONMENTS
 
     @property
+    def cors_allow_origins(self) -> list[str]:
+        if self.is_development:
+            origins = {
+                (self.frontend_origin or "http://localhost:3000").rstrip("/"),
+                "http://localhost",
+                "http://localhost:3000",
+                "http://127.0.0.1",
+                "http://127.0.0.1:3000",
+            }
+            return sorted(origins)
+        return [_PRODUCTION_FRONTEND_ORIGIN]
+
+    @property
     def uses_pgvector(self) -> bool:
         return self.is_development
 
@@ -214,7 +228,9 @@ class Settings(BaseSettings):
             )
 
         if self.frontend_origin is None:
-            self.frontend_origin = "http://localhost"
+            self.frontend_origin = (
+                "http://localhost" if in_docker else "http://localhost:3000"
+            ) if self.is_development else _PRODUCTION_FRONTEND_ORIGIN
 
         self._resolve_llm()
         self._resolve_bedrock()

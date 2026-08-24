@@ -1,4 +1,15 @@
+import hashlib
+import re
+
 import bcrypt
+
+_CLIENT_PASSWORD_HASH = re.compile(r"^[0-9a-f]{64}$")
+
+
+def client_password_digest(password: str) -> str:
+    if _CLIENT_PASSWORD_HASH.fullmatch(password):
+        return password
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
 def hash_password(password: str) -> str:
@@ -11,7 +22,10 @@ def verify_password(password: str, hashed_password: str) -> bool:
 
 class BcryptPasswordHasher:
     def hash(self, password: str) -> str:
-        return hash_password(password)
+        return hash_password(client_password_digest(password))
 
     def verify(self, password: str, hashed_password: str) -> bool:
-        return verify_password(password, hashed_password)
+        digest = client_password_digest(password)
+        if verify_password(digest, hashed_password):
+            return True
+        return digest != password and verify_password(password, hashed_password)

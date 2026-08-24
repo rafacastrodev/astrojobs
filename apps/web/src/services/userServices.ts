@@ -1,5 +1,6 @@
 import type { components } from '@/types/api'
 import { api } from '@/utils/api/client'
+import { hashPassword } from '@/utils/crypto/password'
 import type {
   ForgotPasswordFormValues,
   LoginFormValues,
@@ -10,15 +11,22 @@ import type {
 type User = components['schemas']['UserResponse']
 
 async function signIn(values: LoginFormValues) {
-  const response = await api.post<User>('/auth/login', values)
+  const response = await api.post<User>('/auth/login', {
+    email: values.email,
+    password: await hashPassword(values.password),
+  })
   return response.data
 }
 
 async function signUp({
   confirmPassword: _confirmPassword,
+  password,
   ...body
 }: SignupFormValues) {
-  const response = await api.post<User>('/auth/signup', body)
+  const response = await api.post<User>('/auth/signup', {
+    ...body,
+    password: await hashPassword(password),
+  })
   return response.data
 }
 
@@ -47,7 +55,7 @@ async function forgotPassword(values: ForgotPasswordFormValues) {
 async function resetPassword(token: string, values: ResetPasswordFormValues) {
   const response = await api.post<{ ok: boolean }>('/auth/reset-password', {
     token,
-    new_password: values.password,
+    new_password: await hashPassword(values.password),
   })
   return response.data
 }
