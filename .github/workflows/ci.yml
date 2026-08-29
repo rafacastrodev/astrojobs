@@ -1,9 +1,7 @@
 name: AWS Deploy
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 concurrency:
   group: aws-deploy-${{ github.ref }}
@@ -11,6 +9,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: false
     runs-on: ubuntu-latest
 
     permissions:

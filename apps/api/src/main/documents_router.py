@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
 from domain.analysis.entities import AnalysisEntity
 from domain.analysis.errors import AnalyzerConfigurationError, AnalyzerError
@@ -244,6 +244,7 @@ def match_jobs(
 
 @router.get("/jobs", response_model=list[JobMatchResponse])
 def list_catalog_jobs(
+    resume_id: int | None = Query(default=None, gt=0),
     user: UserEntity = Depends(require_professional),
     use_case: MatchJobsForResumeUseCase = Depends(get_match_jobs_use_case),
     applications: SqlAlchemyApplicationRepository = Depends(get_application_repository),
@@ -258,7 +259,14 @@ def list_catalog_jobs(
     applied_job_ids = set(application_by_job)
     offered_job_ids = set(offers.list_job_ids_for_professional(user.id))
     recruiters = _recruiter_cache(users)
-    matches = use_case.execute_for_user(user.id)
+    try:
+        matches = (
+            use_case.execute_for_resume(resume_id, user.id)
+            if resume_id is not None
+            else use_case.execute_for_user(user.id)
+        )
+    except DocumentNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     open_ids = {match.document.id for match in matches}
     matches.extend(
         JobMatch(document=job, score=0.0)

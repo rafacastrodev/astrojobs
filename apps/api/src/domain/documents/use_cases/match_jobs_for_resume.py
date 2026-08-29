@@ -47,13 +47,20 @@ class MatchJobsForResumeUseCase:
     def execute(
         self, resume_document_id: int, user_id: int, top_k: int = DEFAULT_TOP_K
     ) -> list[JobMatch]:
-        resume = self._get_resume.execute(resume_document_id, user_id)
-        analysis = self._analyses.get_latest_general(resume_document_id, user_id)
         matches = [
-            match for match in self._score_jobs(resume, analysis) if match.score > 0
+            match
+            for match in self.execute_for_resume(resume_document_id, user_id)
+            if match.score > 0
         ]
         limit = max(1, min(top_k, MAX_TOP_K))
         return matches[:limit]
+
+    def execute_for_resume(
+        self, resume_document_id: int, user_id: int
+    ) -> list[JobMatch]:
+        resume = self._get_resume.execute(resume_document_id, user_id)
+        analysis = self._analyses.get_latest_general(resume_document_id, user_id)
+        return self._score_jobs(resume, analysis)
 
     def execute_for_user(self, user_id: int) -> list[JobMatch]:
         jobs = [
@@ -123,13 +130,11 @@ class MatchJobsForResumeUseCase:
                 semantic_scores.get(job.id, 0.0),
                 has_required_technologies=bool(job_labels),
             )
-            if (
-                resume_labels
-                and job_labels
-                and not _passes_filters(job.payload, resume.payload, analysis)
-            ):
-                score *= 0.5
-            score = apply_title_score(score, job.payload, resume.payload)
+            compatible = _passes_filters(job.payload, resume.payload, analysis)
+            if compatible:
+                score = apply_title_score(score, job.payload, resume.payload)
+            else:
+                score = 0.0
             matches.append(
                 JobMatch(
                     document=job,

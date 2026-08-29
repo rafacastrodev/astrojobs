@@ -1,0 +1,12 @@
+About
+Frontend engineer with six years building web applications in React and TypeScript.
+
+Experiences
+Frontend Engineer at Atlas (Jan 2021 - Current)
+Built accessible React applications with TypeScript, Vite, and modern CSS.
+
+Web Developer at Nova (Mar 2019 - Dec 2020)
+Maintained responsive user interfaces and component libraries.
+
+Education
+Bachelor of Computer Science

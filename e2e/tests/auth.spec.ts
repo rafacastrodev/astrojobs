@@ -72,7 +72,7 @@ test.describe('authentication', () => {
     await expectSignedIn(page)
     await logOut(page)
 
-    await signUp(page, email)
+    await signUp(page, email, undefined, false)
     await expect(page.getByRole('alert')).toContainText(
       'Could not create this account',
     )

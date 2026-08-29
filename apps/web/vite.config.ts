@@ -21,6 +21,10 @@ const config = defineConfig(({ command }) => ({
   server: {
     port: 3000,
     proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
       '/health': 'http://localhost:8000',
       '/regions': 'http://localhost:8000',
       '/auth': 'http://localhost:8000',

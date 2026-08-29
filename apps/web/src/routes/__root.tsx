@@ -33,17 +33,9 @@ function RootComponent() {
 }
 
 function RootNotFound() {
-  return (
-    <AppShell>
-      <NotFoundPage />
-    </AppShell>
-  )
+  return <NotFoundPage />
 }
 
 function RootError(props: ErrorComponentProps) {
-  return (
-    <AppShell>
-      <ErrorPage {...props} />
-    </AppShell>
-  )
+  return <ErrorPage {...props} />
 }

@@ -27,8 +27,10 @@ async function listAnalyses(resumeId: number) {
   return response.data
 }
 
-async function listJobs() {
-  const response = await api.get<JobMatch[]>('/documents/jobs')
+async function listJobs(resumeId?: number) {
+  const response = await api.get<JobMatch[]>('/documents/jobs', {
+    params: resumeId == null ? undefined : { resume_id: resumeId },
+  })
   return response.data
 }
 

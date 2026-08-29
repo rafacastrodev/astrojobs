@@ -69,6 +69,41 @@ def test_job_form_canonicalizes_region_and_rejects_unknown_ones() -> None:
         )
 
 
+def test_job_form_rejects_html_and_script() -> None:
+    payload = {
+        "technologies": ["Python"],
+        "seniority": "junior",
+        "work_mode": "on-site",
+        "region": "Sao Paulo",
+        "employment_type": "internship",
+    }
+    with pytest.raises(ValidationError, match="HTML and script"):
+        JobCreateRequest(
+            title="<img src=x onerror=alert(1)>QA XSS Probe",
+            description="Testing stored XSS handling.",
+            **payload,
+        )
+    with pytest.raises(ValidationError, match="HTML and script"):
+        JobCreateRequest(
+            title="QA Engineer",
+            description="<script>alert(3)</script> Testing stored XSS handling.",
+            **payload,
+        )
+
+
+def test_job_form_allows_plain_comparison_and_cplusplus() -> None:
+    job = JobCreateRequest(
+        title="C++ Engineer",
+        technologies=["C++"],
+        description="Ship native clients with salary > 80k.",
+        seniority="senior",
+        work_mode="remote",
+        region="Remote / Worldwide",
+        employment_type="full-time",
+    )
+    assert job.title == "C++ Engineer"
+
+
 def test_job_form_accepts_optional_hidden_salary_range() -> None:
     job = JobCreateRequest(
         title="Backend Engineer",

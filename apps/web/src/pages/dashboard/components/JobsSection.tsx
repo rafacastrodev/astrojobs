@@ -221,6 +221,7 @@ export const JobsSection = ({ focusJobId }: { focusJobId?: number }) => {
   const queryClient = useQueryClient()
   const [openJobId, setOpenJobId] = useState<number | null>(null)
   const [page, setPage] = useState(0)
+  const [selectedResumeId, setSelectedResumeId] = useState<number | undefined>()
   const resumesQuery = useQuery({
     queryKey: ['resumes'],
     queryFn: resumeServices.list,
@@ -229,11 +230,14 @@ export const JobsSection = ({ focusJobId }: { focusJobId?: number }) => {
     Array.isArray(resumesQuery.data) ? resumesQuery.data : []
   ) as Resume[]
   const hasResume = resumes.length > 0
-  const resumeId = resumes[0]?.id
+  const selectedResume = resumes.find(
+    (resume) => resume.id === selectedResumeId,
+  )
+  const resumeId = selectedResume?.id
 
   const jobsQuery = useQuery({
-    queryKey: ['catalog-jobs'],
-    queryFn: analysisServices.listJobs,
+    queryKey: ['catalog-jobs', resumeId],
+    queryFn: () => analysisServices.listJobs(resumeId),
     refetchInterval: 15_000,
   })
   const jobs = (jobsQuery.data ?? []) as JobMatch[]
@@ -269,7 +273,17 @@ export const JobsSection = ({ focusJobId }: { focusJobId?: number }) => {
 
   useEffect(() => {
     setPage(0)
-  }, [hasResume])
+  }, [resumeId])
+
+  useEffect(() => {
+    if (resumes.length === 0) {
+      setSelectedResumeId(undefined)
+      return
+    }
+    if (!resumes.some((resume) => resume.id === selectedResumeId)) {
+      setSelectedResumeId(resumes[0].id)
+    }
+  }, [resumes, selectedResumeId])
 
   const apply = useMutation({
     mutationFn: ({
@@ -289,9 +303,28 @@ export const JobsSection = ({ focusJobId }: { focusJobId?: number }) => {
       <h2 className="text-lg font-semibold text-card-foreground">Open jobs</h2>
       <p className="mt-2 text-sm text-muted-foreground">
         {hasResume
-          ? 'Ranked by stack overlap with your resume.'
+          ? 'Ranked for the selected resume. Region and salary incompatibilities receive no match.'
           : 'Newest roles first. Upload a resume to rank them by match.'}
       </p>
+      {hasResume ? (
+        <label className="mt-4 block max-w-md text-sm font-medium text-card-foreground">
+          Rank and apply with
+          <select
+            value={resumeId ?? ''}
+            onChange={(event) => {
+              setOpenJobId(null)
+              setSelectedResumeId(Number(event.target.value))
+            }}
+            className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-ring"
+          >
+            {resumes.map((resume) => (
+              <option key={resume.id} value={resume.id}>
+                {resume.source_filename}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <div className="mt-6">
         {jobsQuery.isLoading ? (
           <p className="text-sm text-muted-foreground">Loading jobs…</p>

@@ -36,8 +36,7 @@ test.describe('job matching', () => {
     expect(scores).toEqual([...scores].sort((a: number, b: number) => b - a))
 
     const entry = page.getByRole('listitem').filter({ hasText: 'resume.txt' })
-    await entry.getByRole('button', { name: 'Open' }).click()
-    await page.getByRole('button', { name: 'Matching jobs' }).click()
+    await entry.getByLabel('View details').click()
     await expect(page.getByText(matches[0].title)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Detailed analysis' }).first()).toBeVisible()
   })

@@ -4,6 +4,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from domain.applications.entities import ApplicationStatus
+from domain.documents.job_text import reject_unsafe_job_text
 from domain.documents.region_catalog import canonical_region
 from domain.documents.technology_catalog import canonical_technology
 from domain.users.profile import validate_salary_range
@@ -72,12 +73,12 @@ class JobCreateRequest(BaseModel):
         value = value.strip()
         if not value:
             raise ValueError("Job title cannot be empty")
-        return value
+        return reject_unsafe_job_text(value)
 
     @field_validator("description")
     @classmethod
     def _trim_description(cls, value: str) -> str:
-        return value.strip()
+        return reject_unsafe_job_text(value.strip())
 
     @field_validator("region")
     @classmethod

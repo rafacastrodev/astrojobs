@@ -32,8 +32,8 @@ export const useResumeAnalysis = (
   })
 
   const jobs = useQuery({
-    queryKey: ['catalog-jobs'],
-    queryFn: analysisServices.listJobs,
+    queryKey: ['catalog-jobs', resumeId],
+    queryFn: () => analysisServices.listJobs(resumeId),
     enabled: mode === 'job',
   })
 

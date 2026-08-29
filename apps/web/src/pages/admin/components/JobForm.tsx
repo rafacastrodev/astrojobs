@@ -4,6 +4,10 @@ import { Button } from '@/components/Button'
 import { CloseIcon } from '@/components/icons'
 import { RegionSelect } from '@/components/RegionSelect'
 import { getApiErrorMessage } from '@/utils'
+import {
+  UNSAFE_JOB_TEXT_MESSAGE,
+  jobTextLooksUnsafe,
+} from '@/utils/validation/jobText'
 
 import { useCreateJob, useTechnologyCatalog } from '../hooks/useAdminDocuments'
 import type { JobEmploymentType, JobSeniority, JobWorkMode } from '../types'
@@ -44,6 +48,7 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
   const [salaryMin, setSalaryMin] = useState('')
   const [salaryMax, setSalaryMax] = useState('')
   const [hideSalary, setHideSalary] = useState(false)
+  const [contentError, setContentError] = useState<string | null>(null)
 
   const parseUsd = (value: string) => {
     const trimmed = value.trim()
@@ -84,6 +89,11 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
           return
         }
         if (salaryInvalid) return
+        if (jobTextLooksUnsafe(title) || jobTextLooksUnsafe(description)) {
+          setContentError(UNSAFE_JOB_TEXT_MESSAGE)
+          return
+        }
+        setContentError(null)
         create.mutate(
           {
             title: title.trim(),
@@ -123,7 +133,10 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
           id="job-title"
           name="title"
           value={title}
-          onChange={(event) => setTitle(event.target.value)}
+          onChange={(event) => {
+            setTitle(event.target.value)
+            setContentError(null)
+          }}
           maxLength={200}
           className="rounded-lg border border-border bg-input p-3"
         />
@@ -316,7 +329,10 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
           id="job-description"
           name="description"
           value={description}
-          onChange={(event) => setDescription(event.target.value)}
+          onChange={(event) => {
+            setDescription(event.target.value)
+            setContentError(null)
+          }}
           rows={5}
           maxLength={8000}
           className="rounded-lg border border-border bg-input p-3"
@@ -337,6 +353,11 @@ export const JobForm = ({ onCreated }: JobFormProps) => {
           Create job
         </Button>
       </div>
+      {contentError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {contentError}
+        </p>
+      ) : null}
       {create.isError ? (
         <p role="alert" className="text-sm text-destructive">
           {getApiErrorMessage(create.error, 'Could not create the job')}

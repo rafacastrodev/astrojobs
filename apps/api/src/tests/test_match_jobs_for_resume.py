@@ -220,10 +220,10 @@ def test_on_site_job_matches_city_inside_the_job_country() -> None:
         _Documents([job, local, abroad]),
         _Analyses(),
     ).execute(4, 21)
-    assert abroad_matches[0].score == 0.5
+    assert abroad_matches == []
 
 
-def test_salary_overlap_keeps_match_and_gap_penalizes() -> None:
+def test_salary_overlap_keeps_match_and_gap_has_no_match() -> None:
     job = _doc(
         1,
         "job",
@@ -254,10 +254,8 @@ def test_salary_overlap_keeps_match_and_gap_penalizes() -> None:
         == 1.0
     )
     assert (
-        MatchJobsForResumeUseCase(_Documents([job, gap]), _Analyses()).execute(4, 21)[
-            0
-        ].score
-        == 0.5
+        MatchJobsForResumeUseCase(_Documents([job, gap]), _Analyses()).execute(4, 21)
+        == []
     )
 
 
@@ -312,4 +310,51 @@ def test_overlays_user_profile_onto_resume_for_region_filter() -> None:
         _Analyses(),
         user_repository=_Users(),
     ).execute(3, 20)
-    assert matches[0].score == 0.5
+    assert matches == []
+
+
+def test_catalog_for_one_resume_keeps_incompatible_jobs_at_zero() -> None:
+    compatible = _doc(
+        1,
+        "job",
+        {
+            "title": "Backend",
+            "technologies": ["Python"],
+            "work_mode": "remote",
+            "region": "Africa",
+            "salary_min_usd": 70000,
+            "salary_max_usd": 90000,
+        },
+        10,
+    )
+    incompatible = _doc(
+        2,
+        "job",
+        {
+            "title": "Backend",
+            "technologies": ["Python"],
+            "work_mode": "on-site",
+            "region": "China",
+            "salary_min_usd": 30000,
+            "salary_max_usd": 40000,
+        },
+        10,
+    )
+    resume = _doc(
+        3,
+        "resume",
+        {
+            "skills": ["Python"],
+            "region": "Africa",
+            "salary_min_usd": 70000,
+            "salary_max_usd": 90000,
+        },
+        20,
+    )
+
+    matches = MatchJobsForResumeUseCase(
+        _Documents([compatible, incompatible, resume]), _Analyses()
+    ).execute_for_resume(3, 20)
+
+    assert [item.document.id for item in matches] == [1, 2]
+    assert [item.score for item in matches] == [1.0, 0.0]

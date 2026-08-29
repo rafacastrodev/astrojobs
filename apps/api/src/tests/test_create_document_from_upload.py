@@ -38,6 +38,12 @@ class FakeDocuments:
         self.failed_message = message
         return self.document
 
+    def mark_published(self, _document_id):
+        assert self.document is not None
+        self.document.status = "synced"
+        self.document.error_message = None
+        return self.document
+
 
 class FakeLoader:
     def load(self, _content, _filename):
@@ -73,7 +79,7 @@ def test_admin_upload_indexes_the_document_immediately() -> None:
     assert document.id == 7
 
 
-def test_admin_upload_marks_failed_when_indexing_breaks() -> None:
+def test_admin_upload_still_publishes_when_optional_indexing_breaks() -> None:
     documents = FakeDocuments()
     sync = FakeSync()
     sync.fail = True
@@ -83,5 +89,5 @@ def test_admin_upload_marks_failed_when_indexing_breaks() -> None:
 
     document = use_case.execute(b"file", "cv.txt", "resume")
 
-    assert document.status == "failed"
-    assert documents.failed_message == "Could not index document"
+    assert document.status == "synced"
+    assert documents.failed_message is None

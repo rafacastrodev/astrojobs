@@ -44,11 +44,10 @@ test.describe('resumes', () => {
     expect(payload.currently_employed).toBe(true)
 
     const entry = page.getByRole('listitem').filter({ hasText: 'resume.txt' })
-    await entry.getByRole('button', { name: 'Open' }).click()
-    await expect(page.getByRole('button', { name: 'Full resume' })).toBeVisible()
-    await expect(page.getByText('Full extracted text')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Score and tips' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Matching jobs' })).toBeVisible()
+    await entry.getByLabel('View details').click()
+    await expect(entry.getByRole('heading', { name: 'Resume' })).toBeVisible()
+    await expect(entry.getByRole('heading', { name: 'Suggestions' })).toBeVisible()
+    await expect(entry.getByRole('heading', { name: 'Matching jobs' })).toBeVisible()
   })
 
   test('removes a resume', async ({ page }) => {
@@ -57,7 +56,8 @@ test.describe('resumes', () => {
     const entry = page.getByRole('listitem').filter({ hasText: 'resume.txt' })
     await expect(entry).toBeVisible()
 
-    await entry.getByRole('button', { name: 'Remove' }).click()
+    await entry.getByLabel('Delete resume.txt').click()
+    await page.getByRole('button', { name: 'Remove' }).click()
     await expect(page.getByText('You have not uploaded a resume yet.')).toBeVisible()
   })
 
