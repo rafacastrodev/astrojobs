@@ -1,0 +1,16 @@
+{
+  "name": "AstroJobs",
+  "install": "bash .cursor/install.sh",
+  "start": "bash .cursor/start.sh",
+  "terminals": [
+    {
+      "name": "dev",
+      "command": "export PATH=\"$HOME/.local/bin:$PATH\"; pnpm dev",
+      "description": "Runs the API (uvicorn on :8000) and web (vite on :3000) together via concurrently."
+    }
+  ],
+  "ports": [
+    { "name": "web", "port": 3000 },
+    { "name": "api", "port": 8000 }
+  ]
+}
